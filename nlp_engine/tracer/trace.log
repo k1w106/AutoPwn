@@ -1,0 +1,3 @@
+[AUTO_PWN] Alloc | size = 256 bytes | address = 0x5555555592a0
+[AUTO_PWN] Heap base |              | address = 0x555555559010
+[AUTO_PWN] Free  |                  | address = 0x5555555592a0
