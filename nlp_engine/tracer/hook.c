@@ -4,6 +4,7 @@
 #include <stdlib.h>
 // gcc -shared -fPIC ./hook.c -o ./hook.so -ldl
 // Usage: LD_PRELOAD=./hook.so ./<binary_file>
+//        LD_PRELOAD=./hook.so ./test 2> ../analyzer/trace.log
 
 // Định nghĩa các con trỏ hàm để lưu giữ hàm trong libc
 static void* (*real_malloc)(size_t) = NULL;
@@ -26,7 +27,6 @@ void* malloc(size_t size) {
     // Định dạng: [AUTO_PWN] OP | SIZE | ADDR
     unsigned int offset_heap_base_239 = 0x290;
     fprintf(stderr, "[AUTO_PWN] Alloc | size = %zu bytes | address = %p\n", size, ptr);
-    
     return ptr;
 }
 // Ghi đè free

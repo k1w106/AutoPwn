@@ -1,0 +1,2 @@
+[AUTO_PWN] Alloc | size = 256 bytes | address = 0x5ce92b5512a0
+[AUTO_PWN] Free  |                  | address = 0x5ce92b5512a0

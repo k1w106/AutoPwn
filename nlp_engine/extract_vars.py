@@ -48,14 +48,16 @@ def run_scan(target_file, engine):
 def main():
     engine = NLPEngine()
     writeup_dir = "./data/writeups"
+    output_file = "./analyzer/critical_vars.txt"
+    final_vars = []
     
     # Chế độ 1: Scan 1 file chỉ định (Ví dụ: python3 extract_vars.py writeup.txt)
     if len(sys.argv) > 1:
         target_file = sys.argv[1]
         target_file = os.path.join(writeup_dir, target_file)
         print(f"[*] Đang quét file: {target_file}")
-        results = run_scan(target_file, engine)
-        print(f"[+] Biến quan trọng tìm thấy: {results}")
+        final_vars = run_scan(target_file, engine)
+        print(f"[+] Biến quan trọng tìm thấy: {final_vars}")
 
     # Chế độ 2: Full scan (Ví dụ: python3 extract_vars.py)
     else:
@@ -73,8 +75,15 @@ def main():
                 vars_in_file = run_scan(file_path, engine)
                 all_vars.update(vars_in_file)
                 print(f"\n[OK] Kết quả Full scan của {file_path} là: {list(all_vars)}")
-        
-        
+        final_vars = list(all_vars)
+        print(f"\n[100%] Full scan: {list(final_vars)}")
+    # TRÍCH XUẤT RA FILE ./analyzer/critical_vars.txt
+    if final_vars:
+        with open(output_file, "w", encoding="utf-8") as f:
+            f.write(str(final_vars))
+        print(f"[OK] Đã trích xuất dữ liệu ra file '{output_file}' thành công!")
+    else:
+        print("[!] Tập hợp biến nguy hiểm bị rỗng.")
 
 if __name__ == "__main__":
     main()

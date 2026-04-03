@@ -1,0 +1,37 @@
+[
+    {
+        "step": 1,
+        "action": {
+            "type": "alloc",
+            "size": 256,
+            "addr": "0x5ce92b5512a0",
+            "label": "obj_0"
+        },
+        "state_after": {
+            "base": "tracked",
+            "address": "tracked",
+            "_": "tracked",
+            "addresses": "tracked",
+            "pointer": "tracked",
+            "free_hook": "tracked",
+            "header": "tracked"
+        }
+    },
+    {
+        "step": 2,
+        "action": {
+            "type": "free",
+            "addr": "0x5ce92b5512a0",
+            "label": "obj_0"
+        },
+        "state_after": {
+            "base": "tracked",
+            "address": "tracked",
+            "_": "tracked",
+            "addresses": "tracked",
+            "pointer": "tracked",
+            "free_hook": "tracked",
+            "header": "tracked"
+        }
+    }
+]
