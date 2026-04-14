@@ -1,5 +1,0 @@
-spacy
-gensim
-nltk
-
-
