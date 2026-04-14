@@ -1,0 +1,4 @@
+[AUTO_PWN] Leak  | size = 12 bytes | address = 0x7fff7e08f08b | type = write
+[AUTO_PWN] Alloc | size = 256 bytes | address = 0x5d1d052a32a0
+[AUTO_PWN] Copy  | size = 12 bytes | dest = 0x5d1d052a32a0 | source = 0x7fff7e08f08b | type = memcpy 
+[AUTO_PWN] Free  |                 | address = 0x5d1d052a32a0

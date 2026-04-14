@@ -1,0 +1,2 @@
+- Để can thiệp được các lần call function trong binary (ví dụ như malloc) thì ta cần sử dụng kĩ thuật hook vào binary.
+- Kiểm tra lớp bảo vệ của file binary thì: checksec <tên_file>
