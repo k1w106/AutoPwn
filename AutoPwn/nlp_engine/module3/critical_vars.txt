@@ -1,0 +1,1 @@
+['pointer', 'free_hook', 'libc addresses', 'libc base', 'heap address', 'header of first chunk']

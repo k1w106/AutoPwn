@@ -1,0 +1,19 @@
+Module 1 (NLP): Đọc writeup để biết "Cái gì quan trọng?".
+
+    Kết quả: Một danh sách các từ khóa (__free_hook, tcache_entry, top_chunk).
+
+Module 2 (Dynamic Analysis): Chạy một file exploit mẫu (có sẵn) để xem "Hacker đã làm gì?".
+
+    Kết quả: Một file log (trace.log) ghi lại mọi hành động malloc, free, memcpy.
+
+Module 3 (ESM - Trái tim): Chuyển file log thành một "Bản đồ chiến thuật".
+
+    Kết quả: Tool hiểu được: "À, để chiếm quyền, đầu tiên phải leak được Libc, sau đó mới ghi đè con trỏ". Nó học được thứ tự các bước.
+
+Module 4 (Generalization): Biến chiến thuật đó thành "Công thức tổng quát".
+
+    Kết quả: Thay vì ghi nhớ địa chỉ 0x5555..., nó nhớ là heap_base + offset.
+
+Module 5 (Exploit Generation): Áp dụng công thức vào File binary mới.
+
+    Kết quả: Đây là mục tiêu tối thượng. Tool sẽ tự sinh ra script Python (Pwntools) để giải một bài CTF mới mà nó chưa từng thấy writeup.
