@@ -1,0 +1,271 @@
+{
+    "taxonomy": {
+        "bugs": [
+            "double_free",
+            "overflow"
+        ],
+        "primitives": [
+            "arbitrary_allocation",
+            "arbitrary_free",
+            "arbitrary_write"
+        ],
+        "hooks": [
+            "__exit_functions",
+            "got"
+        ],
+        "functions": [
+            "free",
+            "malloc",
+            "shell",
+            "system"
+        ],
+        "leak_targets": [
+            "__environ",
+            "main_arena"
+        ],
+        "capabilities": [
+            "libc_leak",
+            "stack_leak"
+        ],
+        "leaks": [
+            "libc_base"
+        ],
+        "structures": [
+            "chunk",
+            "fastbin",
+            "tcache",
+            "tcache_perthread_struct",
+            "top_chunk",
+            "unsorted_bin"
+        ],
+        "metadata_fields": [
+            "bk",
+            "fd",
+            "prev_size",
+            "size"
+        ],
+        "techniques": [
+            "chunk_overlap",
+            "tcache_poisoning"
+        ],
+        "goals": [
+            "control_flow_hijack"
+        ],
+        "gadgets": [
+            "pop_rdi",
+            "return_address"
+        ],
+        "others": [
+            "((ptr>>12)+page_offset",
+            "((size_t) ptr",
+            "(_",
+            "0x000000000010f75b",
+            "0x08",
+            "0x10",
+            "0x1000",
+            "0x130",
+            "0x18",
+            "0x182",
+            "0x20",
+            "0x290",
+            "0x30",
+            "0x40",
+            "0x410",
+            "0x420",
+            "0x440",
+            "0x80",
+            "__typeof",
+            "access to perthread metadata",
+            "address",
+            "before mentioned size classes",
+            "buffer of size",
+            "def demangle_alone(ptr",
+            "forged size",
+            "get_index",
+            "important metadata",
+            "libc address",
+            "libc address space",
+            "main address",
+            "memory address",
+            "mid = ptr ^",
+            "modified size",
+            "no apparent address leak",
+            "offset",
+            "only page address",
+            "p64((return_pointer-0x08)",
+            "page address",
+            "permanent offset",
+            "perthread metadata",
+            "protect_ptr",
+            "protect_ptr(pos",
+            "ptr",
+            "reveal_ptr(ptr",
+            "same ((size_t) pos",
+            "same size",
+            "size field",
+            "size metadata",
+            "struct"
+        ]
+    },
+    "exploit_ir": {
+        "bugs": [
+            "double_free",
+            "overflow"
+        ],
+        "primitives": [
+            "arbitrary_allocation",
+            "arbitrary_free",
+            "arbitrary_write"
+        ],
+        "techniques": [
+            "chunk_overlap",
+            "tcache_poisoning"
+        ],
+        "capabilities": [
+            "libc_leak",
+            "stack_leak"
+        ],
+        "leak_targets": [
+            "__environ",
+            "main_arena"
+        ],
+        "targets": [
+            "__environ",
+            "__exit_functions",
+            "bk",
+            "fd",
+            "got",
+            "libc_base",
+            "main_arena",
+            "return_address"
+        ],
+        "goals": [
+            "control_flow_hijack"
+        ],
+        "transitions": [
+            {
+                "from": "arbitrary_free",
+                "to": "tcache_poisoning",
+                "action": "poison_bin"
+            },
+            {
+                "from": "tcache_poisoning",
+                "to": "arbitrary_allocation",
+                "action": "malloc_at_target"
+            },
+            {
+                "from": "arbitrary_allocation",
+                "to": "arbitrary_write",
+                "action": "write_at_allocated_target"
+            },
+            {
+                "from": "arbitrary_write",
+                "to": "control_flow_hijack",
+                "action": "overwrite_hook_or_ret"
+            },
+            {
+                "from": "libc_leak",
+                "to": "stack_leak",
+                "action": "read_environ"
+            }
+        ],
+        "metadata": {
+            "source": "nlp_writeup_extraction",
+            "confidence_score": 0.85,
+            "fusion_ready": true,
+            "engine_version": "2.1-exploit-ir"
+        }
+    },
+    "states": [
+        {
+            "subject": "you",
+            "relation": "overwrite",
+            "object": "chunk"
+        },
+        {
+            "subject": "chunk",
+            "relation": "read",
+            "object": "chunk"
+        },
+        {
+            "subject": "chunk",
+            "relation": "free",
+            "object": "chunk"
+        },
+        {
+            "subject": "the first    bytes of the user data",
+            "relation": "overwrite",
+            "object": "free"
+        },
+        {
+            "subject": "the first    bytes of the user data",
+            "relation": "overwrite",
+            "object": "chunk"
+        },
+        {
+            "subject": "fd",
+            "relation": "point",
+            "object": "fd"
+        },
+        {
+            "subject": "mechanisms",
+            "relation": "trigger",
+            "object": "fastbin"
+        },
+        {
+            "subject": "we",
+            "relation": "allocate",
+            "object": "chunk"
+        },
+        {
+            "subject": "tcache",
+            "relation": "store",
+            "object": "got"
+        },
+        {
+            "subject": "we",
+            "relation": "read",
+            "object": "fd"
+        },
+        {
+            "subject": "tcache",
+            "relation": "hold",
+            "object": "chunk"
+        },
+        {
+            "subject": "we",
+            "relation": "free",
+            "object": "chunk"
+        },
+        {
+            "subject": "we",
+            "relation": "allocate",
+            "object": "top_chunk"
+        },
+        {
+            "subject": "unsorted_bin",
+            "relation": "write",
+            "object": "fd"
+        },
+        {
+            "subject": "__environ",
+            "relation": "be",
+            "object": "__environ"
+        },
+        {
+            "subject": "we",
+            "relation": "overwrite",
+            "object": "chunk"
+        },
+        {
+            "subject": "we",
+            "relation": "modify",
+            "object": "return_address"
+        },
+        {
+            "subject": "libc_base",
+            "relation": "be",
+            "object": "__environ"
+        }
+    ]
+}
