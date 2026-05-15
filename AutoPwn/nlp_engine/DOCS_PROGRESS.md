@@ -26,35 +26,49 @@ Current Status: **Module 1 (NLP) and Module 2 (Runtime) are COMPLETE.**
     - **Semantic Filtering**: Prunes 95% of standard I/O noise, keeping only events targeting or originating from known heap chunks.
 - **Output**: `module3/trace_events.json`.
 
-## 4. Pending: Module 3 (Knowledge Fusion)
-- **Objective**: Match the "Theory" (Module 1 IR) with "Reality" (Module 2 Trace).
-- **Goal**: Construct the finalized **Exploit State Machine (ESM)**.
+## 4. Module 3: Knowledge Fusion (ESM) - COMPLETE
+- **File**: `module3/esm.py`
+- **Output**: `module4/esm_output.json`.
 
-## 5. Active Workspace
-- `nlp_engine/module1`
-- `nlp_engine/module2`
-- `nlp_engine/module3`
+## 5. Module 4: Evolutionary Exploit Planner - COMPLETE
+- **File**: `module4/planner.py`
+- **Logic**: Implements **Evolutionary Heap Simulation** with **Beam Search**.
+- **Features**: Topology-aware reasoning, Glibc version constraints (Legacy vs Modern), and strategic scoring (Trust vs Complexity).
+- **Output**: `module5/final_plan.json`.
 
-## 6. NEXT STAGE: Module 3 (Runtime Semantic Analysis & Knowledge Fusion)
-**Blueprinted Roadmap (Verified against AutoPwn Paper):**
+## 6. Module 5: Exploit Synthesizer - ON PROGRESS....
+- **File**: `module5/synthesizer.py`
+- **Logic**: Transforms strategic plans into concrete `pwntools` exploit skeletons.
+- **Output**: `module5/exploit_synthesized.py`.
 
-### Objectives:
-Transform low-level runtime traces into exploit semantics and runtime Exploit IR. Construct the finalized **Exploit State Machine (ESM)**.
+## 7. PROJECT STATUS: FULL END-TO-END AUTOPWN PIPELINE
+The system successfully bridges the entire gap from **NLP Writeup Understanding** to **Evolutionary Strategy Planning** and **Concrete Exploit Synthesis**.
 
-### Modular Architecture Requirements:
+## 8. POST-MORTEM: Corrected Vulnerability Model (Glibc 2.34+)
+The previous analysis erroneously assumed a direct "Heap Overflow". The actual "Ground Truth" bug in the "Babyheap" challenge is as follows:
 
-1. **HEAP STATE RECONSTRUCTION**
-   - Build a runtime heap model from traces (chunk addr, size, state, metadata, overlap, bins).
-2. **PRIMITIVE DETECTION ENGINE**
-   - Detect: UAF, double free, heap overflow, arbitrary free/alloc/write, fake chunks.
-   - Requires: Heuristics, runtime evidence, confidence scoring.
-3. **TECHNIQUE RECOGNITION ENGINE**
-   - Infer techniques: tcache poisoning, fastbin dup, unsortedbin leak, chunk overlap.
-   - Reason about: Allocator behavior and metadata corruption.
-4. **CAPABILITY INFERENCE ENGINE**
-   - Infer: Libc leak, stack leak, control-flow hijack.
-5. **RUNTIME EXPLOIT IR**
-   - Standardized format for transitions and actions (e.g., `malloc_at_target`).
-6. **NLP + RUNTIME IR ALIGNMENT**
-   - Cross-reference Module 1 IR vs Module 3 Runtime IR.
-   - Validate exploit stages, infer missing steps, and resolve inconsistencies.
+### The Real Bug: UAF-Edit (Write-After-Free)
+The `delete_chunk` function frees memory but **does not null out the pointer** in the global array. The `modify_chunk` (edit) function does not check if a chunk is freed before allowing a write.
+
+### The Actual Exploit Chain (Verified):
+1. **Initial Leak**: Free `chunk0`, then `view(0)` to leak the **mangled fd pointer** -> Extract **XOR Key** and **Heap Base**.
+2. **Tcache Poisoning (via UAF-Edit)**: 
+   - `edit(0)` while it is freed to overwrite `fd` with `target ^ XOR_key`.
+   - The target is an address that allows overwriting another chunk's metadata (e.g., `chunk1->size`).
+3. **Unsorted Bin Leak**:
+   - Overwrite `chunk1->size` to `0x421` using the arbitrary allocation from step 2.
+   - `free(1)` -> It is too large for tcache and goes to the **Unsorted Bin**.
+   - `view(1)` -> **Libc Leak** (via `main_arena` pointers).
+4. **Final Hijack**: Use UAF-Edit on `chunk0` again to poison tcache towards `__environ` (stack leak) and then `saved_rip` (ROP).
+
+## 9. INSTRUCTIONS FOR THE NEXT AGENT
+1. **Vulnerability Type**: Confirm the bug is **UAF-Edit**, not overflow.
+2. **Task**: Refactor `module5/synthesizer.py` to use the **UAF-Edit -> Tcache Poisoning** primitive for all stages.
+3. **Logic Flow**: 
+   - `create(A)`, `free(A)`, `edit(A, target^key)` (The Poison Step).
+   - `create(B)`, `create(C)` (B is dummy, C is the target).
+4. **Key Correction**: Ensure the `POISON_FD` operation in the DSL specifically leverages the UAF-Edit capability identified in ESM.
+
+
+
+

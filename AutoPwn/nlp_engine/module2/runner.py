@@ -332,6 +332,9 @@ def annotate(events: list[dict], mmap: MemoryMap) -> list[dict]:
         elif t == "Read":
             notes.append(f"len={h_size}")
             if mmap.is_in_heap(ev["addr"]): notes.append("heap_read")
+            if content and content != "0x0000000000000000":
+                if mmap.is_in_module(content, "libc"): notes.append("libc_ptr_candidate")
+                elif mmap.is_in_heap(content): notes.append("heap_ptr_candidate")
             
         if notes:
             ev["note"] = ", ".join(notes)
