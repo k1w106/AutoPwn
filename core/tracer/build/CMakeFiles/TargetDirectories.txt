@@ -1,0 +1,3 @@
+/home/kiwi/UIT-DoAn/NT521/core/tracer/build/CMakeFiles/heap_tracer.dir
+/home/kiwi/UIT-DoAn/NT521/core/tracer/build/CMakeFiles/edit_cache.dir
+/home/kiwi/UIT-DoAn/NT521/core/tracer/build/CMakeFiles/rebuild_cache.dir

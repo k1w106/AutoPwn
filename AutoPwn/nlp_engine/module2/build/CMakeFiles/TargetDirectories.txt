@@ -1,3 +1,0 @@
-/home/kiwi/UIT-DoAn/NT521/AutoPwn/AutoPwn/nlp_engine/module2/build/CMakeFiles/heap_tracer.dir
-/home/kiwi/UIT-DoAn/NT521/AutoPwn/AutoPwn/nlp_engine/module2/build/CMakeFiles/edit_cache.dir
-/home/kiwi/UIT-DoAn/NT521/AutoPwn/AutoPwn/nlp_engine/module2/build/CMakeFiles/rebuild_cache.dir
