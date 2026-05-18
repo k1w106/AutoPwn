@@ -1,0 +1,41 @@
+Fastbin Attack for Arbitrary Allocation
+
+Fastbins are singly linked lists for small chunks (size < 0x80 on 64-bit).
+Fastbin chunks have only an fd pointer (no bk pointer).
+The fastbin has a simpler structure than tcache with fewer security checks.
+
+In older glibc versions (< 2.26), before tcache was introduced,
+fastbin attacks were the primary technique for heap exploitation.
+Even with modern glibc, fastbin attacks work when:
+1. We cannot use tcache (e.g., tcache is full or disabled)
+2. We need to target specific addresses for allocation
+
+The fastbin double-free is straightforward:
+1. Free chunk A (goes to fastbin)
+2. Free chunk B (goes to fastbin, A->fd = B)
+3. Free chunk A again (fastbin: A -> B -> A)
+4. Allocate from fastbin (gets A)
+5. Edit A's fd to point to our target address
+6. Allocate from fastbin (gets B)
+7. Allocate from fastbin (gets our target address)
+
+The key difference from tcache is that fastbin validates fd pointers less strictly.
+Fastbin only checks that the chunk size matches the bin size.
+So our target address must have a valid size field at the right offset.
+
+Common targets for fastbin attack:
+1. __malloc_hook - 0x23 (on older glibc): This lands on a fake chunk with size 0x7f
+   The fake size comes from libc data at that offset (partial 0x7f byte).
+2. Stack addresses: if we know the stack layout, we can allocate on the stack.
+
+For the target __malloc_hook - 0x23:
+The offset 0x23 aligns the chunk header such that the "size" field reads 0x7f from libc's data.
+After allocating here, we can overwrite __malloc_hook with one_gadget or system.
+Then the next malloc call triggers our shell.
+
+After Fastbin Attack to overwrite __malloc_hook, any subsequent malloc will execute our payload.
+We trigger this by calling allocate with controlled input.
+The one_gadget in libc spawns a shell directly if constraints are met.
+
+Fastbin attack is less relevant on glibc 2.34+ because __malloc_hook is no longer called.
+But the technique is useful for educational purposes and for older libc versions.

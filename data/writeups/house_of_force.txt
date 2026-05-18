@@ -1,0 +1,44 @@
+House of Force Technique
+
+The House of Force is an old but elegant heap exploitation technique.
+It targets the top chunk (also called the wilderness) in glibc's heap allocator.
+The top chunk is a special chunk at the end of the heap that serves as a source of memory.
+When malloc needs memory and no free chunks are available, it splits the top chunk.
+
+The attack works by corrupting the top chunk's size field.
+We set the top chunk size to a very large value (e.g., 0xFFFFFFFFFFFFFFFF).
+Then we make a malloc request of a specific size such that the new top chunk lands at our target.
+After this allocation, the top chunk pointer points to our target address.
+The next malloc request will return memory at our target.
+
+The key formula for the requested size:
+requested_size = target_addr - top_chunk_addr - 0x20 (for chunk header overhead)
+
+By carefully calculating this size, we can make the next malloc return an address within:
+1. Stack (to overwrite return address)
+2. GOT (to overwrite function pointer)
+3. .bss section (to overwrite global variables)
+
+Prerequisites:
+1. We must be able to corrupt the top chunk size (via heap overflow or UAF write)
+2. We need knowledge of the heap address (to calculate top_chunk_addr)
+3. We need knowledge of the target address (ASLR bypass needed for stack/libc targets)
+
+The top chunk is located right after the last allocated chunk.
+When we read the last chunk's data, if we overflow we can see the top chunk's size field.
+With UAF, we can free a chunk, read its neighbor's metadata, and edit the top chunk size.
+
+Modern glibc (2.29+) has additional checks against House of Force:
+1. The requested size must not overflow (size check on allocation)
+2. The new top chunk must be properly aligned
+3. The top chunk size must be reasonable
+
+Because of these mitigations, House of Force is mostly effective on older glibc (< 2.29).
+However, understanding it helps in learning heap exploitation history and concepts.
+
+The typical exploit flow for House of Force:
+1. Leak heap address (to know top_chunk location)
+2. Overflow or UAF to corrupt top_chunk size to -1 (0xFFFFFFFFFFFFFFFF)
+3. Calculate and malloc a huge size to land top_chunk at target
+4. Malloc again to get a chunk at our target address
+5. Overwrite the target (e.g., return address with ROP chain)

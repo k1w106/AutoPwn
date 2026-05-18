@@ -1,0 +1,38 @@
+Unsorted Bin Libc Leak Technique
+
+To calculate the base address of libc, we need to leak a libc pointer.
+The unsorted bin contains a pointer to main_arena+0x60 in its fd/bk when it is doubly linked.
+If we can read a freed chunk's fd or bk from the unsorted bin, we get a libc address.
+
+The prerequisite is having a free chunk in the unsorted bin.
+For glibc versions with tcache, small chunks are first cached in tcache.
+To bypass tcache, we need to either:
+1. Fill the tcache bin (7 entries for glibc 2.34+, 7 entries for glibc 2.29-2.33)
+2. Create chunks larger than tcache max size (0x410 bytes)
+3. Forge a fake chunk size by overwriting the size field of an adjacent chunk
+
+Method 2 is simple: allocate a chunk larger than 0x410 and free it.
+Method 3 is more interesting: we corrupt a chunk's size to extend it past tcache max.
+Then when that chunk is freed, glibc sends it to the unsorted bin.
+
+When freeing to unsorted bin, glibc checks:
+1. The chunk size must be valid (aligned, not too large)
+2. The next chunk's prev_inuse bit must be set
+3. The next chunk must have a valid prev_size matching our chunk size
+
+After the free, unsorted bin's fd/bk point to main_arena+0x60 relative to libc.
+We can view the freed chunk to read this pointer.
+Then libc_base = leaked_addr - (main_arena_offset + 0x60).
+
+On modern glibc (2.34+), the main_arena symbol may not be exported.
+We can compute it as __malloc_hook + 0x10 since main_arena is right after __malloc_hook.
+In glibc 2.34+, __malloc_hook is still at a fixed offset even though it's no longer used.
+main_arena = __malloc_hook + 0x10.
+
+The leaked unsorted bin pointer gives us:
+libc_leak = main_arena + 0x60 = __malloc_hook + 0x10 + 0x60 = __malloc_hook + 0x70.
+So libc_base = libc_leak - __malloc_hook - 0x70.
+
+We must ensure the freed chunk is the ONLY chunk in the unsorted bin.
+If there are multiple chunks, we get a heap address in fd or bk instead of libc.
+To isolate the leak, free only one large chunk or forge a single oversized chunk.

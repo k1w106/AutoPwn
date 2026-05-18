@@ -1,0 +1,43 @@
+Stack Leak via __environ in libc
+
+Once we have the libc base address, we can leak a stack address.
+The __environ variable in libc stores the address of the environment pointer on the stack.
+More usefully, we can use __environ to get a pointer to the stack.
+libc.symbols['__environ'] is at a known offset from libc base.
+
+To read __environ:
+1. Poison tcache fd to __environ - 0x18 (adjust for chunk header and safe linking)
+   Target = libc_base + __environ_offset - 0x18
+2. Allocate at that address (the malloc returns the aligned target)
+3. Read the chunk content which contains the stack pointers
+
+The __environ points to the envp area on the stack which is near main's stack frame.
+From the leaked stack address, we calculate:
+return_address_offset = stack_leak - calculated_offset
+
+The offset between __environ value and main's return address varies:
+- We need to determine the offset for the specific binary
+- Typically it's around 0x120 to 0x180 bytes depending on the binary and glibc version
+- We use a dynamic offset calculated from the runtime context
+
+After getting the stack address:
+1. Calculate target return address = stack_leak - offset
+2. Poison tcache fd to the return address location
+3. Allocate at the return address
+4. Write a ROP chain to gain shell
+
+Safe Linking applies to all tcache fd pointers.
+When poisoning to __environ:
+protect_ptr(target, pos) = target ^ (pos >> 12)
+Where pos is the address of the chunk we're editing (to un-XOR, glibc will use our XOR)
+
+So: fd = protect_ptr(libc_base + __environ_offset - 0x18, edit_chunk_addr)
+glibc will compute: REVEAL(fd) = REVEAL(protect_ptr(target, pos)) = target ^ (pos >> 12) ^ (pos >> 12) = target
+
+This technique requires:
+1. Libc leak (to know __environ address)
+2. Heap leak (for XOR key in Safe Linking)
+3. UAF or tcache poisoning primitive (to corrupt fd)
+4. A way to read the allocated chunk (view function)
+
+The entire chain: heap leak → libc leak → stack leak → control flow hijack.

@@ -1,25 +1,53 @@
-# AutoPwn: Hệ Thống Tự Động Sinh Mã Khai Thác Lỗi Heap Hỗ Trợ Bởi Artifact
+# AutoPwn v3.0: Artifact-Assisted Heap Exploit Generation
 
-**AutoPwn** là một framework nghiên cứu được thiết kế để tự động hóa quá trình sinh mã khai thác lỗi (exploit) cho các lỗ hổng Heap trong các cuộc thi CTF Pwn. Bằng cách kết nối tri thức khai thác từ ngôn ngữ tự nhiên (writeups) và vết thực thi động (runtime execution traces), hệ thống tự động tổng hợp các kịch bản khai thác hoàn chỉnh bằng `pwntools`.
+Framework tự động sinh mã khai thác lỗi Heap cho CTF PWN, lấy cảm hứng từ paper **AutoPwn (IEEE TIFS 2024)**.
 
-## 🚀 Tính Năng Chính
-- **Semantic Exploit Engine**: Trích xuất IR lỗ hổng (Lỗi, Nguyên mẫu - Primitives, Kỹ thuật) từ các bài writeup NLP.
-- **Runtime Experience Extractor**: Sử dụng DynamoRIO để giám sát các sự kiện Heap ở cấp độ lệnh.
-- **Evolutionary Exploit Planner**: Sử dụng thuật toán Beam Search và Heap State Machine nội bộ để tìm đường dẫn khai thác tối ưu.
-- **Autonomous Synthesizer**: Biên dịch kế hoạch khai thác trừu tượng thành mã Python `pwntools` cụ thể.
-- **Hỗ trợ Glibc Hiện Đại**: Được thiết kế đặc biệt để xử lý các cơ chế bảo mật của glibc 2.34+ (Safe Linking, Tcache protections).
+## Tính năng
 
-## 🛠️ Công Nghệ Sử Dụng
-- **Ngôn ngữ**: Python 3.x (Điều phối, NLP, Logic), C (Tracing Client)
-- **NLP**: Bộ phân giải Exploit-IR dựa trên quy tắc tùy chỉnh.
-- **Binary Instrumentation**: DynamoRIO (để giám sát mức lệnh).
-- **Khai thác lỗi**: Pwntools.
-- **Kiến trúc**: Lớp điều phối mô-đun (Modular Orchestration).
+- **Multi-Writeup NLP**: Học từ nhiều bài writeup, composite taxonomy, verb expansion
+- **Operation Generalization**: Symbolic values (leak_obj/victim_obj/placeholder_obj) + range scopes
+- **Composite ESM**: Merge nhiều ESM, state equivalence, action query, latent inference
+- **Hybrid Tracing**: DynamoRIO (có solve.py) hoặc angr symbolic (không cần solve.py)
+- **Evolutionary Planner**: DFS qua ESM states (Algorithm 2 từ paper)
+- **Safe Linking aware**: Tự động bypass glibc 2.34+ Safe Linking
+- **Interface transplantation**: Tự động thích nghi với menu binary từ solve.py
 
-## 📂 Cấu Trúc Dự Án
-- `autopwn.py`: Trình điều phối chính của framework.
-- `core/`: Các mô-đun logic nội bộ (NLP, Tracer, Planner, Codegen).
-- `outputs/`: Nơi lưu trữ tập trung cho các artifact, vết thực thi và exploit được sinh ra.
-- `benchmarks/`: Tập hợp các file binary lỗi để thử nghiệm.
+## Công nghệ
 
-Xem `RUNBOOK.md` để biết hướng dẫn sử dụng chi tiết và `REPORT.md` để hiểu sâu hơn về kiến trúc hệ thống.
+- **Python 3.x**: Điều phối, NLP, Logic
+- **C**: DynamoRIO tracing client
+- **NLP**: spaCy + verb similarity expansion
+- **Binary Instrumentation**: DynamoRIO
+- **Symbolic Execution**: angr
+- **Exploitation**: Pwntools
+
+## Cấu trúc
+
+```
+autopwn.py                          # Orchestrator
+benchmarks/                         # Binary target + solve.py
+data/writeups/                      # 8 sample writeups
+core/
+├── nlp_engine/extract_vars.py      # Module 1: Multi-Writeup NLP
+├── tracer/                         # Module 2: Hybrid Tracer
+│   ├── heap_tracer.c
+│   └── runner.py
+├── generalizer/                    # Module 3: Operation Generalizer (MỚI)
+│   └── operation_generalizer.py
+├── knowledge_fusion/esm.py         # Module 4: Composite ESM
+├── symbolic_executor/              # Module 5: angr Executor (MỚI)
+│   └── angr_executor.py
+├── planner/planner.py              # Module 6: Evolutionary Planner
+└── codegen/synthesizer.py          # Module 7: Synthesizer
+outputs/                            # Kết quả cuối cùng
+```
+
+## Quick Start
+
+```bash
+pip install pwntools angr spacy
+python3 -m spacy download en_core_web_sm
+python3 autopwn.py ./benchmarks/babyheap_patched
+```
+
+Xem `docs/RUNBOOK.md` để biết hướng dẫn chi tiết và `docs/AUTOPWN.md` để hiểu kiến trúc.

@@ -1,54 +1,100 @@
-# Báo Cáo Kỹ Thuật AutoPwn: Kiến Trúc và Thiết Kế
+# Báo Cáo Kỹ Thuật AutoPwn v3.0: Artifact-Assisted Exploit Generation
 
-Báo cáo này cung cấp cái nhìn chi tiết về framework AutoPwn, giải thích cơ chế nội bộ của từng mô-đun và chứng minh tính nguyên bản của logic tổng hợp mã khai thác tự động.
-
----
-
-## 1. Mô-đun 1: Semantic Exploit Engine (`core/nlp_engine/`)
-**Mục tiêu**: Chuyển đổi các bài writeup NLP không cấu trúc thành một **Exploit IR** có cấu trúc.
-
-- **Cơ chế**: Triển khai một bộ phân giải phân loại (taxonomy parser) độ chính xác cao để xác định:
-    - **Lỗi (Bugs)**: ví dụ: `double_free`, `uaf`, `overflow`.
-    - **Nguyên mẫu (Primitives)**: ví dụ: `arbitrary_write`, `arbitrary_allocation`.
-    - **Kỹ thuật (Techniques)**: ví dụ: `tcache_poisoning`.
-- **Xác thực**: Lọc các "nhiễu NLP" bằng cách đối soát các ký hiệu trích xuất được với từ điển Heap đã biết.
-- **Đầu ra**: `critical_vars.json` (Cơ sở tri thức).
-
-## 2. Mô-đun 2: Runtime Experience Extractor (`core/tracer/`)
-**Mục tiêu**: Quan sát hành vi Heap thực tế và xác định các nguyên mẫu (primitives) khả thi.
-
-- **Cấu tạo nội bộ**:
-    - Một client **DynamoRIO** tùy chỉnh (`heap_tracer.c`) giám sát các lệnh gọi `malloc`/`free` và các truy cập bộ nhớ ở cấp độ lệnh.
-    - `runner.py` lọc nhiễu I/O tiêu chuẩn và ánh xạ các vùng nhớ (Binary, Libc, Heap, Stack).
-- **Kết quả**: `trace_events.json` (Dữ liệu quan sát).
-
-## 3. Mô-đun 3: Knowledge Fusion (ESM) (`core/knowledge_fusion/`)
-**Mục tiêu**: Tương quan tri thức NLP với các quan sát thực tế khi chạy.
-
-- **Logic**: Triển khai một **Heap State Machine**. Nó xử lý vết thực thi và xác định "bằng chứng lỗ hổng". Ví dụ, nếu một sự kiện `free` xảy ra trên một chunk đã được `free`, nó sẽ đánh dấu lỗi `double_free`.
-- **Khám phá năng lực tiềm ẩn**: Suy luận các khả năng khai thác tiềm năng (ví dụ: nếu có `libc_leak` và `arbitrary_write`, hệ thống suy luận có khả năng chiếm quyền điều khiển luồng thực thi `control_flow_hijack`).
-
-## 4. Mô-đun 4: Evolutionary Exploit Planner (`core/planner/`)
-**Mục tiêu**: Tìm đường dẫn tối ưu từ lỗ hổng đến việc chiếm được Shell.
-
-- **Thuật toán**: Sử dụng chiến lược tìm kiếm tiến hóa (**Evolutionary Strategy Search** - Beam Search) để điều hướng trong đồ thị khai thác.
-- **Chứng minh tính độc lập**: Bộ lập kế hoạch sinh ra các kế hoạch dựa trên **năng lực được phát hiện** (từ ESM) và **điểm số chiến lược**. Nó KHÔNG tham chiếu đến bất kỳ script giải mẫu nào có sẵn. Nó tự lập luận về các ràng buộc phiên bản GLIBC (ví dụ: logic XOR của Safe Linking) một cách tự chủ.
-
-## 5. Mô-đun 5: Autonomous Exploit Synthesizer (`core/codegen/`)
-**Mục tiêu**: Biên dịch kế hoạch trừu tượng thành mã Python thực tế.
-
-- **Bộ biên dịch DSL**: Chuyển đổi các thao tác IR trừu tượng (như `POISON_FD`, `DOUBLE_FREE_BYPASS`, `ALLOC_ROP`) thành các khối mã `pwntools` cụ thể.
-- **Chứng minh tính nguyên bản so với script mẫu (Ground Truth)**:
-    - **Luồng logic khác biệt**: Script mẫu thường sử dụng các chỉ số cố định và offset thủ công. Synthesizer của AutoPwn sử dụng một **Chunk Registry** động và tính toán offset dựa trên bố cục Heap được phát hiện.
-    - **Tự động vượt qua các cơ chế bảo mật**: Synthesizer tự động sinh ra logic `protect_ptr` cho glibc 2.34+, một bước mà thông thường phải code tay.
-    - **Chuyển giao Payload nguyên tử**: Trong khi con người có thể thực hiện `create` rồi `edit`, hệ thống sử dụng kỹ thuật `ALLOC_ROP` để đưa payload vào ngay khi cấp phát nhằm đảm bảo tính ổn định—một kỹ thuật bắt nguồn từ logic chấm điểm độ ổn định nội bộ.
+Framework tự động sinh mã khai thác lỗi Heap cho CTF PWN, lấy cảm hứng từ paper **AutoPwn (IEEE TIFS 2024)**.
 
 ---
 
-## Ánh xạ Mô-đun tóm tắt
-- **Mô-đun 1**: `core/nlp_engine/` - Trích xuất Artifact
-- **Mô-đun 2**: `core/tracer/` - Suy luận Nguyên mẫu (Primitive)
-- **Mô-đun 3**: `core/knowledge_fusion/` - Tương quan tri thức
-- **Mô-đun 4**: `core/planner/` - Lập kế hoạch khai thác
-- **Mô-đun 5**: `core/codegen/` - Sinh mã nguồn
-- **File trung gian**: `core/artifacts` - Là các file JSON được sinh ra khi chạy từng **module**
+## Kiến trúc Pipeline (7 stages)
+
+```
+Multi-Writeup NLP → DynamoRIO Tracer → Operation Generalizer → Composite ESM
+     → angr Symbolic Executor → Evolutionary Planner → Synthesizer
+```
+
+### Module 1: Multi-Writeup NLP Engine (`core/nlp_engine/extract_vars.py`)
+- Quét TẤT CẢ `.txt` trong `data/writeups/`
+- spaCy + NORM_MAP + verb-object extraction
+- Word2Vec-style verb expansion (similarity groups)
+- Composite taxonomy: union findings từ nhiều writeups
+- Transition inference với confidence scores
+- Output: `critical_vars.json`
+
+### Module 2: Runtime Tracer (`core/tracer/runner.py`)
+- **Hybrid mode**: DynamoRIO (có solve.py) hoặc angr symbolic (không có solve.py)
+- DynamoRIO C client hook malloc/free/read/write/memcpy
+- Leak annotation: `libc_ptr_candidate`, `unsorted_bin_leak`, `heap_ptr_candidate`
+- Output: `trace_events.json`
+
+### Module 3: Operation Generalizer (`core/generalizer/operation_generalizer.py`) 
+- Algorithm 1 từ paper AutoPwn
+- Thay địa chỉ cụ thể bằng symbolic values: `leak_obj`, `victim_obj`, `placeholder_obj`
+- Thay size cụ thể bằng range scopes: `(0x78, +∞)` cho unsorted bin
+- Forward correlation analysis
+- Output: `generalized_actions.json`
+
+### Module 4: Composite ESM (`core/knowledge_fusion/esm.py`)
+- Evidence binding: mỗi event bind vào bug/primitive/technique/capability/goal
+- State Equivalence Query (EQ): so sánh 2 states
+- Action Query (AQ): tìm actions khả thi từ state hiện tại
+- Latent capability inference
+- Composite ESM merge từ nhiều traces
+- Output: `esm_output.json`
+
+### Module 5: angr Symbolic Executor (`core/symbolic_executor/angr_executor.py`) 
+- Load binary, tìm heap operation call sites
+- Symbolic input injection
+- Path exploration với 3 metrics: DOF, DOC, pairing state
+- Concretize symbolic values
+- Output: `symbolic_results.json`
+
+### Module 6: Evolutionary Planner (`core/planner/planner.py`)
+- Algorithm 2 từ paper: DFSExplore(s0, A)
+- Backtracking khi action fail
+- Priority: action phổ biến nhất (theo frequency)
+- IR generation từ action sequence
+- Output: `final_plan.json`
+
+### Module 7: Synthesizer (`core/codegen/synthesizer.py`)
+- Parse AUTOPWN_CONFIG từ solve.py
+- Interface transplantation (create/delete/view/edit)
+- Handle generalized actions + concretize symbolic values
+- Safe Linking bypass (protect_ptr function)
+- ROP chain generation (pop rdi, ret, /bin/sh, system)
+- Output: `exploit.py`
+
+---
+
+## So sánh với Paper AutoPwn (IEEE TIFS 2024)
+
+| Paper AutoPwn | AutoPwn v3.0 (Đồ án) |
+|---|---|
+| LE: NLP (Word2Vec) + LD_PRELOAD | LE: NLP (spaCy) + DynamoRIO |
+| Operation generalization (Algorithm 1) | ✅ Giống paper |
+| Composite ESM merge | ✅ Giống paper |
+| UE: S2E symbolic execution | UE: angr symbolic execution |
+| DFS exploit generation (Algorithm 2) | ✅ Giống paper |
+| 96 binaries: 22 full + 13 partial | Đang phát triển |
+
+---
+
+## Cấu trúc thư mục
+
+```
+autopwn.py                          # Orchestrator chính
+benchmarks/                         # Binary target + solve.py
+data/writeups/                      # 8 sample writeups
+core/
+├── artifacts/                      # Intermediate JSON
+├── nlp_engine/extract_vars.py      # Module 1
+├── tracer/                         # Module 2
+│   ├── heap_tracer.c               # DynamoRIO C client
+│   └── runner.py                   # Hybrid runner
+├── generalizer/                    # Module 3 
+│   └── operation_generalizer.py
+├── knowledge_fusion/esm.py         # Module 4
+├── symbolic_executor/              # Module 5 
+│   └── angr_executor.py
+├── planner/planner.py              # Module 6
+└── codegen/synthesizer.py          # Module 7
+outputs/                            # Kết quả cuối cùng
+```

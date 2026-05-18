@@ -1,0 +1,45 @@
+ROP Chain Construction for Modern Exploitation
+
+Return-Oriented Programming (ROP) is used to hijack control flow on modern systems.
+NX (No-eXecute) prevents executing code on the stack or heap.
+ASLR randomizes addresses, requiring leaks before ROP chain construction.
+PIE randomizes the binary base, requiring binary base leak if using binary gadgets.
+
+A typical ROP chain for getting a shell on 64-bit x86:
+1. pop rdi; ret — load rdi with /bin/sh address
+2. /bin/sh string address — argument to system()
+3. system() address — spawn shell
+
+We also need a ret gadget before the ROP chain for stack alignment.
+On glibc 2.34+ with Ubuntu 20.04+, system() requires 16-byte stack alignment.
+Adding an extra ret gadget ensures alignment.
+
+Finding gadgets:
+1. Use pwntools ROP library: rop = ROP(libc)
+2. Find pop rdi: rop.find_gadget(['pop rdi', 'ret'])
+3. Find ret: next(libc.search(asm('ret')))
+4. Find /bin/sh: next(libc.search(b'/bin/sh\x00'))
+
+The ROP chain is written to the stack return address.
+We need to overwrite the saved RIP of a function that will return soon.
+
+Steps:
+1. Leak libc base (via unsorted bin fd)
+2. Leak stack address (via __environ in libc)
+3. Calculate target = stack_leak - offset_to_return_addr
+4. Poison tcache fd to target
+5. Allocate at target
+6. Write ROP chain payload: p64(0) + p64(ret) + p64(pop_rdi) + p64(binsh) + p64(system)
+
+After the function returns, our ROP chain executes:
+ret → pops the saved RIP but doesn't change much (stack alignment fix)
+pop rdi; ret → pops /bin/sh into rdi, then jumps to system
+system("/bin/sh") → spawns a shell
+
+For the ROP chain to work reliably:
+1. The return address must be written at the right moment
+2. Stack alignment must be correct (16-byte boundary for system calls)
+3. The binary must not crash before reaching the return
+
+When multiple return addresses are on the stack, we can overwrite just the first one.
+The targeted function (typically main or a handler function) returns to our controlled RIP.

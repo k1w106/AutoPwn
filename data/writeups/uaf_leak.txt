@@ -1,0 +1,45 @@
+Using Use-After-Free for Information Leakage
+
+Use-after-free (UAF) vulnerabilities allow attackers to access freed chunks.
+This is a powerful primitive for information leakage because freed chunks contain heap metadata.
+
+When a chunk is freed into tcache:
+1. The first 8 bytes (fd) contain the XOR'd pointer to the next tcache entry
+   fd = next_ptr XOR (chunk_addr >> 12) with Safe Linking enabled
+2. If this is the only entry in the bin, next_ptr = 0
+   So fd = 0 XOR (chunk_addr >> 12) = chunk_addr >> 12 = XOR key for heap
+
+Reading the fd gives us the XOR key directly.
+This reveals the heap base:
+heap_base = xor_key << 12
+
+After freeing a chunk into unsorted bin:
+1. fd and bk point to main_arena+0x60 in libc (if it's the only chunk in unsorted bin)
+2. Reading fd gives us a libc address
+3. libc_base = libc_leak - (main_arena_offset + 0x60)
+
+UAF read can also leak stack addresses:
+1. If a heap chunk contains a pointer to stack (e.g., through __environ)
+2. __environ = libc_base + offset_to_environ
+3. Reading from __environ gives us a stack pointer
+4. From the stack pointer, we calculate the return address of main
+
+UAF write allows us to modify freed chunk metadata:
+1. Overwriting fd in tcache = tcache poisoning (arbitrary allocation)
+2. Overwriting size field = chunk overlap / fake chunk creation
+
+The UAF vulnerability typically comes from:
+1. Pointer not NULL'd after free
+2. Use-after-free via dangling pointer
+3. Double free via not checking if already freed
+
+Detection: if we can read from a chunk after freeing it, we have UAF read.
+If we can write to a chunk after freeing it, we have UAF write.
+Both are powerful primitives for building a full exploit.
+
+The typical exploit flow with UAF:
+1. Leak heap (via tcache fd XOR key)
+2. Leak libc (via unsorted bin pointers)
+3. Leak stack (via __environ)
+4. Overwrite heap metadata for arbitrary allocation
+5. Hijack control flow (ROP on stack or overwrite function pointer)

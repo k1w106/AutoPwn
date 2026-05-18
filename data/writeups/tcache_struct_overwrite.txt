@@ -1,0 +1,47 @@
+Tcache Struct Overwrite for Arbitrary Allocation
+
+The tcache_perthread_struct is a special structure at the top of the heap.
+It manages all tcache bins and contains:
+1. counts[TCACHE_MAX_BINS]: an array of tcache_counters (uint16_t)
+2. entries[TCACHE_MAX_BINS]: an array of tcache_entry pointers
+
+The structure is allocated at the very first malloc as a 0x290 byte chunk.
+This chunk is at the very beginning of the heap (heap_base + 0x10).
+
+If we can overwrite this structure, we directly control the tcache state.
+By setting entries[i] to a target address, the next malloc of size i will return that address.
+By setting counts[i] to a value > 0, we indicate that bin i has available chunks.
+
+This technique is extremely powerful because:
+1. We bypass Safe Linking entirely (we write directly to entries, not using fd)
+2. We can set up multiple bins at once for multi-target attacks
+3. We can set counts to arbitrary values to allow unlimited allocations from any bin
+
+The attack requires:
+1. Ability to allocate a chunk at the tcache_perthread_struct address
+2. Or: ability to write data at tcache_perthread_struct via overflow/UAF
+
+To allocate at tcache_struct:
+1. Double-free a chunk and poison fd to heap_base + 0x10 (tcache_struct start)
+2. Allocate twice: first pops the original chunk, second returns tcache_struct
+3. Write our payload: counts array (7 entries of 0x0100 = 7 allocations each) + entries array
+
+But this corrupts the tcache state which can cause crashes.
+The key insight: after overwriting tcache_struct, we must carefully set counts and entries.
+If we corrupt entries[i] to garbage, the next malloc from bin i will crash.
+Solution: set counts[i] = 0 for bins we still need and counts[j] = 7 for target bins.
+
+Modern glibc (2.34+) added more protections but still uses this structure.
+The structure has no canary or integrity check on the entries array.
+Once we allocate at the tcache struct, we can write arbitrary pointers to any entry.
+
+Typical payload to overwrite tcache struct:
+p16(7) * 8 + p16(0) * (64 - 8)   # Set counts[0..7] = 7, rest = 0
+p64(target_addr) + p64(garbage)*63  # Set entries[0] = target
+
+This technique gives us arbitrary allocation at any writable address.
+We can target:
+1. Stack return addresses
+2. GOT entries (if not FULL RELRO)
+3. libc function pointers (like __free_hook on glibc < 2.34)
+4. Other writable structures in the binary
