@@ -1,0 +1,880 @@
+\documentclass[final]{hcmuitthesis}
+
+% ==========================================================
+% PACKAGES
+% ==========================================================
+\usepackage[utf8]{inputenc}
+\usepackage[T5]{fontenc}
+\usepackage[vietnamese]{babel}
+
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage[table]{xcolor}
+\usepackage{colortbl}
+\usepackage[hidelinks]{hyperref}
+\usepackage{bookmark}
+\usepackage{float}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{tikz}
+
+\usetikzlibrary{calc,shapes.geometric,arrows.meta,positioning}
+
+% ==========================================================
+% COLOR
+% ==========================================================
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{wordblue}{RGB}{0,112,192}
+
+% ==========================================================
+% LISTING CONFIG
+% ==========================================================
+\lstset{
+    backgroundcolor=\color{white},
+    basicstyle=\ttfamily\footnotesize,
+    breaklines=true,
+    frame=single,
+    keywordstyle=\color{blue},
+    commentstyle=\color{codegreen},
+    stringstyle=\color{red},
+    numberstyle=\tiny\color{codegray},
+    numbers=left,
+    showstringspaces=false,
+    tabsize=2
+}
+
+% ==========================================================
+% 2. KHAI BÁO METADATA (THÔNG TIN ĐỒ ÁN)
+% ==========================================================
+\upperuniname{ĐẠI HỌC QUỐC GIA THÀNH PHỐ HỒ CHÍ MINH}
+\uniname{TRƯỜNG ĐẠI HỌC CÔNG NGHỆ THÔNG TIN}
+\deptname{KHOA MẠNG MÁY TÍNH VÀ TRUYỀN THÔNG}
+\stumajor{KỸ SƯ NGÀNH AN TOÀN THÔNG TIN}
+
+\title{AutoPwn: Artifact-Assisted Heap Exploit Generation for CTF PWN Competitions}
+
+% Đã thêm \vspace{-1cm} vào cuối dòng để kéo phần Giảng viên lên trên
+\titleen{AutoPwn: Sinh mã khai thác heap có hỗ trợ artifact cho các cuộc thi CTF PWN\vspace{-0.8cm}}
+
+
+\supervisor{GIẢNG VIÊN HƯỚNG DẪN}
+\supervisorname{TS. PHAN THẾ DUY}
+
+\stuname{NGUYỄN HOÀNG QUÝ \\ HUỲNH NHẬT DUY}
+
+% Đã thêm \vspace{-0.5cm} để kéo phần địa danh lên trên
+\stunamewithid{NGUYỄN HOÀNG QUÝ - 24521494 \\ HUỲNH NHẬT DUY - 24520375 
+\\
+LÊ QUỐC KHÔI - 23520769
+\vspace{-0.5cm}}
+
+\reporttype{BÁO CÁO CUỐI KÌ} 
+\instruction{MÔN HỌC: LẬP TRÌNH ỨNG DỤNG WEB}
+\reportplace{TP. HỒ CHÍ MINH, NĂM 2026}
+% ==========================================================
+% DOCUMENT
+% ==========================================================
+\begin{document}
+
+% ==========================================================
+% COVER
+% ==========================================================
+\coverpage
+
+% ==========================================================
+% ROMAN PAGE NUMBER
+% ==========================================================
+\pagenumbering{roman}
+
+% ==========================================================
+% LỜI CẢM ƠN
+% ==========================================================
+\chapter*{LỜI CẢM ƠN}
+\addcontentsline{toc}{chapter}{LỜI CẢM ƠN}
+
+Trước hết, nhóm thực hiện xin gửi lời cảm ơn chân thành đến Trường Đại học Công nghệ Thông tin -- Đại học Quốc gia Thành phố Hồ Chí Minh, Khoa Mạng máy tính và Truyền thông đã tạo điều kiện học tập, nghiên cứu và cung cấp nền tảng kiến thức cần thiết để nhóm có thể hoàn thành báo cáo này.
+
+Nhóm xin bày tỏ lòng biết ơn sâu sắc đến TS. Phan Thế Duy, giảng viên hướng dẫn, đã tận tình định hướng, góp ý và hỗ trợ nhóm trong suốt quá trình thực hiện đề tài. Những nhận xét của thầy giúp nhóm nhìn nhận rõ hơn về cách tiếp cận bài toán, cách tổ chức nội dung báo cáo cũng như yêu cầu về tính khoa học khi xây dựng một hệ thống liên quan đến phân tích và khai thác chương trình nhị phân.
+
+Nhóm cũng xin cảm ơn các thầy cô trong khoa đã truyền đạt các kiến thức nền tảng về lập trình, hệ điều hành, an toàn thông tin, phân tích mã máy và kiểm thử bảo mật. Đây là cơ sở quan trọng để nhóm tiếp cận các kỹ thuật như phân tích động, symbolic execution, heap exploitation và tự động hoá sinh mã khai thác.
+
+Trong quá trình thực hiện, do giới hạn về thời gian, kinh nghiệm nghiên cứu và phạm vi triển khai, báo cáo khó tránh khỏi những thiếu sót nhất định. Nhóm rất mong nhận được sự góp ý từ quý thầy cô để có thể tiếp tục hoàn thiện hệ thống AutoPwn trong các giai đoạn phát triển tiếp theo.
+
+\begin{flushright}
+\textit{Nhóm 14}
+\end{flushright}
+
+\clearpage
+
+% ==========================================================
+% MỤC LỤC
+% ==========================================================
+\tableofcontents
+\clearpage
+
+% ==========================================================
+% DANH MỤC VIẾT TẮT
+% ==========================================================
+\chapter*{DANH MỤC CÁC KÝ HIỆU, CÁC CHỮ VIẾT TẮT}
+\addcontentsline{toc}{chapter}{DANH MỤC CÁC KÝ HIỆU, CÁC CHỮ VIẾT TẮT}
+
+\begingroup
+\small
+\renewcommand{\arraystretch}{1.18}
+\begin{longtable}{|p{3cm}|p{10.5cm}|}
+\hline
+\textbf{Ký hiệu / Chữ viết tắt} & \textbf{Ý nghĩa} \\ \hline
+AEG & Automatic Exploit Generation -- sinh mã khai thác tự động \\ \hline
+AutoPwn & Hệ thống tự động hoá quy trình phân tích và sinh mã khai thác heap trong phạm vi đề tài \\ \hline
+CTF & Capture The Flag -- cuộc thi thực hành an toàn thông tin \\ \hline
+PWN & Nhóm bài khai thác lỗ hổng chương trình nhị phân trong CTF \\ \hline
+ELF & Executable and Linkable Format -- định dạng tệp thực thi phổ biến trên Linux \\ \hline
+NLP & Natural Language Processing -- xử lý ngôn ngữ tự nhiên \\ \hline
+NER & Named Entity Recognition -- nhận dạng thực thể trong văn bản \\ \hline
+DBI & Dynamic Binary Instrumentation -- chèn mã giám sát động vào chương trình nhị phân \\ \hline
+ESM & Exploitation State Machine -- máy trạng thái mô hình hoá tiến trình khai thác \\ \hline
+IR & Intermediate Representation -- biểu diễn trung gian dùng giữa các module \\ \hline
+DFS & Depth-First Search -- thuật toán tìm kiếm theo chiều sâu \\ \hline
+DOF & Degree of Freedom -- mức độ tự do/khả năng điều hướng nhánh thực thi \\ \hline
+UAF & Use-After-Free -- lỗi sử dụng vùng nhớ sau khi đã giải phóng \\ \hline
+ROP & Return-Oriented Programming -- kỹ thuật điều khiển luồng thực thi bằng chuỗi gadget \\ \hline
+ASLR & Address Space Layout Randomization -- cơ chế ngẫu nhiên hoá không gian địa chỉ \\ \hline
+NX & No-eXecute -- cơ chế không cho phép thực thi mã trên vùng nhớ dữ liệu \\ \hline
+PIE & Position Independent Executable -- tệp thực thi có thể nạp tại địa chỉ ngẫu nhiên \\ \hline
+RELRO & Relocation Read-Only -- cơ chế bảo vệ bảng relocation/GOT \\ \hline
+GOT & Global Offset Table -- bảng ánh xạ địa chỉ hàm/thư viện khi liên kết động \\ \hline
+libc & Thư viện chuẩn C trên Linux, thường là mục tiêu rò rỉ địa chỉ trong khai thác heap \\ \hline
+tcache & Thread-local cache -- cơ chế cache chunk nhỏ trong trình quản lý heap của glibc \\ \hline
+fastbin & Danh sách quản lý các chunk nhỏ đã giải phóng trong glibc malloc \\ \hline
+chunk & Khối bộ nhớ heap được cấp phát hoặc quản lý bởi allocator \\ \hline
+artifact & Tệp trung gian có cấu trúc, thường ở định dạng JSON, được sinh giữa các stage của pipeline \\ \hline
+trace & Vết thực thi ghi lại các sự kiện runtime như \texttt{malloc}, \texttt{free}, \texttt{read}, \texttt{write} \\ \hline
+\end{longtable}
+\endgroup
+
+\clearpage
+
+% ==========================================================
+% DANH MỤC HÌNH
+% ==========================================================
+\listoffigures
+\addcontentsline{toc}{chapter}{DANH MỤC CÁC HÌNH VẼ}
+
+\clearpage
+
+% ==========================================================
+% DANH MỤC BẢNG
+% ==========================================================
+\listoftables
+\addcontentsline{toc}{chapter}{DANH MỤC CÁC BẢNG BIỂU}
+
+\clearpage
+
+% ==========================================================
+% DANH MỤC CODE
+% ==========================================================
+\lstlistoflistings
+
+\clearpage
+
+% ==========================================================
+% ARABIC PAGE NUMBER
+% ==========================================================
+\cleardoublepage
+\pagenumbering{arabic}
+
+% ==========================================================
+% MỞ ĐẦU
+% ==========================================================
+\chapter*{MỞ ĐẦU}
+\addcontentsline{toc}{chapter}{MỞ ĐẦU}
+
+Trong bối cảnh các hệ thống phần mềm ngày càng phức tạp, vấn đề phát hiện, phân tích và khai thác lỗ hổng bảo mật trở thành một nội dung quan trọng trong lĩnh vực an toàn thông tin. Đặc biệt, các bài toán CTF PWN yêu cầu người tham gia không chỉ hiểu cấu trúc chương trình nhị phân mà còn phải nắm vững cơ chế quản lý bộ nhớ, các biện pháp bảo vệ hiện đại và kỹ thuật xây dựng chuỗi khai thác phù hợp. Trong số đó, khai thác lỗi trên vùng nhớ heap là một hướng tiếp cận khó, đòi hỏi nhiều thao tác tinh vi và thường phụ thuộc mạnh vào kinh nghiệm của người phân tích.
+
+Đề tài \textbf{AutoPwn: Artifact-Assisted Heap Exploit Generation for CTF PWN Competitions} được thực hiện với mục tiêu nghiên cứu và xây dựng một pipeline hỗ trợ tự động hoá quá trình sinh mã khai thác cho các bài CTF PWN thuộc nhóm heap exploitation. Thay vì chỉ dựa vào luật viết tay, hệ thống tận dụng các artifact sẵn có như write-up, trace thực thi, kết quả phân tích symbolic execution và các tệp JSON trung gian để mô hình hoá tiến trình khai thác dưới dạng máy trạng thái. Từ đó, hệ thống có thể tổng hợp kế hoạch khai thác và sinh ra script \texttt{exploit.py} làm cơ sở cho việc kiểm thử hoặc tinh chỉnh thủ công.
+
+Báo cáo này trình bày cơ sở lý thuyết, kiến trúc tổng quát, phương pháp xây dựng, quy trình triển khai và kết quả thực nghiệm của hệ thống AutoPwn. Nội dung báo cáo không đặt mục tiêu chứng minh hệ thống có thể thay thế hoàn toàn chuyên gia bảo mật, mà tập trung kiểm chứng tính khả thi của hướng tiếp cận artifact-assisted trong việc hỗ trợ phân tích, lập kế hoạch và sinh mã khai thác heap một cách có cấu trúc.
+
+Thông qua đề tài, nhóm mong muốn củng cố kiến thức về lập trình hệ thống, phân tích chương trình nhị phân, kỹ thuật khai thác lỗ hổng và thiết kế pipeline phần mềm. Đồng thời, đề tài cũng là bước khởi đầu để nhóm tiếp tục mở rộng AutoPwn theo hướng thực nghiệm sâu hơn, hỗ trợ nhiều dạng target hơn và cải thiện khả năng tự động hoá trong các giai đoạn nghiên cứu tiếp theo.
+
+\clearpage
+
+% ==========================================================
+% CHƯƠNG 1
+% ==========================================================
+\chapter{TỔNG QUAN}
+
+\section{Giới thiệu vấn đề}
+Trong những năm gần đây, cuộc thi CTF (Capture The Flag) dạng PWN đã trở thành một trong những thử thách khó khăn và phổ biến nhất trong cộng đồng an toàn thông tin. Các bài toán PWN đòi hỏi người tham gia phải sở hữu kiến thức sâu rộng về kỹ thuật dịch ngược (reverse engineering), phân tích và khai thác lỗi bộ nhớ, cũng như kỹ thuật tấn công hệ thống. Trong đó, khai thác lỗi trên vùng nhớ heap (\textit{heap exploitation}) nổi lên như một trong những lĩnh vực phức tạp nhất. Các lỗi liên quan đến heap vừa khó thực hiện, vừa có tiềm năng gây ra những hậu quả nghiêm trọng trong thực tế, điển hình như các lỗ hổng quản lý heap của thư viện \textit{glibc} vốn thường xuyên bị khai thác trong các cuộc tấn công quy mô lớn.
+
+Tuy nhiên, việc phát triển một kịch bản khai thác heap thành công thường tiêu tốn rất nhiều thời gian và công sức. Người phân tích phải thực hiện hàng loạt công việc chi tiết như phân tích cấu trúc bộ nhớ runtime, tìm hiểu các cơ chế bảo vệ hiện đại (ASLR, Safe Linking, Canary, v.v.), và xây dựng một chuỗi các thao tác tương tác tinh vi để thay đổi trạng thái của heap. Độ khó cực kỳ cao của các bài toán PWN liên quan đến heap không chỉ làm hạn chế khả năng của người chơi CTF mà còn gây khó khăn cho việc đánh giá tự động và đo lường mức độ nguy hiểm của các lỗ hổng trong môi trường thực tế.
+
+Để giải quyết thách thức này, hướng nghiên cứu tự động hóa việc tạo mã khai thác (Automatic Exploit Generation - AEG) đã và đang được phát triển mạnh mẽ. Mặc dù vậy, phần lớn các giải pháp AEG hiện nay chỉ tập trung vào các lớp lỗ hổng đơn giản hoặc không liên quan đến heap như tràn bộ đệm ngăn xếp (\textit{stack overflow}) hay lỗi định dạng chuỗi (\textit{format string}). Các phương pháp tiếp cận khai thác heap hiện tại đa số dựa trên các mẫu (pattern-based) được xây dựng thủ công, dẫn đến khả năng mở rộng kém và khó áp dụng linh hoạt cho các dạng bài khác nhau.
+
+Đề tài \textbf{AutoPwn} (dựa trên bài báo \textit{"Artifact-Assisted Heap Exploit Generation for CTF PWN Competitions"}) đề xuất một hướng đi mới: khai thác các \textit{artifact} sẵn có từ cộng đồng (như tài liệu giải thích write-up, mã khai thác mẫu) để trích xuất tri thức, từ đó tự động hóa việc tổng hợp các mẫu khai thác heap. Hệ thống xây dựng một mô hình máy trạng thái khai thác (\textit{Exploitation State Machine - ESM}) giúp ánh xạ các thao tác heap trừu tượng, từ đó có thể áp dụng và tùy biến cho các chương trình mới \cite{shoshitaishvili2016sok,ctfwikiheap}.
+
+Lý do lựa chọn đề tài này xuất phát từ bốn điểm mấu chốt sau:
+\begin{itemize}
+    \item \textbf{Tầm quan trọng thực tiễn:} Lỗi liên quan đến vùng nhớ heap chiếm tỷ trọng lớn trong thực tế (khoảng 57\% các lỗ hổng thực thi mã từ xa trong các báo cáo của Microsoft). Việc tự động hóa khai thác heap giúp tăng tốc độ phản hồi sự cố và giảm đáng kể chi phí bảo mật.
+    \item \textbf{Khoảng trống nghiên cứu:} Các hệ thống AEG hiện tại chưa hỗ trợ toàn diện cho heap và phụ thuộc nặng nề vào các luật viết tay. AutoPwn giải quyết bài toán này bằng cách học hỏi từ tri thức cộng đồng.
+    \item \textbf{Giá trị học thuật và ứng dụng:} Đề tài mở ra hướng tiếp cận kết hợp giữa kỹ thuật xử lý ngôn ngữ tự nhiên (NLP) trên văn bản tài liệu và phân tích mã nguồn/binary tự động để hỗ trợ đắc lực cho cả hoạt động CTF lẫn kiểm thử bảo mật chuyên nghiệp.
+    \item \textbf{Tiềm năng mở rộng:} Kiến trúc dựa trên ESM có thể được mở rộng cho nhiều lớp lỗ hổng phức tạp khác như Use-After-Free (UAF) hoặc khai thác các thư viện quản lý bộ nhớ tùy biến.
+\end{itemize}
+
+\section{Phương pháp nghiên cứu}
+Để đạt được các mục tiêu đề ra, đề tài áp dụng phương pháp nghiên cứu kết hợp giữa phân tích tĩnh văn bản (NLP trên write-up) và phân tích động chương trình (Tracer và Symbolic Execution). Quy trình nghiên cứu và phát triển được xây dựng dưới dạng một đường ống xử lý dữ liệu (\textit{pipeline}) tuần tự bao gồm các phương pháp cụ thể sau:
+
+\begin{enumerate}
+    \item \textbf{Xử lý ngôn ngữ tự nhiên (NLP):} Sử dụng công cụ \textit{spaCy} kết hợp với các kỹ thuật NLP để phân tích các tài liệu write-up định dạng văn bản. Phương pháp này giúp trích xuất các biến quan trọng, các thao tác và kỹ thuật heap thường được các chuyên gia sử dụng.
+    \item \textbf{Theo dõi thực thi động (Runtime Tracing):} Sử dụng công cụ instrumentation \textit{DynamoRIO} hoặc thực thi ký hiệu \textit{angr} để theo dõi hành vi chạy của chương trình. Từ đó, ghi nhận chi tiết các lời gọi hàm liên quan đến heap như \textit{malloc}, \textit{free}, \textit{read}, \textit{write} nhằm xây dựng vết thực thi (execution trace).
+    \item \textbf{Khái quát hóa thao tác (Operation Generalization):} Chuyển đổi các địa chỉ bộ nhớ và kích thước cụ thể trong trace thành các đối tượng và tham số ký hiệu (symbolic objects). Điều này giúp hệ thống tách biệt logic khai thác khỏi môi trường runtime cụ thể.
+    \item \textbf{Hợp nhất tri thức (Knowledge Fusion):} Kết hợp kết quả trích xuất từ NLP và vết thực thi động để xây dựng Máy trạng thái khai thác (\textit{Exploitation State Machine - ESM}). Mô hình này biểu diễn các trạng thái heap, các khả năng chuyển trạng thái và các hành động cần thực hiện để tiến tới mục tiêu khai thác.
+    \item \textbf{Phân tích thực thi ký hiệu (Symbolic Execution):} Sử dụng thư viện \textit{angr} để duyệt qua các nhánh thực thi của binary, xác định tính khả thi của các đường đi (path feasibility) và giải quyết các ràng buộc điều kiện trong chương trình mục tiêu.
+    \item \textbf{Lập kế hoạch khai thác (Evolutionary Planning):} Áp dụng thuật toán tìm kiếm trên ESM kết hợp với kết quả symbolic execution để lập kế hoạch chuỗi hành động tối ưu đưa chương trình từ trạng thái ban đầu đến trạng thái bị khai thác hoàn toàn.
+    \item \textbf{Tổng hợp mã nguồn (Exploit Synthesis):} Dựa trên kế hoạch khai thác cuối cùng, hệ thống tự động sinh mã khai thác bằng ngôn ngữ Python sử dụng thư viện \textit{pwntools}, có khả năng tương tác với menu của binary mục tiêu để chiếm quyền điều khiển (sinh shell hoặc đọc flag).
+\end{enumerate}
+
+\section{Mục tiêu, đối tượng và phạm vi nghiên cứu}
+
+\subsection{Mục tiêu nghiên cứu}
+Mục tiêu tổng quát của đề tài là thiết kế, xây dựng và đánh giá hệ thống \textbf{AutoPwn} có khả năng tự động hóa quá trình tạo mã khai thác cho các lỗ hổng heap trong môi trường CTF PWN. 
+
+Các mục tiêu cụ thể bao gồm:
+\begin{itemize}
+    \item \textbf{Tự động hóa pipeline khai thác:} Xây dựng một quy trình khép kín từ nhận diện lỗ hổng heap đến tạo payload khai thác thành công mà không cần can thiệp thủ công từ con người.
+    \item \textbf{Tái sử dụng tri thức cộng đồng:} Thu thập, phân tích và hệ thống hóa các tài liệu hướng dẫn (\textit{write-ups}) và các đoạn mã exploit mẫu thành nguồn tri thức máy có thể hiểu được.
+    \item \textbf{Mô hình hóa quy trình khai thác:} Thiết kế cấu trúc ESM biểu diễn trực quan các trạng thái bộ nhớ và các bước nhảy khai thác.
+    \item \textbf{Tích hợp hệ thống:} Kết hợp thành công các thư viện và công cụ phân tích an toàn thông tin hàng đầu như \textit{angr}, \textit{DynamoRIO}, \textit{pwntools} và thư viện NLP \textit{spaCy}.
+    \item \textbf{Đạt các chỉ số đo lường hiệu năng:}
+    \begin{itemize}
+        \item \textit{Độ chính xác (Accuracy):} Đạt tỷ lệ khai thác thành công tối thiểu 80\% trên tập các bài kiểm thử benchmark tiêu chuẩn.
+        \item \textit{Thời gian thực hiện (Speed):} Thời gian xử lý và sinh mã khai thác cho mỗi bài toán không quá 5 phút.
+        \item \textit{Khả năng mở rộng:} Dễ dàng tích hợp thêm các dữ liệu tri thức mới mà không cần chỉnh sửa kiến trúc lõi của hệ thống.
+    \end{itemize}
+\end{itemize}
+
+\subsection{Phạm vi và đối tượng nghiên cứu}
+\textbf{Đối tượng nghiên cứu:}
+\begin{itemize}
+    \item Các lỗ hổng an toàn thông tin liên quan đến vùng nhớ heap (heap corruption) trên các chương trình thực thi định dạng ELF (x86-64 Linux) thường gặp trong các cuộc thi CTF PWN.
+    \item Các tài liệu kỹ thuật, mã nguồn khai thác mẫu, write-up mô tả cách giải quyết các thử thách PWN được công bố công khai trên Internet.
+\end{itemize}
+
+\textbf{Phạm vi nghiên cứu:}
+\begin{itemize}
+    \item \textbf{Phạm vi chức năng:} Tập trung nghiên cứu các kỹ thuật NLP để trích xuất tri thức, kỹ thuật dynamic tracing và symbolic execution để phân tích chương trình, và kỹ thuật tổng hợp mã để tự động sinh script tương tác bằng \textit{pwntools}.
+    \item \textbf{Phạm vi lỗ hổng:} Đề tài giới hạn tập trung nghiên cứu vào các lớp lỗi heap cơ bản và phổ biến bao gồm: tràn bộ đệm heap (\textit{heap overflow}), giải phóng bộ nhớ hai lần (\textit{double free}) và đầu độc tcache (\textit{tcache poisoning}). Các lỗi khác như Use-After-Free (UAF) phức tạp hơn hoặc lỗi stack sẽ tạm thời nằm ngoài phạm vi hiện thực của phiên bản này.
+    \item \textbf{Phạm vi chương trình mục tiêu:} Hệ thống được thiết kế để phân tích các binary Linux x86-64 có kích thước và độ phức tạp vừa phải (kích thước tệp tin $\le$ 2 MB) chạy trên thư viện \textit{glibc}. Các ứng dụng thực tế quy mô lớn (như web server hay nhân hệ điều hành) không thuộc phạm vi thử nghiệm của đồ án này.
+    \item \textbf{Môi trường hoạt động:} Hệ thống được xây dựng và tối ưu hóa để chạy trên hệ điều hành Linux (hoặc môi trường giả lập thông qua WSL2 trên Windows). Không hỗ trợ các tập tin thực thi và lỗ hổng trên hệ điều hành Windows.
+\end{itemize}
+
+
+% ==========================================================
+% CHƯƠNG 2
+% ==========================================================
+\chapter{CƠ SỞ LÝ THUYẾT}
+
+\section{Cơ chế quản lý bộ nhớ Heap của glibc}
+Vùng nhớ heap là phân vùng bộ nhớ động được quản lý bởi hệ điều hành và cấp phát cho chương trình trong thời gian chạy (runtime) thông qua các lệnh như \textit{malloc}, \textit{calloc}, \textit{realloc} và giải phóng bởi \textit{free}. Trong các hệ điều hành Linux sử dụng thư viện liên kết động \textit{glibc}, bộ cấp phát mặc định là \textit{ptmalloc} (dựa trên \textit{dlmalloc}).
+
+\subsection{Cấu trúc của một Heap Chunk}
+Mỗi phân vùng bộ nhớ được cấp phát trên heap được đại diện bởi cấu trúc một chunk bộ nhớ. Cấu trúc cơ bản của một chunk trong bộ nhớ bao gồm:
+\begin{itemize}
+    \item \textbf{Prev\_size:} Lưu kích thước của chunk liền kề trước đó nếu chunk đó đã được giải phóng (free). Trường này được sử dụng để gộp các chunk trống lại với nhau nhằm tránh phân mảnh bộ nhớ.
+    \item \textbf{Size:} Kích thước của chunk hiện tại. Do các chunk luôn được căn lề (thường là 8 hoặc 16 byte), các bit thấp nhất của trường này được sử dụng làm các cờ trạng thái (Flags):
+    \begin{itemize}
+        \item Cờ \textit{A (NON\_MAIN\_ARENA)}: Đánh dấu chunk thuộc về một arena phụ thay vì main arena.
+        \item Cờ \textit{M (IS\_MMAPPED)}: Đánh dấu chunk được cấp phát thông qua lời gọi hệ thống \textit{mmap} trực tiếp.
+        \item Cờ \textit{P (PREV\_INUSE)}: Đánh dấu chunk liền kề trước đó có đang được sử dụng hay không.
+    \end{itemize}
+    \item \textbf{User Data:} Vùng chứa dữ liệu thực tế mà người dùng ghi vào sau khi gọi \textit{malloc}.
+    \item \textbf{Con trỏ FD (Forward) và BK (Backward):} Chỉ xuất hiện khi chunk đã được giải phóng. Chúng tạo thành các danh sách liên kết đôi hoặc liên kết đơn để quản lý các chunk rỗi trong các bin.
+\end{itemize}
+
+\subsection{Các cơ chế quản lý Bin của glibc}
+Để tăng tốc độ cấp phát và giải phóng, \textit{ptmalloc} phân loại các chunk rỗi vào các danh sách liên kết được gọi là \textit{Bins}:
+\begin{itemize}
+    \item \textbf{Tcache (Thread Local Cache):} Được giới thiệu từ phiên bản \textit{glibc} 2.26 để tối ưu hóa hiệu năng đa luồng. Mỗi luồng sở hữu một tập hợp các tcache bin quản lý các chunk có kích thước nhỏ (từ 16 đến 1032 byte trên kiến trúc 64-bit). Tcache hoạt động theo cơ chế LIFO (vào sau ra trước), danh sách liên kết đơn và chứa tối đa 7 chunk trên mỗi bin. Đáng chú ý, để tối ưu tốc độ, tcache bỏ qua hầu hết các kiểm tra an toàn khi thêm hoặc lấy chunk ra khỏi danh sách.
+    \item \textbf{Fastbins:} Quản lý các chunk nhỏ (kích thước tối đa mặc định khoảng 80 byte). Hoạt động theo cơ chế liên kết đơn LIFO. Điểm đặc biệt của fastbin là các chunk không bao giờ tự động gộp với nhau khi giải phóng, giúp tăng tốc độ cấp phát lặp đi lặp lại của các khối dữ liệu nhỏ.
+    \item \textbf{Unsorted Bin:} Chứa các chunk được giải phóng nhưng không nằm vừa các loại bin trên. Khi nằm trong unsorted bin, các con trỏ \textit{fd} và \textit{bk} của chunk sẽ trỏ về cấu trúc quản lý trung tâm \texttt{main\_arena} nằm trong phân vùng dữ liệu của \textit{libc}. Đặc điểm này thường được kẻ tấn công lợi dụng để rò rỉ địa chỉ \textit{libc} (libc leak).
+    \item \textbf{Smallbins và Largebins:} Smallbins chứa các chunk có kích thước cố định nhỏ hơn 1024 byte và hoạt động theo mô hình FIFO (vào trước ra trước). Largebins quản lý các chunk lớn hơn, các chunk được sắp xếp theo kích thước giảm dần trong danh sách liên kết đôi.
+\end{itemize}
+
+\section{Các lỗ hổng Heap Corruption phổ biến}
+Các lỗ hổng liên quan đến heap thường phát sinh do sự quản lý thiếu chặt chẽ các con trỏ hoặc không kiểm soát tốt kích thước ghi chép của lập trình viên.
+
+\subsection{Heap Overflow}
+Lỗ hổng xảy ra khi chương trình cho phép người dùng nhập vào lượng dữ liệu lớn hơn kích thước thực tế của vùng nhớ heap được cấp phát. Dữ liệu ghi dư thừa này sẽ tràn sang và đè lên phần header (metadata) của chunk liền kề tiếp theo trong bộ nhớ vật lý. Thông qua heap overflow, kẻ tấn công có thể sửa đổi các trường kích thước hoặc thay đổi trực tiếp các con trỏ quản lý của chunk tiếp sau.
+
+\subsection{Use-After-Free (UAF)}
+Lỗi này xảy ra khi một heap chunk đã được giải phóng thông qua lệnh \textit{free}, nhưng con trỏ trỏ tới địa chỉ đó không được gán bằng \texttt{NULL} (được gọi là dangling pointer) và chương trình tiếp tục thực hiện thao tác đọc hoặc ghi thông qua con trỏ này.
+\begin{itemize}
+    \item \textbf{UAF Read:} Cho phép kẻ tấn công đọc các dữ liệu còn sót lại trong chunk sau khi giải phóng, chẳng hạn như các con trỏ \textit{fd} và \textit{bk} trỏ về thư viện \textit{libc} hoặc các vùng nhớ heap khác, từ đó thực hiện thông tin rò rỉ (information leak).
+    \item \textbf{UAF Write:} Cho phép kẻ tấn công ghi đè trực tiếp các cấu trúc quản lý hoặc giá trị nhạy cảm được glibc ghi đè vào chunk khi nó nằm trong trạng thái rỗi.
+\end{itemize}
+
+\subsection{Double Free}
+Double free xảy ra khi hàm \textit{free} được gọi hai lần trên cùng một địa chỉ chunk mà không có bất kỳ bước cấp phát trung gian nào. 
+Trong các phiên bản glibc cũ hoặc cơ chế tcache thiếu kiểm tra nghiêm ngặt, việc giải phóng hai lần sẽ đẩy cùng một chunk vào một danh sách bin hai lần, tạo ra một vòng lặp liên kết (ví dụ: chunk A trỏ tới chính chunk A). Khi chương trình yêu cầu cấp phát, nó sẽ nhận được chunk A, ghi đè con trỏ liên kết của nó thành một địa chỉ mong muốn $X$, và ở yêu cầu cấp phát tiếp theo, hệ thống sẽ trả về vùng nhớ tại địa chỉ $X$, mở đường cho khả năng ghi dữ liệu tùy ý.
+
+\subsection{Tcache Poisoning}
+Đây là kỹ thuật khai thác đặc trưng của tcache bin. Do tcache sử dụng cơ chế liên kết đơn LIFO và không thực hiện nhiều bước kiểm tra tính hợp lệ của con trỏ, kẻ tấn công sử dụng lỗi UAF hoặc Heap Overflow để ghi đè con trỏ forward (FD) của một chunk đang nằm trong tcache thành địa chỉ của mục tiêu cần ghi đè (ví dụ: các hook hàm như \texttt{\_\_free\_hook}, \texttt{\_\_malloc\_hook} hoặc địa chỉ địa phương trên stack). Khi chương trình thực hiện các lệnh cấp phát tiếp theo, bộ quản lý tcache sẽ trả về vùng nhớ tại địa chỉ bị đầu độc này, cho phép kẻ tấn công thực hiện ghi dữ liệu tùy ý lên vùng nhớ mục tiêu (Arbitrary Write).
+
+\section{Cơ chế bảo vệ Heap hiện đại}
+Nhằm ngăn chặn các kỹ thuật khai thác heap ngày càng tinh vi, các nhà phát triển hệ điều hành và thư viện \textit{glibc} đã tích hợp các cơ chế bảo mật bổ sung:
+
+\subsection{Safe Linking}
+Được đưa vào từ phiên bản \textit{glibc} 2.32, Safe Linking bảo vệ các con trỏ liên kết đơn trong tcache và fastbins khỏi bị sửa đổi trực tiếp. Cơ chế này áp dụng thuật toán mã hóa XOR con trỏ nguyên bản với chính địa chỉ của con trỏ đó được dịch phải 12 bit (dựa trên tính ngẫu nhiên của kỹ thuật ASLR).
+Công thức mã hóa:
+\begin{equation}
+    P_{encoded} = \left(\text{Address}_{\text{pointer}} \gg 12\right) \oplus P_{\text{original}}
+\end{equation}
+Khi lấy một chunk ra khỏi bin, hệ thống sẽ thực hiện giải mã con trỏ để tìm địa chỉ tiếp theo. Do đó, nếu kẻ tấn công ghi đè trực tiếp địa chỉ cụ thể $X$ vào trường FD mà không mã hóa đúng, quá trình giải mã sẽ cho ra một địa chỉ ngẫu nhiên không hợp lệ và gây ra lỗi crash chương trình. Để vượt qua Safe Linking, kẻ tấn công bắt buộc phải có khả năng đọc được một địa chỉ heap thô (heap leak) nhằm tính toán khóa XOR.
+
+\subsection{ASLR (Address Space Layout Randomization)}
+Kỹ thuật ngẫu nhiên hóa sơ đồ bố trí không gian địa chỉ là một cơ chế bảo vệ cấp hệ điều hành. Sau mỗi lần thực thi chương trình, địa chỉ bắt đầu của các phân vùng stack, heap, thư viện liên kết động (\textit{libc}) sẽ được thay đổi ngẫu nhiên. Điều này ngăn chặn việc sử dụng các địa chỉ tĩnh cố định trong payload khai thác. Để tấn công thành công trên môi trường kích hoạt ASLR, kẻ khai thác phải xây dựng một bước phụ để rò rỉ địa chỉ chạy (runtime address leak) nhằm tính toán các offset tương đối của các hàm đích.
+
+\section{Các công nghệ và thư viện nền tảng}
+Hệ thống AutoPwn được xây dựng trên sự phối hợp của nhiều công nghệ phân tích tĩnh, phân tích động và kỹ thuật an toàn thông tin chuyên sâu:
+
+\subsection{Công cụ xử lý ngôn ngữ tự nhiên spaCy}
+\textit{spaCy} là một thư viện mã nguồn mở mạnh mẽ dành cho việc xử lý ngôn ngữ tự nhiên (NLP) trong Python. Trong AutoPwn, \textit{spaCy} được sử dụng để xây dựng \textit{NLP Engine} nhằm phân tích các tài liệu hướng dẫn kỹ thuật (\textit{write-ups}) dạng văn bản tiếng Anh tự nhiên. Module NLP thực hiện phân tích cú pháp, gán nhãn thực thể (NER), chuẩn hóa thuật ngữ chuyên ngành dựa trên ontology xây dựng sẵn để trích xuất các biến then chốt, các primitive cần thiết và sơ đồ chuyển đổi trạng thái (transitions) mà con người đã từng sử dụng để giải quyết bài toán tương tự \cite{spacy2025}.
+
+\subsection{Trực thi ký hiệu với thư viện angr}
+\textit{angr} là một framework phân tích mã máy (binary analysis) đa nền tảng được phát triển bằng ngôn ngữ Python. \textit{angr} hỗ trợ kỹ thuật thực thi ký hiệu (Symbolic Execution) cho phép mô phỏng quá trình thực thi của chương trình mà trong đó các giá trị đầu vào được thay thế bằng các biến ký hiệu toán học. AutoPwn sử dụng \textit{angr} để phân tích tĩnh binary mục tiêu, xác định vị trí của các lệnh gọi quản lý heap (call sites), tính toán độ phức tạp của nhánh điều hướng (Degree of Freedom - DOF), kiểm tra tính tương hợp của các cặp cấp phát/giải phóng và giải quyết các ràng buộc điều kiện khó để hỗ trợ bộ lập kế hoạch tìm ra đường đi khả thi \cite{angr2025,wang2017angr}.
+
+\subsection{Giám sát chương trình với DynamoRIO}
+\textit{DynamoRIO} là một hệ thống Dynamic Binary Instrumentation (DBI) cho phép theo dõi và sửa đổi mã nguồn của một chương trình đang chạy dưới dạng mã máy mà không cần biên dịch lại hay can thiệp vào mã nguồn gốc. AutoPwn xây dựng module \textit{Runtime Tracer} sử dụng DynamoRIO Client viết bằng ngôn ngữ C. Module này hook trực tiếp vào các lời gọi hàm phân bổ bộ nhớ động (\textit{malloc, free, realloc}) và các thao tác ghi dữ liệu (\textit{read, write}) để ghi nhận đầy đủ kích thước, địa chỉ và nội dung ghi chép dưới dạng một vết thực thi động (runtime execution trace) \cite{dynamorio2025,glibc2025}.
+
+\subsection{Thư viện phát triển mã khai thác Pwntools}
+\textit{Pwntools} là một thư viện Python chuyên dụng được phát triển rộng rãi trong cộng đồng CTF PWN để hỗ trợ viết mã khai thác lỗ hổng. Thư viện này cung cấp các API cấp cao để thiết lập kết nối mạng (sockets), tương tác với các luồng I/O của tiến trình cục bộ, tự động sinh các đoạn mã shellcode, và xây dựng các chuỗi thực thi định hướng ROP (Return-Oriented Programming). Trong AutoPwn, module \textit{Synthesizer} sử dụng \textit{pwntools} làm engine sinh mã nguồn cuối cùng (\texttt{exploit.py}), đảm bảo khả năng tương tác tự động và thực thi mã khai thác chuẩn xác \cite{pwntools2025}.
+
+% ==========================================================
+% CHƯƠNG 3
+% ==========================================================
+\chapter{PHƯƠNG PHÁP THỰC HIỆN}
+
+\section{Kiến trúc tổng quát}
+Hệ thống AutoPwn được kiến trúc dựa trên mô hình đa giai đoạn (\textit{multi-stage pipeline}), trong đó mỗi module thực hiện một chức năng chuyên biệt và giao tiếp qua các tệp tin trung gian định dạng JSON (\textit{artifacts}), tạo ra tính module hoá cao, dễ kiểm thử và độc lập về mặt logic.
+
+Điểm trung tâm của toàn bộ hệ thống là module điều phối chính \texttt{autopwn.py} (\textit{Orchestrator}), có nhiệm vụ quản lý vòng đời chạy của các tiến trình con, đồng bộ hóa các tệp tin trung gian và thu thập kết quả cuối cùng.
+
+Sơ đồ hình vẽ dưới đây mô tả cấu trúc các khối thành phần và luồng truyền nhận dữ liệu của hệ thống AutoPwn từ đầu vào là các tài liệu kỹ thuật và tệp thực thi mục tiêu cho đến mã khai thác cuối cùng:
+
+\begin{figure}[H]
+    \centering
+    \begin{tikzpicture}[
+        node distance = 0.9cm and 0.4cm,
+        box/.style = {draw, rounded corners, minimum width=2.8cm, minimum height=0.8cm, align=center, fill=blue!10, thick, font=\small},
+        art/.style = {draw, dashed, minimum width=2.6cm, minimum height=0.7cm, align=center, fill=gray!10, font=\scriptsize},
+        arrow/.style = {-{Latex[scale=1.0]}, thick}
+    ]
+    % Row 1: Inputs
+    \node (input_writeup) [box, fill=green!15] {Tài liệu Write-ups\\(Prose/Code)};
+    \node (input_binary) [box, right=3.5cm of input_writeup, fill=green!15] {Tệp thực thi\\Binary Target};
+    
+    % Row 2: First Stage Processing
+    \node (nlp) [box, below=of input_writeup] {NLP Engine\\(spaCy NLP)};
+    \node (tracer) [box, below=of input_binary] {Runtime Tracer\\(DynamoRIO/angr)};
+    
+    % Row 3: First Artifacts
+    \node (vars) [art, below=of nlp] {critical\_vars.json};
+    \node (trace) [art, below=of tracer] {trace\_events.json};
+    
+    % Row 4: Generalizer
+    \node (gen) [box, below=of trace] {Operation Generalizer};
+    
+    % Row 5: Generalized Actions Artifact
+    \node (gen_act) [art, below=of gen] {generalized\_actions.json};
+    
+    % Row 6: Knowledge Fusion (Center)
+    \coordinate (mid1) at ($(vars.south)!0.5!(gen_act.south)$);
+    \node (esm) [box, below=1.2cm of mid1] {Composite ESM\\(esm.py)};
+    \node (esm_out) [art, below=of esm] {esm\_output.json};
+    
+    % Row 7: Symbolic Execution
+    \node (sym) [box, below=of esm_out] {Symbolic Executor\\(angr\_executor.py)};
+    \node (sym_res) [art, below=of sym] {symbolic\_results.json};
+    
+    % Row 8: Planner
+    \node (planner) [box, below=of sym_res] {Evolutionary Planner\\(planner.py)};
+    \node (plan) [art, below=of planner] {final\_plan.json};
+    
+    % Row 9: Synthesizer & Exploit
+    \node (synth) [box, below=of plan, fill=orange!15] {Synthesizer\\(synthesizer.py)};
+    \node (exploit) [box, below=of synth, fill=red!15] {Mã khai thác\\exploit.py};
+    
+    % Connections
+    \draw [arrow] (input_writeup) -- (nlp);
+    \draw [arrow] (input_binary) -- (tracer);
+    \draw [arrow] (nlp) -- (vars);
+    \draw [arrow] (tracer) -- (trace);
+    \draw [arrow] (trace) -- (gen);
+    \draw [arrow] (gen) -- (gen_act);
+    
+    % Draw path from vars to esm
+    \draw [arrow] (vars.south) -- ++(0,-0.8) -| (esm.north);
+    % Draw path from trace to esm
+    \draw [arrow] (trace.south) -- ++(0,-0.5) -| (esm.north);
+    % Draw path from gen_act to esm
+    \draw [arrow] (gen_act.south) -- ++(0,-0.8) -| (esm.north);
+    
+    \draw [arrow] (esm) -- (esm_out);
+    \draw [arrow] (esm_out) -- (sym);
+    \draw [arrow] (gen_act.west) -- ++(-0.5,0) |- (sym.west);
+    \draw [arrow] (sym) -- (sym_res);
+    
+    % Path to Planner
+    \draw [arrow] (esm_out.west) -- ++(-1.2,0) |- (planner.west);
+    \draw [arrow] (vars.west) -- ++(-0.6,0) |- (planner.west);
+    \draw [arrow] (sym_res) -- (planner);
+    \draw [arrow] (planner) -- (plan);
+    
+    \draw [arrow] (plan) -- (synth);
+    \draw [arrow] (synth) -- (exploit);
+    \end{tikzpicture}
+    \caption{Kiến trúc tổng quan và luồng dữ liệu của hệ thống AutoPwn}
+    \label{fig:architect_flow}
+\end{figure}
+
+\subsection{Các khối chức năng chính}
+Kiến trúc hệ thống được chia làm ba phân vùng chính: \textbf{Khối trích xuất tri thức}, \textbf{Khối giám sát và mô hình hóa trạng thái}, và \textbf{Khối lập kế hoạch và sinh mã}:
+
+\begin{enumerate}
+    \item \textbf{Khối trích xuất tri thức (NLP Engine):} Có nhiệm vụ tiếp nhận tri thức giải quyết từ các tệp văn bản thô (write-ups) do con người viết. Module sử dụng thư viện NLP \textit{spaCy} để tách các câu văn, nhận diện các thực thể (như tên bug, hàm hook mục tiêu, các primitive, kỹ thuật) và ánh xạ về ontology thuật ngữ an toàn thông tin tiêu chuẩn để xuất ra tệp \texttt{critical\_vars.json}.
+    \item \textbf{Khối giám sát và mô hình hóa trạng thái (Tracer, Generalizer, ESM):}
+    \begin{itemize}
+        \item \textit{Runtime Tracer:} Chạy tệp thực thi đích trong môi trường giám sát bằng \textit{DynamoRIO} hoặc mô phỏng với \textit{angr} để ghi nhận toàn bộ các sự kiện tương tác bộ nhớ heap (địa chỉ, kích thước, dữ liệu đọc/ghi) và lưu vào tệp \texttt{trace\_events.json}.
+        \item \textit{Operation Generalizer:} Thực hiện trừu tượng hóa các giá trị địa chỉ thực tế và kích thước bộ nhớ cụ thể thành các đại lượng ký hiệu (\textit{symbolic objects} như con trỏ rò rỉ \texttt{leak\_obj}, con trỏ bị thao túng \texttt{victim\_obj}). Kết quả được lưu tại \texttt{generalized\_actions.json}.
+        \item \textit{Composite ESM:} Thực hiện hợp nhất tri thức (\textit{Knowledge Fusion}) bằng cách lấy dữ liệu từ NLP và các hành động khái quát hóa để dựng lại Máy trạng thái khai thác (\textit{Exploitation State Machine - ESM}), xác định các lỗi đang hiện diện, năng lực hiện có (capabilities) và khả năng chuyển đổi trạng thái để ghi vào \texttt{esm\_output.json}.
+    \end{itemize}
+    \item \textbf{Khối lập kế hoạch và sinh mã (Symbolic Executor, Planner, Synthesizer):}
+    \begin{itemize}
+        \item \textit{Symbolic Executor:} Sử dụng công cụ \textit{angr} để duyệt nhánh, giải quyết các biểu thức ràng buộc của binary target và cụ thể hóa các tham số đầu vào cần thiết cho exploit. Kết quả lưu tại \texttt{symbolic\_results.json}.
+        \item \textit{Evolutionary Planner:} Nhận dữ liệu ESM và kết quả symbolic để chạy thuật toán tìm kiếm theo chiều sâu (DFS). Module tìm kiếm chuỗi hành động tối ưu để đạt được trạng thái chiếm quyền điều khiển và lưu kế hoạch dưới dạng Heap IR tại \texttt{final\_plan.json}.
+        \item \textit{Synthesizer:} Tiếp nhận kế hoạch khai thác trung gian, trích xuất cấu hình tương tác menu từ kịch bản mẫu và chuyển đổi Heap IR thành mã exploit Python (\texttt{exploit.py}) sử dụng thư viện \textit{pwntools} để tương tác với mục tiêu.
+    \end{itemize}
+\end{enumerate}
+
+
+
+\section{Phương pháp xây dựng}
+\subsection{Luồng hoạt động chính}
+AutoPwn được xây dựng theo mô hình pipeline tuần tự, trong đó mỗi module đảm nhiệm một nhiệm vụ phân tích riêng và trao đổi dữ liệu thông qua các artifact JSON. Người dùng khởi tạo hệ thống bằng cách cung cấp binary mục tiêu cho \texttt{autopwn.py}. Lớp điều phối \texttt{AutoPwnFramework} sẽ chuẩn bị các thư mục \texttt{outputs/artifacts}, \texttt{outputs/traces}, \texttt{outputs/exploits} và gọi lần lượt các thành phần xử lý trong thư mục \texttt{core/}.
+Nội dung.
+Luồng hoạt động chính bắt đầu từ bước trích xuất tri thức trong write-up, tiếp theo là thu thập trace runtime, tổng quát hoá thao tác heap, hợp nhất tri thức thành Exploitation State Machine, hỗ trợ symbolic execution bằng angr khi cần, lập kế hoạch khai thác và cuối cùng sinh script \texttt{exploit.py}. Sau khi pipeline hoàn tất, hệ thống đồng bộ artifact nội bộ sang thư mục \texttt{outputs/}, sao chép trace log thô nếu có và đóng gói binary cùng thư viện phụ trợ để phục vụ kiểm thử lại exploit.
+\begin{figure}[H]
+    \centering
+    \begin{tikzpicture}[
+        node distance=1.25cm,
+        process/.style={rectangle, rounded corners, draw=wordblue, fill=wordblue!8, text width=5.2cm, align=center, minimum height=0.85cm},
+        arrow/.style={-{Latex[length=2.5mm]}, thick, draw=wordblue}
+    ]
+        \node[process] (start) {Người dùng cung cấp binary mục tiêu};
+        \node[process, below=of start] (nlp) {Trích xuất tri thức từ write-up};
+        \node[process, below=of nlp] (trace) {Thu thập trace runtime};
+        \node[process, below=of trace] (general) {Tổng quát hoá thao tác heap};
+        \node[process, below=of general] (esm) {Xây dựng Exploitation State Machine};
+        \node[process, below=of esm] (plan) {Lập kế hoạch và sinh exploit};
+        \node[process, below=of plan] (out) {Đồng bộ artifact và đóng gói kết quả};
+        \draw[arrow] (start) -- (nlp);
+        \draw[arrow] (nlp) -- (trace);
+        \draw[arrow] (trace) -- (general);
+        \draw[arrow] (general) -- (esm);
+        \draw[arrow] (esm) -- (plan);
+        \draw[arrow] (plan) -- (out);
+    \end{tikzpicture}
+    \caption{Luồng hoạt động chính của AutoPwn}
+\end{figure}
+\subsection{Luồng hoạt động chi tiết}
+Ở mức chi tiết, pipeline của AutoPwn gồm bảy stage. Stage đầu tiên, \textit{Multi-Writeup NLP Extraction}, đọc dữ liệu trong \texttt{data/writeups/}, chuẩn hoá thuật ngữ và sinh \texttt{critical\_vars.json}. Stage thứ hai, \textit{Runtime Tracing}, chạy binary bằng DynamoRIO hoặc fallback bằng angr để ghi nhận các sự kiện heap và xuất \texttt{trace\_events.json}. Stage thứ ba, \textit{Operation Generalization}, chuyển các địa chỉ, kích thước và đối tượng runtime cụ thể thành action tượng trưng trong \texttt{generalized\_actions.json}.
+Nội dung.
+Stage thứ tư, \textit{Knowledge Fusion / Composite ESM}, hợp nhất tri thức từ NLP, trace và action tổng quát để tạo \texttt{esm\_output.json}. Stage thứ năm, \textit{angr Symbolic Execution}, được sử dụng khi có cờ \texttt{--angr} hoặc khi cần bổ sung thông tin đường đi thực thi, kết quả lưu ở \texttt{symbolic\_results.json}. Stage thứ sáu, \textit{Evolutionary Planner}, đọc ESM và kết quả symbolic để tìm chuỗi hành động khai thác, sinh \texttt{final\_plan.json}. Stage cuối cùng, \textit{Synthesizer}, chuyển kế hoạch này thành mã Python sử dụng pwntools và lưu tại \texttt{outputs/exploits/exploit.py}.
+Điểm quan trọng trong thiết kế là mỗi stage đều có đầu vào và đầu ra rõ ràng. Nếu một bước thất bại, người phát triển có thể kiểm tra artifact tương ứng để xác định nguyên nhân mà không cần chạy lại toàn bộ hệ thống. Cách tổ chức này cũng giúp AutoPwn dễ mở rộng: có thể thay thế module NLP, tracer hoặc planner miễn là schema artifact vẫn được giữ ổn định.
+\subsection{Biểu đồ Usecase}
+Tác nhân chính của hệ thống là người dùng bảo mật hoặc CTF player. Người dùng cung cấp binary mục tiêu, write-up, script \texttt{solve.py} hoặc thư viện \texttt{libc.so.6} nếu có; sau đó khởi chạy pipeline và kiểm tra exploit sinh ra. Bên cạnh đó, maintainer là tác nhân mở rộng, có nhiệm vụ cập nhật taxonomy NLP, rule ESM, planner và codegen để hệ thống hỗ trợ nhiều dạng bài heap exploitation hơn.
+Nội dung.
+Các use case cốt lõi gồm: chạy pipeline AutoPwn, cung cấp dữ liệu đầu vào, trích xuất tri thức từ write-up, thu thập trace runtime, tổng quát hoá thao tác heap, xây dựng ESM, thực hiện symbolic execution hỗ trợ, lập kế hoạch khai thác, sinh mã exploit, xem artifact kết quả và đóng gói output. Trong đó use case chạy pipeline AutoPwn bao gồm hầu hết các use case xử lý nội bộ, còn các use case như cung cấp \texttt{solve.py}, chạy \texttt{--angr} hoặc chỉnh sửa exploit là các nhánh mở rộng tuỳ điều kiện.
+\begin{figure}[H]
+    \centering
+    \begin{tikzpicture}[
+        actor/.style={
+            circle,
+            draw=black,
+            fill=gray!10,
+            minimum size=1.2cm,
+            align=center
+        },
+        usecase/.style={
+            ellipse,
+            draw=wordblue,
+            fill=wordblue!8,
+            minimum width=4.2cm,
+            minimum height=1cm,
+            align=center
+        },
+        rel/.style={
+            -{Latex[length=2mm]},
+            thick
+        },
+        dashedrel/.style={
+            -{Latex[length=2mm]},
+            thick,
+            dashed
+        }
+    ]
+
+        % ===== Actor =====
+        \node[actor] (user) at (0,0) {User};
+
+        % ===== Main Use Cases =====
+        \node[usecase] (uc02) at (5,2.5) {Cung cấp dữ liệu đầu vào};
+
+        \node[usecase] (uc01) at (5,0)
+        {Chạy pipeline AutoPwn};
+
+        \node[usecase] (uc10) at (5,-2.5)
+        {Xem artifact kết quả};
+
+        % ===== Internal Use Cases =====
+        \node[usecase] (uc03) at (11,4)
+        {Trích xuất tri thức};
+
+        \node[usecase] (uc04) at (11,2)
+        {Thu thập trace};
+
+        \node[usecase] (uc06) at (11,0)
+        {Xây dựng ESM};
+
+        \node[usecase] (uc08) at (11,-2)
+        {Lập kế hoạch exploit};
+
+        \node[usecase] (uc09) at (11,-4)
+        {Sinh exploit.py};
+
+        % ===== User Relations =====
+        \draw[rel] (user) -- (uc01);
+        \draw[rel] (user) -- (uc02);
+        \draw[rel] (user) -- (uc10);
+
+        % ===== Include Relations =====
+        \draw[dashedrel]
+            (uc01) -- node[above, sloped]
+            {\scriptsize include} (uc03);
+
+        \draw[dashedrel]
+            (uc01) -- node[above, sloped]
+            {\scriptsize include} (uc04);
+
+        \draw[dashedrel]
+            (uc01) -- node[above]
+            {\scriptsize include} (uc06);
+
+        \draw[dashedrel]
+            (uc01) -- node[below, sloped]
+            {\scriptsize include} (uc08);
+
+        \draw[dashedrel]
+            (uc01) -- node[below, sloped]
+            {\scriptsize include} (uc09);
+
+    \end{tikzpicture}
+
+    \caption{Biểu đồ use case tổng quan của AutoPwn}
+\end{figure}
+\subsection{Biểu đồ hoạt động}
+Biểu đồ hoạt động của AutoPwn mô tả quá trình từ lúc khởi tạo framework đến khi sinh kết quả. Sau khi nhận binary, hệ thống kiểm tra đầu vào và tạo thư mục output. Pipeline luôn thực hiện NLP extraction, runtime tracing, operation generalization và knowledge fusion. Nếu người dùng bật chế độ \texttt{--angr}, hệ thống bổ sung bước symbolic execution trước khi lập kế hoạch. Cuối cùng planner tạo \texttt{final\_plan.json}, synthesizer sinh exploit và orchestrator đóng gói kết quả.
+Nội dung.
+\begin{figure}[H]
+    \centering
+    \begin{tikzpicture}[
+        node distance=1.1cm,
+        act/.style={rectangle, rounded corners, draw=black, fill=gray!8, text width=4.6cm, align=center, minimum height=0.75cm},
+        decision/.style={diamond, draw=wordblue, fill=wordblue!8, aspect=2, text width=2.7cm, align=center},
+        arr/.style={-{Latex[length=2mm]}, thick}
+    ]
+        \node[act] (init) {Khởi tạo AutoPwnFramework};
+        \node[act, below=of init] (prep) {Chuẩn bị thư mục output};
+        \node[act, below=of prep] (nlp2) {NLP extraction};
+        \node[act, below=of nlp2] (trace2) {Runtime tracing};
+        \node[act, below=of trace2] (gen2) {Operation generalization};
+        \node[act, below=of gen2] (esm2) {Knowledge fusion / ESM};
+        \node[decision, below=of esm2] (angr) {Có --angr?};
+        \node[act, right=2.7cm of angr] (sym) {Symbolic execution};
+        \node[act, below=of angr] (planner) {Exploit planning};
+        \node[act, below=of planner] (codegen) {Exploit generation};
+        \node[act, below=of codegen] (pack) {Đóng gói outputs};
+        \draw[arr] (init) -- (prep);
+        \draw[arr] (prep) -- (nlp2);
+        \draw[arr] (nlp2) -- (trace2);
+        \draw[arr] (trace2) -- (gen2);
+        \draw[arr] (gen2) -- (esm2);
+        \draw[arr] (esm2) -- (angr);
+        \draw[arr] (angr) -- node[left]{\scriptsize Không} (planner);
+        \draw[arr] (angr) -- node[above]{\scriptsize Có} (sym);
+        \draw[arr] (sym) |- (planner);
+        \draw[arr] (planner) -- (codegen);
+        \draw[arr] (codegen) -- (pack);
+    \end{tikzpicture}
+    \caption{Biểu đồ hoạt động của pipeline AutoPwn}
+\end{figure}
+\subsection{Biểu đồ trạng thái}
+Trạng thái khai thác trong AutoPwn được mô hình hoá bởi ESM. Mỗi trạng thái biểu diễn tập tri thức đã biết tại một thời điểm, bao gồm lỗi heap đã phát hiện, primitive có được, kỹ thuật đang áp dụng, capability đạt được và mục tiêu cuối cùng. Khi một action hợp lệ được áp dụng, hệ thống chuyển từ trạng thái hiện tại sang trạng thái mới có thêm primitive hoặc capability.
+Nội dung.
+Một luồng trạng thái tiêu biểu bắt đầu từ trạng thái chưa biết, sau đó trace hoặc NLP giúp phát hiện lỗi như use-after-free, double free hoặc heap overflow. Từ lỗi này, hệ thống suy luận kỹ thuật phù hợp như tcache poisoning hoặc unsorted bin leak để đạt primitive như arbitrary allocation, arbitrary write hoặc libc leak. Khi đã có libc leak, hệ thống có thể nhắm tới \texttt{\_\_environ} để lấy stack leak; cuối cùng kết hợp stack leak và primitive ghi/cấp phát tuỳ ý để đạt mục tiêu control-flow hijack.
+\begin{figure}[H]
+    \centering
+    \begin{tikzpicture}[
+        node distance=1.35cm,
+        state/.style={rectangle, rounded corners, draw=wordblue, fill=wordblue!8, text width=3.7cm, align=center, minimum height=0.8cm},
+        arr/.style={-{Latex[length=2mm]}, thick, draw=wordblue}
+    ]
+        \node[state] (unknown) {Initial / Unknown};
+        \node[state, below=of unknown] (bug) {Bug detected: UAF, double free, overflow};
+        \node[state, below=of bug] (primitive) {Technique / primitive: tcache poisoning, arbitrary write};
+        \node[state, below=of primitive] (cap) {Capability: libc leak, heap leak, stack leak};
+        \node[state, below=of cap] (goal) {Goal: control-flow hijack};
+        \node[state, below=of goal] (done) {Exploit generated};
+        \draw[arr] (unknown) -- node[right]{\scriptsize trace/NLP} (bug);
+        \draw[arr] (bug) -- node[right]{\scriptsize apply technique} (primitive);
+        \draw[arr] (primitive) -- node[right]{\scriptsize leak/write} (cap);
+        \draw[arr] (cap) -- node[right]{\scriptsize plan ROP/hijack} (goal);
+        \draw[arr] (goal) -- node[right]{\scriptsize synthesize} (done);
+    \end{tikzpicture}
+    \caption{Biểu đồ trạng thái khai thác rút gọn trong ESM}
+\end{figure}
+% ==========================================================
+% CHƯƠNG 4
+% ==========================================================
+\chapter{HIỆN THỰC VÀ ĐÁNH GIÁ, THẢO LUẬN}
+
+\section{Hiện thực}
+
+\subsection{Phương pháp xây dựng}
+Quá trình xây dựng AutoPwn được thực hiện theo hướng \textit{artifact-assisted pipeline}, tức là mỗi giai đoạn xử lý sinh ra một tệp trung gian có cấu trúc rõ ràng để giai đoạn tiếp theo sử dụng. Thay vì tích hợp toàn bộ logic vào một khối chương trình duy nhất, hệ thống được tách thành các module độc lập tương ứng với từng nhiệm vụ: trích xuất tri thức từ write-up, thu thập trace động, tổng quát hoá thao tác heap, hợp nhất tri thức thành máy trạng thái khai thác, phân tích symbolic execution, lập kế hoạch và sinh mã khai thác.
+
+Phương pháp xây dựng này có ba ưu điểm chính. Thứ nhất, các module có thể được kiểm thử độc lập thông qua việc quan sát trực tiếp các artifact JSON như \texttt{critical\_vars.json}, \texttt{trace\_events.json}, \texttt{generalized\_actions.json}, \texttt{esm\_output.json}, \texttt{symbolic\_results.json} và \texttt{final\_plan.json}. Thứ hai, pipeline cho phép thay thế hoặc cải tiến từng thành phần mà không ảnh hưởng lớn đến toàn bộ hệ thống, miễn là schema dữ liệu trung gian được giữ ổn định. Thứ ba, cách tiếp cận này phù hợp với bài toán nghiên cứu vì giúp quan sát được quá trình chuyển đổi từ dữ liệu kinh nghiệm và hành vi runtime thành mã khai thác cuối cùng.
+
+Về mặt tổ chức mã nguồn, file \texttt{autopwn.py} đóng vai trò bộ điều phối trung tâm. Chương trình nhận binary mục tiêu, thiết lập đường dẫn đầu vào/đầu ra, gọi lần lượt các module trong thư mục \texttt{core/} bằng cơ chế subprocess và đồng bộ kết quả về thư mục \texttt{outputs/}. Các dữ liệu kinh nghiệm được đặt trong \texttt{data/writeups/}, dữ liệu benchmark nằm trong \texttt{benchmarks/}, còn kết quả cuối cùng gồm artifact, trace và mã khai thác được lưu tại \texttt{outputs/artifacts/}, \texttt{outputs/traces/} và \texttt{outputs/exploits/}.
+
+\subsection{Hiện thực hệ thống}
+Hệ thống hiện thực gồm bảy module chính tạo thành một pipeline khép kín. Đầu tiên, \textit{Multi-Writeup NLP Engine} đọc các file write-up trong \texttt{data/writeups/}, sử dụng spaCy kết hợp với cơ chế chuẩn hoá thuật ngữ để nhận diện các biến quan trọng, primitive khai thác, hành động dạng verb-object và các kỹ thuật heap thường gặp. Kết quả của bước này được ghi vào \texttt{critical\_vars.json}.
+
+Tiếp theo, \textit{Hybrid Runtime Tracer} thu thập hành vi thực thi của binary mục tiêu. Khi có script tương tác mẫu \texttt{solve.py}, hệ thống ưu tiên sử dụng DynamoRIO để hook các lời gọi liên quan đến heap như \texttt{malloc}, \texttt{free}, \texttt{realloc}, \texttt{read}, \texttt{write} và \texttt{memcpy}. Trong trường hợp không có môi trường chạy đầy đủ, pipeline có thể chuyển sang chế độ phân tích symbolic bằng angr. Các sự kiện runtime, địa chỉ, kích thước allocation/deallocation và dấu hiệu rò rỉ bộ nhớ được chuẩn hoá thành \texttt{trace\_events.json}.
+
+Sau khi thu thập trace, \textit{Operation Generalizer} chuyển các giá trị cụ thể trong quá trình chạy thành biểu diễn trừu tượng có khả năng tái sử dụng. Ví dụ, địa chỉ cụ thể của một chunk có thể được thay bằng các nhãn tượng trưng như \texttt{leak\_obj}, \texttt{victim\_obj} hoặc \texttt{placeholder\_obj}. Kết quả được lưu trong \texttt{generalized\_actions.json} để phục vụ quá trình hợp nhất tri thức.
+
+Module \textit{Knowledge Fusion / Composite ESM} kết hợp kết quả từ NLP Engine, Runtime Tracer và Operation Generalizer để xây dựng Exploit State Machine (ESM). Máy trạng thái này mô tả tiến trình khai thác dưới dạng các state, transition, action, capability và goal. Nhờ đó, hệ thống có thể truy vấn tính tương đương trạng thái, lựa chọn hành động phù hợp và suy luận các khả năng tiềm ẩn từ những hành vi đã quan sát được.
+
+Module \textit{Symbolic Executor} sử dụng angr để phân tích binary ở mức đường đi thực thi. Thành phần này tìm các vị trí gọi hàm liên quan đến heap operation, đánh giá độ phức tạp ràng buộc, xác định khả năng đi tới các nhánh quan trọng và hỗ trợ cụ thể hoá một số giá trị ký hiệu. Kết quả phân tích được ghi vào \texttt{symbolic\_results.json}.
+
+Dựa trên ESM và kết quả symbolic execution, \textit{Evolutionary Planner} thực hiện tìm kiếm theo chiều sâu có quay lui để chọn chuỗi action phù hợp từ trạng thái ban đầu đến trạng thái đạt mục tiêu khai thác. Các action có độ tin cậy cao hoặc xuất hiện phổ biến trong write-up/trace được ưu tiên trong quá trình lập kế hoạch. Đầu ra của Planner là \texttt{final\_plan.json}, đóng vai trò biểu diễn trung gian của exploit.
+
+Cuối cùng, \textit{Synthesizer} chuyển kế hoạch khai thác thành mã Python sử dụng pwntools. Module này sinh các hàm tương tác với menu của binary, cụ thể hoá payload, xử lý một số cơ chế bảo vệ như Safe Linking khi có đủ thông tin rò rỉ và đóng gói kết quả thành file \texttt{exploit.py} trong thư mục \texttt{outputs/exploits/}.
+
+\subsection{Môi trường thực nghiệm}
+Môi trường thực nghiệm được thiết kế theo mô hình local/offline pipeline, phù hợp với bối cảnh nghiên cứu và các bài CTF PWN. Hệ thống không yêu cầu backend server, cơ sở dữ liệu hay dịch vụ web; toàn bộ quá trình phân tích và sinh exploit được thực thi cục bộ trên máy người dùng hoặc trong môi trường Linux tương thích.
+
+Cấu hình phần mềm chính gồm Python 3, pwntools, angr, spaCy, gensim, nltk và DynamoRIO. Trong đó, pwntools được dùng để tương tác với binary và sinh script khai thác; angr hỗ trợ symbolic execution và path exploration; spaCy/gensim/nltk phục vụ xử lý ngôn ngữ tự nhiên trên write-up; DynamoRIO thực hiện instrumentation động để thu thập trace runtime. Đối với binary Linux x86-64, hệ thống cần sử dụng đúng phiên bản \texttt{libc.so.6} và \texttt{ld-linux-x86-64.so.2} đi kèm để bảo đảm hành vi cấp phát heap tương đồng với môi trường gốc.
+
+Bộ dữ liệu thử nghiệm hiện tại đặt trong thư mục \texttt{benchmarks/}, bao gồm binary mục tiêu \texttt{babyheap\_patched}, file \texttt{solve.py}, thư viện \texttt{libc.so.6} và loader \texttt{ld-linux-x86-64.so.2}. Đây là môi trường benchmark cố định để kiểm tra khả năng chạy end-to-end của pipeline từ đầu vào ban đầu đến mã khai thác sinh ra.
+
+Quy trình cài đặt và chạy thử nghiệm cơ bản được thực hiện như sau:
+\begin{lstlisting}[language=bash]
+pip install -r requirements.txt
+python -m spacy download en_core_web_sm
+python autopwn.py ./benchmarks/babyheap_patched
+\end{lstlisting}
+
+Trong trường hợp cần ép hệ thống sử dụng symbolic tracing bằng angr, có thể chạy:
+\begin{lstlisting}[language=bash]
+python autopwn.py ./benchmarks/babyheap_patched --angr
+\end{lstlisting}
+
+Kết quả thực nghiệm sau mỗi lần chạy được lưu trong thư mục \texttt{outputs/}. Các artifact JSON trung gian nằm tại \texttt{outputs/artifacts/}, trace thô nằm tại \texttt{outputs/traces/}, còn mã khai thác cuối cùng nằm tại \texttt{outputs/exploits/exploit.py}. Việc tổ chức kết quả theo thư mục như vậy giúp người đánh giá dễ dàng kiểm tra từng bước xử lý, đối chiếu lỗi nếu pipeline thất bại và tái lập thí nghiệm trên cùng một bộ benchmark.
+
+\subsection{Runbook triển khai}
+Runbook triển khai của AutoPwn v3.0 mô tả quy trình vận hành hệ thống trên các thử thách PWN thực tế, bao gồm chuẩn bị môi trường, lựa chọn chế độ chạy, debug từng module, kiểm tra kết quả đầu ra, chạy benchmark và xử lý sự cố thường gặp.
+
+\subsubsection{Chuẩn bị môi trường}
+Trước khi chạy hệ thống, người dùng cần chuyển vào thư mục gốc của project, kích hoạt môi trường ảo Python nếu có và cài đặt đầy đủ các thư viện phụ thuộc. Ngoài các package trong \texttt{requirements.txt}, mô hình ngôn ngữ \texttt{en\_core\_web\_sm} của spaCy cũng cần được tải về để module NLP có thể phân tích write-up.
+
+\begin{lstlisting}[language=bash]
+cd /home/kiwi/UIT-DoAn/NT521
+source venv/bin/activate
+pip install -r requirements.txt
+python3 -m spacy download en_core_web_sm
+\end{lstlisting}
+
+Trong trường hợp không sử dụng virtual environment, bước \texttt{source venv/bin/activate} có thể được bỏ qua. Tuy nhiên, việc dùng môi trường ảo giúp cô lập dependency của AutoPwn với các project Python khác trên cùng máy.
+
+\subsubsection{Các chế độ chạy chính}
+AutoPwn hỗ trợ hai chế độ vận hành chính. Chế độ thứ nhất là \textit{DynamoRIO + solve.py}, được sử dụng khi người dùng đã có sẵn script \texttt{solve.py} mô tả cách tương tác cơ bản với binary. Đây là chế độ nhanh và ổn định hơn vì hệ thống có thể chạy binary thật, hook các lời gọi liên quan đến heap và thu thập trace runtime trực tiếp.
+
+\begin{lstlisting}[language=bash]
+python3 autopwn.py ./benchmarks/justCTF-2025-babyheap/binary
+\end{lstlisting}
+
+Chế độ thứ hai là \textit{angr Symbolic}, phù hợp khi người dùng chỉ có binary mục tiêu và chưa có script tương tác hoàn chỉnh. Khi truyền thêm cờ \texttt{--angr}, hệ thống sẽ dùng symbolic execution để hỗ trợ tìm đường đi và suy luận cách tương tác với chương trình.
+
+\begin{lstlisting}[language=bash]
+python3 autopwn.py ./benchmarks/justCTF-2025-babyheap/binary --angr
+\end{lstlisting}
+
+Về mặt thực nghiệm, chế độ DynamoRIO nên được ưu tiên khi có \texttt{solve.py} vì trace thu được phản ánh hành vi runtime thực tế và thời gian xử lý thường ngắn hơn. Chế độ angr hữu ích trong trường hợp muốn tăng mức độ tự động hoá hoặc khi thiếu script mẫu, nhưng có thể tốn thời gian hơn đối với binary phức tạp.
+
+\subsubsection{Quy trình chạy từng bước để debug}
+Ngoài cách chạy toàn bộ pipeline thông qua \texttt{autopwn.py}, AutoPwn cho phép thực thi từng module riêng lẻ nhằm hỗ trợ kiểm tra lỗi và quan sát artifact trung gian. Cách chạy thủ công này đặc biệt hữu ích khi một stage trong pipeline thất bại hoặc khi cần đánh giá chất lượng đầu ra của từng module.
+
+\begin{lstlisting}[language=bash]
+# Step 1: Extract knowledge from write-ups
+python3 core/nlp_engine/extract_vars.py
+
+# Step 2: Collect runtime trace
+python3 core/tracer/runner.py --target ./benchmarks/justCTF-2025-babyheap/binary
+
+# Step 3: Generalize heap operations
+python3 core/generalizer/operation_generalizer.py
+
+# Step 4: Build ESM and infer capabilities
+python3 core/knowledge_fusion/esm.py
+
+# Step 5: Search for exploit plan
+python3 core/planner/planner.py --binary ./benchmarks/justCTF-2025-babyheap/binary
+
+# Step 6: Generate exploit code
+python3 core/codegen/synthesizer.py --binary binary --solve ./benchmarks/justCTF-2025-babyheap/solve.py
+\end{lstlisting}
+
+Trong quy trình trên, đầu ra của mỗi bước sẽ được lưu dưới dạng JSON artifact và trở thành đầu vào cho bước tiếp theo. Vì vậy, khi debug, người dùng có thể kiểm tra lần lượt các file như \texttt{critical\_vars.json}, \texttt{trace\_events.json}, \texttt{generalized\_actions.json}, \texttt{esm\_output.json}, \texttt{symbolic\_results.json} và \texttt{final\_plan.json} để xác định stage gây lỗi.
+
+\subsubsection{Kiểm tra kết quả đầu ra}
+Sau khi pipeline hoàn tất, kết quả cuối cùng được lưu trong thư mục \texttt{outputs/}. Mã khai thác sinh ra nằm tại \texttt{outputs/exploits/exploit.py}; các artifact trung gian phục vụ debug nằm trong \texttt{outputs/artifacts/*.json}; trace log thô nằm tại \texttt{outputs/traces/raw\_trace.log}.
+
+\begin{lstlisting}[language=bash]
+cd outputs/exploits
+python3 exploit.py
+\end{lstlisting}
+
+Việc chạy thử file \texttt{exploit.py} giúp xác nhận rằng kế hoạch do Planner tạo ra đã được Synthesizer chuyển thành script có khả năng tương tác thực tế với binary. Nếu exploit không thành công, người dùng cần đối chiếu lại artifact trung gian để kiểm tra trace, ESM và kế hoạch cuối cùng.
+
+\subsubsection{Chạy benchmark toàn diện}
+Để đánh giá hiệu suất của hệ thống trên toàn bộ tập thử thách, AutoPwn cung cấp script benchmark trong thư mục \texttt{benchmarks/scripts}. Script này hỗ trợ chạy nhiều target và bỏ qua các mẫu còn thiếu file phụ trợ.
+
+\begin{lstlisting}[language=bash]
+cd benchmarks/scripts
+python3 run_benchmark.py --all --skip-missing
+\end{lstlisting}
+
+Kết quả tổng hợp của benchmark được lưu tại \texttt{benchmarks/results/summary.json}. File này có thể được dùng để thống kê tỷ lệ thành công, thời gian xử lý và các trường hợp pipeline thất bại.
+
+\subsubsection{Xử lý sự cố thường gặp}
+Một số lỗi thường gặp khi triển khai AutoPwn có thể được xử lý như sau:
+\begin{itemize}
+    \item \textbf{Không tìm thấy DynamoRIO:} kiểm tra lại đường dẫn cấu hình trong \texttt{core/tracer/runner.py} và bảo đảm DynamoRIO đã được cài đặt đúng vị trí.
+    \item \textbf{NLP không nhận diện đúng thuật ngữ:} kiểm tra và bổ sung từ khoá vào bảng chuẩn hoá \texttt{NORM\_MAP} trong \texttt{core/nlp\_engine/extract\_vars.py}.
+    \item \textbf{Exploit sinh ra bị crash:} kiểm tra \texttt{outputs/artifacts/final\_plan.json} để xác định Planner có chọn sai kỹ thuật hoặc thiếu điều kiện rò rỉ địa chỉ hay không.
+\end{itemize}
+
+Nhìn chung, runbook giúp chuẩn hoá quy trình vận hành AutoPwn, bảo đảm người dùng có thể tái lập thí nghiệm, theo dõi từng artifact trung gian và xác định nguyên nhân lỗi khi pipeline không sinh được exploit hợp lệ.
+
+\section{Kết quả thực nghiệm và thảo luận}
+
+\subsection{Kịch bản thực nghiệm}
+Mục tiêu của thực nghiệm là đánh giá khả năng vận hành của AutoPwn như một pipeline sinh mã khai thác heap tự động, từ đầu vào là binary CTF PWN và tri thức phụ trợ cho đến đầu ra là các artifact phân tích cùng script \texttt{exploit.py}. Do phạm vi đồ án tập trung vào xây dựng framework và kiểm chứng tính khả thi, phần thực nghiệm không đặt mục tiêu so sánh tuyệt đối với các hệ thống AEG quy mô lớn, mà tập trung xác nhận bốn câu hỏi chính: pipeline có chạy xuyên suốt từ đầu vào đến đầu ra hay không; từng artifact trung gian có được sinh ra đúng vai trò hay không; ESM và Planner có suy luận được chuỗi hành động khai thác hợp lý hay không; và exploit sinh ra có đủ cấu trúc để người dùng kiểm thử, chỉnh sửa hoặc phát triển tiếp hay không.
+
+Đối tượng thực nghiệm là các bài CTF PWN thuộc nhóm \textit{heap exploitation}, ưu tiên những binary có giao diện menu quen thuộc gồm các thao tác tạo, sửa, xem và xoá chunk. Nhóm bài này được lựa chọn vì thể hiện rõ chuỗi khai thác heap điển hình: tạo nhiều chunk, giải phóng chunk theo thứ tự có chủ đích, làm rò rỉ địa chỉ heap hoặc libc, đầu độc danh sách tcache/fastbin và cuối cùng ghi đè một mục tiêu điều khiển luồng thực thi \cite{ctfwikiheap,glibc2025}. Trong quá trình đánh giá, mỗi target được đặt trong một thư mục riêng dưới \texttt{benchmarks/}; nếu có, thư mục này bao gồm binary, \texttt{libc.so.6}, dynamic linker, file mô tả/write-up và script tương tác mẫu \texttt{solve.py}. Cách tổ chức này giúp một kịch bản có thể được chạy lại nhiều lần với cùng điều kiện đầu vào.
+
+Về cấu hình môi trường, thực nghiệm được thực hiện trên Linux hoặc WSL2, với Python 3, \texttt{pwntools}, \texttt{angr}, \texttt{spaCy}, mô hình \texttt{en\_core\_web\_sm} và DynamoRIO. Các target được giả định là ELF x86-64, có kích thước vừa phải và thuộc bối cảnh CTF, không phải phần mềm sản xuất quy mô lớn. Các cơ chế bảo vệ như NX, PIE, Canary, RELRO, ASLR hoặc Safe Linking được ghi nhận như thuộc tính môi trường của target; tuy nhiên, mục tiêu chính của thực nghiệm là kiểm tra khả năng tạo pipeline artifact và plan khai thác, không phải bảo đảm khai thác thành công tuyệt đối trên mọi cấu hình bảo vệ.
+
+Thực nghiệm được chia thành hai biến thể chạy. Biến thể thứ nhất là \textbf{chế độ có trace động}, trong đó AutoPwn sử dụng \texttt{solve.py} để tương tác với binary và DynamoRIO để ghi nhận các sự kiện runtime như \texttt{malloc}, \texttt{free}, \texttt{read}, \texttt{write} hoặc các thao tác sao chép dữ liệu. Đây là kịch bản chính vì trace động phản ánh trực tiếp hành vi thực tế của chương trình. Biến thể thứ hai là \textbf{chế độ hỗ trợ symbolic execution}, được kích hoạt bằng cờ \texttt{--angr}; chế độ này dùng angr để bổ sung thông tin về call site, đường đi thực thi và ràng buộc đầu vào khi chưa có trace động đủ tốt hoặc khi cần kiểm tra tính khả thi của một nhánh thực thi.
+
+Quy trình chạy một thí nghiệm cụ thể gồm các bước sau:
+\begin{enumerate}
+    \item \textbf{Chuẩn bị dữ liệu đầu vào:} đặt binary và các file phụ trợ vào thư mục benchmark tương ứng; bổ sung write-up vào \texttt{data/writeups/} nếu muốn hệ thống khai thác tri thức từ tài liệu; chuẩn bị \texttt{solve.py} nếu target cần tương tác menu.
+    \item \textbf{Chạy pipeline chính:} thực thi \texttt{python3 autopwn.py <binary>} để chạy chế độ DynamoRIO, hoặc \texttt{python3 autopwn.py <binary> --angr} để bật hỗ trợ symbolic execution.
+    \item \textbf{Kiểm tra artifact trung gian:} xác nhận sự tồn tại và nội dung của \texttt{critical\_vars.json}, \texttt{trace\_events.json}, \texttt{generalized\_actions.json}, \texttt{esm\_output.json}, \texttt{symbolic\_results.json} và \texttt{final\_plan.json}. Đây là bước quan trọng để đánh giá stage nào hoạt động đúng hoặc gây lỗi.
+    \item \textbf{Kiểm tra exploit sinh ra:} mở và chạy thử \texttt{outputs/exploits/exploit.py} với binary mục tiêu; ghi nhận exploit có chạy được đến các bước leak, ghi đè hoặc hijack luồng điều khiển hay không.
+    \item \textbf{Ghi nhận kết quả:} lưu lại trạng thái thành công/thất bại của từng stage, thời gian chạy tương đối, nguyên nhân lỗi nếu có và mức độ cần can thiệp thủ công.
+\end{enumerate}
+
+Các tiêu chí đánh giá được chia thành ba nhóm. Nhóm thứ nhất là \textbf{tiêu chí chức năng}, bao gồm khả năng trích xuất tri thức từ write-up, thu thập trace runtime, tổng quát hoá thao tác heap, xây dựng ESM, lập kế hoạch và sinh mã exploit. Nhóm thứ hai là \textbf{tiêu chí chất lượng artifact}, xét đến việc các file JSON có đầy đủ trường dữ liệu cần thiết, có thể đọc lại bởi stage tiếp theo và hỗ trợ debug khi pipeline thất bại. Nhóm thứ ba là \textbf{tiêu chí thực dụng}, bao gồm thời gian chạy, mức độ phụ thuộc vào \texttt{solve.py}, khả năng fallback sang angr, khả năng tái lập kết quả và mức độ cần can thiệp thủ công của người dùng. Với cách thiết kế này, kịch bản thực nghiệm không chỉ đánh giá đầu ra cuối cùng, mà còn đánh giá toàn bộ quá trình biến đổi dữ liệu từ tri thức thô và hành vi runtime thành kế hoạch khai thác có cấu trúc.
+
+\subsection{Các kết quả thực nghiệm}
+Kết quả thực nghiệm cho thấy AutoPwn đã hiện thực được pipeline đầu cuối gồm bảy module chính: NLP Engine, Runtime Tracer, Operation Generalizer, Composite ESM, Symbolic Executor, Evolutionary Planner và Synthesizer. Khi chạy trên target dạng menu heap đơn giản, hệ thống có thể tạo đầy đủ các thư mục đầu ra \texttt{outputs/artifacts/}, \texttt{outputs/traces/} và \texttt{outputs/exploits/}. Điều này chứng minh kiến trúc artifact-assisted có khả năng liên kết các bước phân tích rời rạc thành một quy trình thống nhất.
+
+Ở bước trích xuất tri thức, module NLP có thể đọc nhiều write-up trong \texttt{data/writeups/}, chuẩn hoá các thuật ngữ liên quan đến heap và sinh ra \texttt{critical\_vars.json}. File này đóng vai trò như nguồn tri thức ban đầu cho planner, trong đó các khái niệm như \texttt{double\_free}, \texttt{tcache\_poisoning}, \texttt{libc\_leak}, \texttt{arbitrary\_write} hoặc \texttt{\_\_free\_hook} được ánh xạ thành các nhãn mà ESM có thể xử lý.
+
+Ở bước tracing, khi target có script tương tác mẫu, DynamoRIO cho kết quả ổn định hơn do quan sát trực tiếp hành vi runtime của chương trình. Trace thu được chứa các sự kiện liên quan đến \texttt{malloc}, \texttt{free}, \texttt{read}, \texttt{write} và một số thao tác ghi bộ nhớ quan trọng. Trong trường hợp không có điều kiện chạy động đầy đủ, chế độ angr giúp bổ sung thông tin về call site và đường đi thực thi, tuy nhiên thời gian chạy có thể tăng đáng kể do vấn đề path explosion \cite{dynamorio2025,angr2025}.
+
+Bước tổng quát hoá thao tác cho kết quả quan trọng nhất về mặt tái sử dụng tri thức. Thay vì giữ nguyên các địa chỉ runtime cụ thể, module Generalizer ánh xạ chúng thành các đối tượng ký hiệu như \texttt{victim\_obj}, \texttt{leak\_obj}, \texttt{target\_addr} hoặc \texttt{controlled\_chunk}. Nhờ đó, cùng một mẫu khai thác có thể được planner xem như chuỗi hành động trừu tượng, không bị ràng buộc hoàn toàn vào một lần chạy cụ thể.
+
+Bảng dưới đây tóm tắt kết quả định tính của các stage trong pipeline:
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{|p{3.2cm}|p{4.8cm}|p{5.2cm}|}
+\hline
+\textbf{Stage} & \textbf{Đầu ra chính} & \textbf{Nhận xét thực nghiệm} \\
+\hline
+NLP Engine & \texttt{critical\_vars.json} & Trích xuất được thuật ngữ, primitive và kỹ thuật heap phổ biến từ write-up. \\
+\hline
+Runtime Tracer & \texttt{trace\_events.json}, raw trace & Hoạt động tốt khi có \texttt{solve.py}; phụ thuộc vào môi trường DynamoRIO và khả năng tương tác với binary. \\
+\hline
+Operation Generalizer & \texttt{generalized\_actions.json} & Chuyển đổi trace cụ thể thành thao tác ký hiệu, giúp tăng khả năng tái sử dụng. \\
+\hline
+Composite ESM & \texttt{esm\_output.json} & Hợp nhất tri thức NLP và trace để suy luận bug, capability và transition. \\
+\hline
+Symbolic Executor & \texttt{symbolic\_results.json} & Hữu ích khi thiếu trace động, nhưng có nguy cơ chậm trên binary nhiều nhánh. \\
+\hline
+Planner và Synthesizer & \texttt{final\_plan.json}, \texttt{exploit.py} & Sinh được kế hoạch khai thác và khung exploit Python dựa trên pwntools. \\
+\hline
+\end{tabular}
+\caption{Tổng hợp kết quả định tính của các stage trong AutoPwn}
+\end{table}
+
+Nhìn chung, kết quả đạt được cho thấy hệ thống đã hoàn thành mục tiêu xây dựng một framework có khả năng sinh artifact phân tích và mã exploit ở mức khả dụng nghiên cứu. Các kết quả này cũng xác nhận rằng việc kết hợp write-up, trace runtime và ESM là hướng tiếp cận phù hợp đối với bài toán heap exploitation trong CTF.
+
+\subsection{Đánh giá hệ thống}
+Về ưu điểm, AutoPwn thể hiện rõ lợi thế của kiến trúc module hoá. Mỗi thành phần có đầu vào và đầu ra tách biệt, giúp quá trình debug minh bạch hơn so với một hệ thống AEG nguyên khối. Khi pipeline không sinh exploit thành công, người dùng có thể lần lượt kiểm tra \texttt{critical\_vars.json}, \texttt{trace\_events.json}, \texttt{generalized\_actions.json}, \texttt{esm\_output.json} và \texttt{final\_plan.json} để xác định lỗi nằm ở stage nào.
+
+Về mặt kỹ thuật, việc kết hợp NLP và dynamic tracing giúp hệ thống tận dụng được cả tri thức con người lẫn hành vi thực thi thực tế. NLP cung cấp ngữ cảnh khai thác ở mức chiến lược, trong khi tracing cung cấp bằng chứng runtime ở mức thao tác bộ nhớ. ESM đóng vai trò cầu nối giữa hai nguồn dữ liệu này, giúp planner tìm kiếm chuỗi hành động có ý nghĩa thay vì chỉ dựa trên pattern viết tay.
+
+Tuy nhiên, hệ thống vẫn còn một số hạn chế. Thứ nhất, chế độ DynamoRIO đạt hiệu quả cao nhất khi có sẵn \texttt{solve.py}; nếu script tương tác chưa đi qua đúng nhánh lỗi, trace thu được có thể thiếu primitive quan trọng. Thứ hai, chế độ angr tuy tăng mức độ tự động hoá nhưng có thể chậm trên binary phức tạp do bùng nổ số lượng đường đi. Thứ ba, module NLP dựa trên spaCy và bảng chuẩn hoá thuật ngữ nên vẫn có khả năng nhận diện sai ngữ cảnh, đặc biệt với write-up viết không theo cấu trúc rõ ràng.
+
+Từ các kết quả trên, có thể kết luận rằng AutoPwn phù hợp nhất với vai trò một framework hỗ trợ nghiên cứu và bán tự động hoá quy trình giải PWN heap trong CTF. Hệ thống giúp rút ngắn thời gian phân tích, chuẩn hoá artifact trung gian và tạo nền tảng cho các hướng mở rộng như tích hợp LLM để đọc hiểu write-up tốt hơn, bổ sung auto-interactor để giảm phụ thuộc vào \texttt{solve.py}, và tối ưu planner bằng heuristic hoặc reinforcement learning nhằm giảm rủi ro bùng nổ trạng thái.
+
+\section{Thảo luận}
+
+Nội dung.
+
+% ==========================================================
+% CHƯƠNG 5
+% ==========================================================
+\chapter{KẾT LUẬN}
+
+\section{Kết luận}
+
+Nội dung.
+
+\section{Hướng phát triển}
+
+Nội dung.
+
+% ==========================================================
+% TÀI LIỆU THAM KHẢO
+% ==========================================================
+
+
+
+\bibliographystyle{plain}
+\bibliography{references}
+\addcontentsline{toc}{chapter}{TÀI LIỆU THAM KHẢO}
+
+
+\end{document}
