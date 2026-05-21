@@ -6,6 +6,10 @@ import json
 import argparse
 from collections import defaultdict
 
+# Add parent directory to path for knowledge base import
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+from knowledge_base.loader import get_knowledge_base
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -102,6 +106,18 @@ class NLPEngine:
         "tcache struct":      "tcache_perthread_struct",
         "fastbin attack":     "fastbin_attack",
         "rop chain":          "rop_chain",
+        "fake chunk":         "fake_chunk",
+        "consolidation":      "consolidation",
+        "unlink":             "unlink_chunk",
+        "unlink chunk":       "unlink_chunk",
+        "malloc consolidation": "consolidation",
+        "chunk consolidation": "consolidation",
+        "main arena offset":  "main_arena_offset",
+        "environ leak":       "environ_leak",
+        "stack pointer":      "stack_pointer",
+        "xor rax":            "xor_rax_gadget",
+        "size field":         "chunk_size",
+        "chunk size":         "chunk_size",
     }
     TECHNICAL_KW: frozenset[str] = frozenset(NORM_MAP.keys())
 
@@ -114,19 +130,20 @@ class NLPEngine:
         "leaks":      ["libc_base", "heap_base", "stack_base"],
         "structures": [
             "tcache", "unsorted_bin", "fastbin", "smallbin", "largebin",
-            "chunk", "top_chunk", "tcache_perthread_struct"
+            "chunk", "top_chunk", "tcache_perthread_struct", "fake_chunk"
         ],
         "metadata_fields": [
-            "fd", "bk", "size", "prev_size", "prev_inuse"
+            "fd", "bk", "size", "prev_size", "prev_inuse", "chunk_size"
         ],
         "techniques": [
             "tcache_poisoning", "chunk_overlap", "unsortedbin_leak", "safe_linking",
-            "house_of_force", "fastbin_attack", "rop_chain"
+            "house_of_force", "fastbin_attack", "rop_chain", "consolidation",
+            "unlink_chunk", "environ_leak", "fake_unsorted_bin"
         ],
         "capabilities": [
             "libc_leak", "stack_leak", "control_flow_hijack"
         ],
-        "gadgets":    ["pop_rdi", "return_address", "ret", "leave", "syscall"],
+        "gadgets":    ["pop_rdi", "return_address", "ret", "leave", "syscall", "xor_rax_gadget"],
     }
 
     MALICIOUS_VERBS: frozenset[str] = frozenset({
@@ -324,9 +341,9 @@ class NLPEngine:
         """Infer high-level techniques, primitives, capabilities, and goals."""
         vars_set = set(var_list)
         capabilities = set()
-        if "__environ" in vars_set or "stack_base" in vars_set:
+        if "__environ" in vars_set or "stack_base" in vars_set or "stack_pointer" in vars_set:
             capabilities.add("stack_leak")
-        if any(v in vars_set for v in ["libc_base", "main_arena", "__free_hook", "__malloc_hook", "unsortedbin_leak"]):
+        if any(v in vars_set for v in ["libc_base", "main_arena", "__free_hook", "__malloc_hook", "unsortedbin_leak", "main_arena_offset"]):
             capabilities.add("libc_leak")
 
         primitives = set()
@@ -352,11 +369,20 @@ class NLPEngine:
             techniques.add("chunk_overlap")
         if "unsorted_bin" in vars_set and any(s["relation"] == "leak" for s in states):
             techniques.add("unsortedbin_leak")
+        if "fake_chunk" in vars_set and "unsorted_bin" in vars_set:
+            techniques.add("fake_unsorted_bin")
         if "top_chunk" in vars_set and has_overwrite:
             techniques.add("house_of_force")
         if "fastbin" in vars_set and "double_free" in vars_set:
             techniques.add("fastbin_attack")
         if "rop_chain" in vars_set or ("pop_rdi" in vars_set and "system" in vars_set):
+            techniques.add("rop_chain")
+        if "consolidation" in vars_set or "unlink_chunk" in vars_set:
+            techniques.add("consolidation")
+            techniques.add("unlink_chunk")
+        if "__environ" in vars_set and "stack_leak" in capabilities:
+            techniques.add("environ_leak")
+        if "xor_rax_gadget" in vars_set or "one_gadget" in vars_set:
             techniques.add("rop_chain")
 
         goals = set()
@@ -458,19 +484,27 @@ class NLPEngine:
         if "arbitrary_allocation" in taxonomy["primitives"] and "arbitrary_write" in taxonomy["primitives"]:
             transitions.append({"from": "arbitrary_allocation", "to": "arbitrary_write", "action": "write_at_allocated_target"})
         if "arbitrary_write" in taxonomy["primitives"] and "control_flow_hijack" in taxonomy["goals"]:
-             transitions.append({"from": "arbitrary_write", "to": "control_flow_hijack", "action": "overwrite_hook_or_ret"})
+              transitions.append({"from": "arbitrary_write", "to": "control_flow_hijack", "action": "overwrite_hook_or_ret"})
         if "chunk_overlap" in taxonomy["techniques"] and "heap_leak" in taxonomy["primitives"]:
             transitions.append({"from": "chunk_overlap", "to": "heap_leak", "action": "read_oob"})
         if "unsortedbin_leak" in taxonomy["techniques"] and "libc_leak" in taxonomy["capabilities"]:
             transitions.append({"from": "unsortedbin_leak", "to": "libc_leak", "action": "read_main_arena"})
+        if "fake_unsorted_bin" in taxonomy["techniques"] and "libc_leak" in taxonomy["capabilities"]:
+            transitions.append({"from": "fake_unsorted_bin", "to": "libc_leak", "action": "read_fake_main_arena"})
         if "libc_leak" in taxonomy["capabilities"] and "stack_leak" in taxonomy["capabilities"]:
             transitions.append({"from": "libc_leak", "to": "stack_leak", "action": "read_environ"})
+        if "environ_leak" in taxonomy["techniques"] and "stack_leak" in taxonomy["capabilities"]:
+            transitions.append({"from": "environ_leak", "to": "stack_leak", "action": "read_environ_ptr"})
         if "house_of_force" in taxonomy["techniques"] and "arbitrary_allocation" in taxonomy["primitives"]:
             transitions.append({"from": "house_of_force", "to": "arbitrary_allocation", "action": "malloc_at_top_target"})
         if "fastbin_attack" in taxonomy["techniques"] and "arbitrary_allocation" in taxonomy["primitives"]:
             transitions.append({"from": "fastbin_attack", "to": "arbitrary_allocation", "action": "malloc_at_fastbin_target"})
         if "rop_chain" in taxonomy["techniques"] and "control_flow_hijack" in taxonomy["goals"]:
             transitions.append({"from": "rop_chain", "to": "control_flow_hijack", "action": "execute_rop"})
+        if "unlink_chunk" in taxonomy["techniques"] and "arbitrary_write" in taxonomy["primitives"]:
+            transitions.append({"from": "unlink_chunk", "to": "arbitrary_write", "action": "unlink_arbitrary_write"})
+        if "consolidation" in taxonomy["techniques"] and "arbitrary_allocation" in taxonomy["primitives"]:
+            transitions.append({"from": "consolidation", "to": "arbitrary_allocation", "action": "consolidate_to_target"})
         return transitions
 
 
@@ -636,6 +670,10 @@ def main():
     args = parse_args()
     engine = NLPEngine()
 
+    # Load knowledge base
+    kb = get_knowledge_base()
+    print(f"[*] Knowledge base loaded: {len(kb.malloc_internals)} rules, {len(kb.ontology)} ontology entries")
+
     if args.file:
         # Single file mode
         target = os.path.join(args.writeup_dir, args.file)
@@ -666,6 +704,25 @@ def main():
 
         composite = build_composite(all_per_writeup, engine)
 
+        # Enrich composite with knowledge base
+        composite["knowledge_base"] = {
+            "malloc_rules": {
+                "tcache_max_size": kb.get_tcache_info().get("max_size", 0x410),
+                "tcache_max_per_size": kb.get_tcache_info().get("max_per_size", 7),
+                "safe_linking_formula": kb.get_tcache_info().get("safe_linking", {}).get("encode_formula", ""),
+                "unsorted_bin_threshold": kb.get_unsorted_bin_info().get("threshold", ""),
+                "unsorted_bin_leak_offset": kb.get_unsorted_bin_info().get("leak_info", {}).get("fd_offset_from_main_arena", 96),
+            },
+            "free_checks": {
+                "prev_inuse_check": kb.get_free_checks().get("prev_inuse_check", {}),
+                "consolidation_check": kb.get_free_checks().get("consolidation_check", {}),
+            },
+            "fake_chunk_rules": kb.get_fake_chunk_rules(),
+            "active_mitigations": kb.check_mitigations(),
+            "exploit_phases": kb.get_exploit_phases(),
+            "decision_rules": kb.get_decision_rules(),
+        }
+
         os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
         with open(args.output, "w", encoding="utf-8") as f:
             json.dump(composite, f, indent=4, ensure_ascii=False)
@@ -675,6 +732,7 @@ def main():
         print(f"     Composite techniques: {composite['composite_taxonomy']['techniques']}")
         print(f"     Composite capabilities: {composite['composite_taxonomy']['capabilities']}")
         print(f"     Transitions: {len(composite['composite_exploit_ir']['transitions'])}")
+        print(f"     Knowledge rules loaded: tcache_max={hex(kb.get_tcache_info().get('max_size', 0x410))}, safe_linking={'yes' if kb.get_tcache_info().get('safe_linking') else 'no'}")
 
 
 if __name__ == "__main__":

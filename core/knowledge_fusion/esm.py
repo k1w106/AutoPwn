@@ -82,6 +82,25 @@ class ESMAnalyzer:
         self.action_catalog: List[dict] = []  # All generalized actions
         self.state_transitions: List[dict] = []  # (from_state, action, to_state)
 
+        # Pre-populate detected items from NLP composite taxonomy
+        self._init_from_nlp_taxonomy()
+
+    def _init_from_nlp_taxonomy(self):
+        """Initialize detected capabilities from NLP composite taxonomy."""
+        # Use a synthetic event for NLP-derived detections
+        nlp_event = {"seq": 0, "type": "NLP", "note": "composite_writeup_analysis"}
+
+        for bug in self.taxonomy.get("bugs", []):
+            self._bind_evidence("bugs", bug, nlp_event)
+        for prim in self.taxonomy.get("primitives", []):
+            self._bind_evidence("primitives", prim, nlp_event)
+        for tech in self.taxonomy.get("techniques", []):
+            self._bind_evidence("techniques", tech, nlp_event)
+        for cap in self.taxonomy.get("capabilities", []):
+            self._bind_evidence("capabilities", cap, nlp_event)
+        for goal in self.taxonomy.get("goals", []):
+            self._bind_evidence("goals", goal, nlp_event)
+
     def _bind_evidence(self, category: str, name: str, event: dict):
         store = {
             "bugs": self.detected_bugs,

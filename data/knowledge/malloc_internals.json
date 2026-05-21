@@ -1,0 +1,272 @@
+{
+  "version": "1.0",
+  "description": "Core malloc/free internals rules for heap exploitation reasoning",
+  "glibc_versions": {
+    "supported": [
+      "2.27",
+      "2.29",
+      "2.31",
+      "2.32",
+      "2.33",
+      "2.34",
+      "2.35",
+      "2.36",
+      "2.37",
+      "2.38",
+      "2.39",
+      "2.40",
+      "2.41"
+    ],
+    "notes": "Behavior changes significantly between versions"
+  },
+  "tcache": {
+    "introduced_in": "2.26",
+    "max_per_size": 7,
+    "max_count": 64,
+    "max_size": 1040,
+    "min_size": 32,
+    "behavior": {
+      "on_free": "If tcache for this size has < 7 entries, goes to tcache. Otherwise goes to fastbin or unsorted bin.",
+      "on_malloc": "First checks tcache for matching size. If found, returns immediately without coalescing.",
+      "perthread_struct_offset": "thread_cache - 16"
+    },
+    "safe_linking": {
+      "introduced_in": "2.32",
+      "encode_formula": "fd_encoded = target_addr ^ (chunk_addr >> 12)",
+      "decode_formula": "real_addr = fd_encoded ^ (chunk_addr >> 12)",
+      "notes": "Only applies to tcache and fastbin FD pointers"
+    },
+    "exploitation_notes": [
+      "To force chunk into unsorted bin: fill tcache (7 frees) then free one more",
+      "Alternative: fake chunk size > 1040 to bypass tcache entirely",
+      "Tcache does NOT check double-free (before 2.34)",
+      "Tcache does NOT consolidate with adjacent chunks"
+    ]
+  },
+  "unsorted_bin": {
+    "threshold": "Chunks > tcache_max_size (1040) OR tcache full for that size",
+    "behavior": {
+      "on_free": "Chunk is placed in unsorted bin list. FD and BK both point to main_arena.",
+      "on_malloc": "Unsorted bin is searched first. If exact match, removed. If larger, split and remainder goes back to unsorted bin.",
+      "fd_bk_value": "Both point to main_arena + 96 (unsorted bin offset)"
+    },
+    "leak_info": {
+      "fd_offset_from_main_arena": 96,
+      "bk_offset_from_main_arena": 96,
+      "formula": "libc_base = leaked_value - (main_arena_offset + 96)"
+    },
+    "exploitation_notes": [
+      "Unsorted bin leak is most reliable libc leak method",
+      "FD and BK both contain libc addresses",
+      "Reading freed chunk (UAF) reveals these pointers",
+      "Chunk must NOT be in tcache for this to work"
+    ]
+  },
+  "fastbin": {
+    "size_range": "32 to 128 (before 2.26: up to 128, after: up to 128 or tcache handles it)",
+    "behavior": {
+      "on_free": "If size <= 128 and tcache full, goes to fastbin. LIFO order.",
+      "on_malloc": "Fastbin checked after tcache. Exact size match only.",
+      "no_consolidation": "Fastbin chunks are NOT consolidated with neighbors"
+    },
+    "exploitation_notes": [
+      "Fastbin attack: overwrite FD to allocate at arbitrary address",
+      "Size check: malloc checks if returned chunk size matches request (fastbin check)",
+      "Double-free detection: checks if FD points to same chunk (before 2.29)"
+    ]
+  },
+  "small_bin": {
+    "size_range": "144 to 1008",
+    "behavior": {
+      "on_free": "If size > fastbin_max and <= 1008, goes to small bin.",
+      "fifo_order": "FIFO, unlike fastbin LIFO",
+      "consolidation": "Consolidates with adjacent free chunks"
+    }
+  },
+  "large_bin": {
+    "size_range": "> 1008",
+    "behavior": {
+      "on_free": "If size > 1008, goes to large bin.",
+      "sorted_by_size": "Chunks sorted by size within bin"
+    }
+  },
+  "free_checks": {
+    "prev_inuse_check": {
+      "description": "When freeing chunk P, glibc checks prev_inuse bit of NEXT chunk",
+      "code": "if (__glibc_unlikely (!prev_inuse(nextchunk))) malloc_printerr(\"double free or corruption (!prev)\")",
+      "exploitation_implication": "Must set prev_inuse=1 on chunk after fake chunk to avoid crash",
+      "severity": "CRITICAL - will abort if violated"
+    },
+    "consolidation_check": {
+      "description": "If prev_inuse of chunk P is 0, glibc consolidates with previous chunk",
+      "code": "if (!prev_inuse(p)) { prevsize = prev_size(p); size += prevsize; p = chunk_at_offset(p, -prevsize); if (chunksize(p) != prevsize) malloc_printerr(\"corrupted size vs. prev_size\"); unlink_chunk(av, p); }",
+      "exploitation_implication": "If creating fake chunk with prev_inuse=0, must also fake prev_size of next chunk to match",
+      "severity": "CRITICAL - will abort if violated"
+    },
+    "size_check": {
+      "description": "Chunk size must be >= MINSIZE (32) and aligned to MALLOC_ALIGNMENT (16)",
+      "exploitation_implication": "Fake chunk size must be valid (>= 32, aligned to 16)",
+      "severity": "CRITICAL"
+    },
+    "next_size_check": {
+      "description": "Next chunk's size must be valid and within arena bounds",
+      "exploitation_implication": "Fake chunk must have valid next chunk size",
+      "severity": "HIGH"
+    }
+  },
+  "malloc_checks": {
+    "fastbin_size_check": {
+      "description": "When allocating from fastbin, returned chunk size must match request",
+      "code": "if (__builtin_expect (fastbin_index (chunksize (victim)) != idx, 0)) malloc_printerr(\"malloc(): memory corruption (fast)\")",
+      "exploitation_implication": "When using fastbin attack, target address - 16 must have valid size matching fastbin index",
+      "severity": "CRITICAL"
+    },
+    "tcache_double_free_check": {
+      "introduced_in": "2.34",
+      "description": "Tcache now checks for double-free by walking the list",
+      "exploitation_implication": "Double-free into tcache is detected in glibc >= 2.34",
+      "severity": "HIGH"
+    }
+  },
+  "fake_chunk_rules": {
+    "minimum_requirements": {
+      "size_field": "Must be >= 32 and aligned to 16",
+      "prev_inuse": "Must be 1 (PREV_INUSE bit set) to avoid consolidation",
+      "next_chunk_size": "Must be valid size to pass next_size_check"
+    },
+    "for_unsorted_bin": {
+      "size": "Must be > 1040 (tcache max) to bypass tcache",
+      "common_values": [
+        1057,
+        1089,
+        1281
+      ],
+      "additional_requirements": [
+        "prev_inuse of next chunk must be 1",
+        "prev_size of next chunk must match if prev_inuse=0",
+        "Must not overlap with existing allocated chunks"
+      ]
+    },
+    "for_fastbin_attack": {
+      "size": "Must match fastbin index (32-128)",
+      "target_address": "target - 16 must have valid size matching fastbin index",
+      "additional_requirements": [
+        "FD pointer must be valid or NULL",
+        "Must pass fastbin size check on allocation"
+      ]
+    }
+  },
+  "heap_layout": {
+    "chunk_structure": {
+      "allocated": {
+        "prev_size": "8 bytes (if prev chunk free, otherwise part of prev chunk's data)",
+        "size": "8 bytes (includes PREV_INUSE, IS_MMAPPED, NON_MAIN_ARENA bits)",
+        "data": "user data (size - 16 bytes)"
+      },
+      "freed": {
+        "prev_size": "8 bytes",
+        "size": "8 bytes",
+        "fd": "8 bytes (forward pointer)",
+        "bk": "8 bytes (backward pointer, only for unsorted/small/large bins)"
+      }
+    },
+    "metadata_bits": {
+      "PREV_INUSE": "Bit 0 of size field. 1 = previous chunk is allocated.",
+      "IS_MMAPPED": "Bit 1 of size field. 1 = chunk was obtained via mmap.",
+      "NON_MAIN_ARENA": "Bit 2 of size field. 1 = chunk belongs to non-main arena (thread cache)."
+    }
+  },
+  "version_specific_changes": {
+    "2.26": "Introduced tcache",
+    "2.29": "Added tcache double-free check (walks list)",
+    "2.32": "Introduced safe linking for tcache/fastbin FD pointers",
+    "2.34": "tcache double-free strengthened, hooks deprecated, malloc_consolidate on large scanf",
+    "2.35": "more tcache hardening, environ leak still viable",
+    "2.36": "Further tcache hardening",
+    "2.37": "Removed __malloc_hook, __free_hook, __realloc_hook",
+    "2.38": "Continued hook removal",
+    "2.39": "More internal hardening",
+    "2.40": "CET (Control-flow Enforcement Technology) support",
+    "2.41": "Full CET enforcement (SHSTK + IBT)"
+  },
+  "advanced_techniques": {
+    "malloc_consolidate_trigger": {
+      "description": "Large input to scanf (>0x400 bytes) triggers malloc_consolidate, moving tcache chunks to unsorted bin",
+      "mechanism": "scanf calls __libc_scratch_buffer_grow_preserve -> malloc -> malloc_consolidate",
+      "use_case": "Force tcache chunks into unsorted bin for libc leak without filling tcache manually",
+      "challenges": [
+        "justCTF-2025-babyheap"
+      ],
+      "requirements": [
+        "large_input_to_scanf"
+      ],
+      "impact": "HIGH - alternative to tcache fill for libc leak"
+    },
+    "environ_stack_leak": {
+      "description": "Use libc's environ variable to leak stack address",
+      "mechanism": "environ points to stack environment pointer, which points to stack frame",
+      "formula": "stack_addr = environ_value - offset_to_return_address",
+      "use_case": "Get stack address for ROP chain placement",
+      "challenges": [
+        "amateurs-ctf-2024-heaps-of-fun",
+        "justCTF-2025-babyheap"
+      ],
+      "requirements": [
+        "libc_leak",
+        "arbitrary_read"
+      ],
+      "impact": "HIGH - enables ROP on stack"
+    },
+    "index_confusion_uaf": {
+      "description": "Index variable mismatch creates UAF vulnerability",
+      "mechanism": "chunk_index_a controls which pointer is NULLed, chunk_index_b controls which is freed. If they differ, freed chunk remains accessible.",
+      "exploitation": "Overflow index counter to wrap around, causing mismatch between free and NULL operations",
+      "challenges": [
+        "backdoor-ctf-2021-babyheap"
+      ],
+      "requirements": [
+        "index_overflow",
+        "separate_free_null_indices"
+      ],
+      "impact": "HIGH - creates UAF from index confusion"
+    },
+    "single_byte_to_large_overflow": {
+      "description": "Single byte overflow corrupts chunk size LSB, enabling larger overflow",
+      "mechanism": "Overwrite LSB of next chunk's size (e.g., 0x100 -> 0x180), free it, then allocate larger chunk to get overflow",
+      "challenges": [
+        "defcon-quals-2019-babyheap"
+      ],
+      "requirements": [
+        "off_by_one",
+        "adjacent_chunks"
+      ],
+      "impact": "HIGH - escalates single byte to arbitrary overflow"
+    },
+    "calloc_no_tcache": {
+      "description": "calloc does NOT use tcache, always gets from fastbin/unsorted bin",
+      "mechanism": "calloc bypasses tcache entirely, useful for getting chunks from specific bins",
+      "use_case": "Get chunk from fastbin when tcache would normally service it",
+      "challenges": [
+        "0ctf-2017-babyheap"
+      ],
+      "requirements": [
+        "calloc_usage"
+      ],
+      "impact": "MEDIUM - useful for specific bin manipulation"
+    },
+    "heap_key_leak_safe_linking": {
+      "description": "Leak heap key (XOR mask) from tcache FD pointer",
+      "mechanism": "When chunk freed to tcache, FD = real_addr ^ (chunk_addr >> 12). If FD points to NULL, encoded value reveals upper bits of chunk address.",
+      "formula": "heap_key = fd_encoded_value; heap_base = heap_key << 12",
+      "challenges": [
+        "justCTF-2025-babyheap",
+        "amateurs-ctf-2024-heaps-of-fun"
+      ],
+      "requirements": [
+        "uaf",
+        "tcache_free"
+      ],
+      "impact": "CRITICAL - enables tcache poisoning bypass"
+    }
+  }
+}

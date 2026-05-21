@@ -98,6 +98,37 @@ class AutoPwnFramework:
                        f"synthesizer.py --binary {binary_name} {solve_arg} {libc_arg}",
                        cwd=os.path.join(self.root_dir, "core", "codegen"))
 
+        # Step 8: Taint Analysis (Module 9 — NEW)
+        self.run_stage("Taint Analysis",
+                       f"taint_analyzer.py",
+                       cwd=os.path.join(self.root_dir, "core", "taint_analysis"))
+
+        # Step 9: Execution Feedback Loop (Module 8 — NEW)
+        exploit_path = os.path.join(self.exploits_dir, "exploit.py")
+        if os.path.exists(exploit_path):
+            self.log("STAGE", "Running Execution Feedback Loop...")
+            start_time = time.time()
+            try:
+                python_exe = sys.executable or "python3"
+                full_command = f"{python_exe} {os.path.join(self.root_dir, 'core', 'executor', 'feedback_loop.py')} --exploit {exploit_path} --binary {self.target} --timeout 15 --retries 2 --output {os.path.join(self.internal_artifacts, 'execution_results.json')}"
+                result = subprocess.run(full_command, shell=True, capture_output=True, text=True)
+                elapsed = time.time() - start_time
+                print(f"      OK ({elapsed:.2f}s)")
+                # Print execution summary
+                if os.path.exists(os.path.join(self.internal_artifacts, "execution_results.json")):
+                    with open(os.path.join(self.internal_artifacts, "execution_results.json")) as f:
+                        exec_data = json.load(f)
+                    summary = exec_data.get("summary", {})
+                    print(f"      Attempts: {summary.get('total_attempts', 0)}")
+                    print(f"      Success: {summary.get('success', False)}")
+                    leaks = summary.get('leaked_values', {})
+                    if leaks:
+                        print(f"      Leaked: {', '.join(leaks.keys())}")
+                    for fb in summary.get('last_feedback', [])[:3]:
+                        print(f"      Feedback: {fb}")
+            except Exception as e:
+                print(f"      Warning: Execution feedback failed: {e}")
+
         print("-" * 60)
 
         self.log("SYNC", "Collecting all artifacts into outputs/")
@@ -105,7 +136,8 @@ class AutoPwnFramework:
         # Copy all internal artifacts to user-visible output
         for filename in ["critical_vars.json", "trace_events.json",
                         "generalized_actions.json", "esm_output.json",
-                        "symbolic_results.json", "final_plan.json"]:
+                        "symbolic_results.json", "final_plan.json",
+                        "taint_results.json", "execution_results.json"]:
             src = os.path.join(self.internal_artifacts, filename)
             if os.path.exists(src):
                 shutil.copy(src, self.artifacts_dir)

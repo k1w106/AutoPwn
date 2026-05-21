@@ -1,86 +1,89 @@
-# Hướng dẫn sử dụng AutoPwn v3.0
+# Hướng dẫn Vận hành AutoPwn v3.0
 
-## Cài đặt
+Tài liệu này hướng dẫn cách chạy hệ thống AutoPwn v3.0 trên các thử thách thực tế.
+
+## 1. Chuẩn bị Môi trường
 
 ```bash
 cd /home/kiwi/UIT-DoAn/NT521
 
-# Python packages
-pip install pwntools angr spacy
+# Kích hoạt môi trường (nếu có)
+source venv/bin/activate
+
+# Cài đặt phụ thuộc
+pip install -r requirements.txt
 python3 -m spacy download en_core_web_sm
-
-# DynamoRIO (đã có sẵn tại ~/DynamoRIO-Linux-11.3.0-1)
 ```
 
-## Chạy nhanh
+## 2. Các chế độ chạy chính
+
+### Chế độ 1: DynamoRIO + solve.py (Nhanh & Ổn định)
+Sử dụng khi bạn đã có script `solve.py` (cấu trúc PWN cơ bản) để hệ thống thu thập trace nhanh chóng.
 
 ```bash
-# Mode 1: DynamoRIO + solve.py (nhanh)
-python3 autopwn.py ./benchmarks/babyheap_patched
-
-# Mode 2: angr symbolic (không cần solve.py)
-python3 autopwn.py ./benchmarks/babyheap_patched --angr
+# Ví dụ với thử thách justCTF 2025
+python3 autopwn.py ./benchmarks/justCTF-2025-babyheap/binary
 ```
 
-## Chạy từng module
+### Chế độ 2: angr Symbolic (Tự động hoàn toàn)
+Sử dụng khi chỉ có binary mục tiêu. Hệ thống sẽ tự tìm cách tương tác với menu.
 
 ```bash
-# Module 1: NLP (8 writeups → composite taxonomy)
-cd core/nlp_engine && python3 extract_vars.py
-
-# Module 2: DynamoRIO tracer
-cd core/tracer && python3 runner.py --target ../../benchmarks/babyheap_patched --skip-build
-
-# Module 3: Operation generalizer
-cd core/generalizer && python3 operation_generalizer.py
-
-# Module 4: Composite ESM
-cd core/knowledge_fusion && python3 esm.py
-
-# Module 5: angr symbolic executor
-cd core/symbolic_executor && python3 angr_executor.py --binary ../../benchmarks/babyheap_patched
-
-# Module 6: Evolutionary planner
-cd core/planner && python3 planner.py --binary ../../benchmarks/babyheap_patched
-
-# Module 7: Synthesizer
-cd core/codegen && python3 synthesizer.py --binary babyheap_patched --solve ../../benchmarks/solve.py
+# Sử dụng flag --angr
+python3 autopwn.py ./benchmarks/justCTF-2025-babyheap/binary --angr
 ```
 
-## Kiểm tra kết quả
+## 3. Quy trình chạy từng bước (Manual Debug)
+
+Nếu muốn kiểm tra từng module:
 
 ```bash
-# Xem exploit sinh ra
-cat outputs/exploits/exploit.py
+# Bước 1: Trích xuất tri thức từ Writeups
+python3 core/nlp_engine/extract_vars.py
 
-# Chạy thử exploit
-cd outputs/exploits && python3 exploit.py
+# Bước 2: Thu thập Trace
+python3 core/tracer/runner.py --target ./benchmarks/justCTF-2025-babyheap/binary
 
-# Xem artifact trung gian
-cat outputs/artifacts/final_plan.json | python3 -m json.tool
+# Bước 3: Trừu tượng hóa thao tác (Generalization)
+python3 core/generalizer/operation_generalizer.py
+
+# Bước 4: Xây dựng ESM và Suy luận
+python3 core/knowledge_fusion/esm.py
+
+# Bước 5: Tìm kiếm kế hoạch khai thác
+python3 core/planner/planner.py --binary ./benchmarks/justCTF-2025-babyheap/binary
+
+# Bước 6: Sinh mã exploit
+python3 core/codegen/synthesizer.py --binary binary --solve ./benchmarks/justCTF-2025-babyheap/solve.py
 ```
 
-## Thêm writeup mới
+## 4. Kiểm tra Kết quả
+
+Kết quả cuối cùng nằm trong thư mục `outputs/`:
+
+- **Mã exploit**: `outputs/exploits/exploit.py`
+- **Artifact trung gian**: `outputs/artifacts/*.json` (Dùng để debug logic của hệ thống)
+- **Trace log**: `outputs/traces/raw_trace.log`
+
+### Chạy thử exploit sinh ra:
+```bash
+cd outputs/exploits
+python3 exploit.py
+```
+
+## 5. Chạy Benchmark toàn diện
+
+Để đánh giá hiệu suất của hệ thống trên toàn bộ tập thử thách:
 
 ```bash
-echo "Nội dung writeup..." > data/writeups/my_technique.txt
-python3 autopwn.py ./benchmarks/babyheap_patched
+cd benchmarks/scripts
+python3 run_benchmark.py --all --skip-missing
 ```
 
-## Cấu trúc solve.py
+Kết quả báo cáo sẽ được lưu tại `benchmarks/results/summary.json`.
 
-```python
-AUTOPWN_CONFIG = {
-    "index_base": 0,        # 0 hoặc 1
-    "reuse_index": False,   # binary có null chunks[idx] sau free không
-    "needs_size": False,    # create có cần size parameter không
-    "data_prompt": "b'Data: '",
-    "menu_prompt": "b'> '",
-    "choices": {
-        "create": "b'1'",
-        "view":   "b'2'",
-        "edit":   "b'3'",
-        "delete": "b'4'",
-    },
-}
-```
+## 6. Xử lý sự cố (Troubleshooting)
+
+- **Lỗi không tìm thấy DynamoRIO**: Đảm bảo đường dẫn trong `core/tracer/runner.py` trỏ đúng về thư mục cài đặt DynamoRIO.
+- **Lỗi NLP không nhận diện term**: Kiểm tra xem từ khóa đã có trong `NORM_MAP` của `core/nlp_engine/extract_vars.py` chưa.
+- **Exploit sinh ra bị crash**: Kiểm tra `outputs/artifacts/final_plan.json` để xem Planner có chọn sai kỹ thuật không.

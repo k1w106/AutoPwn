@@ -1,0 +1,165 @@
+{
+  "version": "1.0",
+  "description": "Heap data structures and memory layout for exploitation reasoning",
+  "chunk": {
+    "header_size": 16,
+    "min_size": 32,
+    "alignment": 16,
+    "fields": {
+      "prev_size": {
+        "offset": 0,
+        "size": 8,
+        "description": "Size of previous chunk (if PREV_INUSE=0). Otherwise used as data area of prev chunk."
+      },
+      "size": {
+        "offset": 8,
+        "size": 8,
+        "description": "Size of this chunk including header. Lower 3 bits are flags.",
+        "flags": {
+          "PREV_INUSE": {
+            "bit": 0,
+            "meaning": "1 = previous chunk is allocated"
+          },
+          "IS_MMAPPED": {
+            "bit": 1,
+            "meaning": "1 = chunk obtained via mmap"
+          },
+          "NON_MAIN_ARENA": {
+            "bit": 2,
+            "meaning": "1 = chunk in non-main arena"
+          }
+        }
+      },
+      "fd": {
+        "offset": 0,
+        "size": 8,
+        "description": "Forward pointer in bin list. Only present when chunk is freed. Overlaps with user data area.",
+        "note": "In tcache/fastbin, this is XOR-encoded with chunk_addr >> 12 (safe linking, glibc >= 2.32)"
+      },
+      "bk": {
+        "offset": 8,
+        "size": 8,
+        "description": "Backward pointer in bin list. Only present when chunk is freed and in unsorted/small/large bin."
+      },
+      "fd_nextsize": {
+        "offset": 16,
+        "size": 8,
+        "description": "Forward pointer for next-size list in large bins."
+      },
+      "bk_nextsize": {
+        "offset": 24,
+        "size": 8,
+        "description": "Backward pointer for next-size list in large bins."
+      }
+    }
+  },
+  "bins": {
+    "tcache": {
+      "type": "per-thread cache",
+      "introduced": "glibc 2.26",
+      "structure": {
+        "entries": 64,
+        "max_per_entry": 7,
+        "size_ranges": "32 to 1040 (step 16)"
+      },
+      "perthread_struct": {
+        "fields": {
+          "counts": "64 bytes (one byte per size class)",
+          "entries": "64 * 8 = 512 bytes (pointers to first chunk in each list)"
+        },
+        "total_size": "592 bytes"
+      },
+      "behavior": "LIFO (Last In First Out)",
+      "checks": "No consolidation, no double-free check (before 2.34)"
+    },
+    "fastbin": {
+      "type": "singly-linked list",
+      "size_ranges": "32 to 128 (10 bins, step 16)",
+      "behavior": "LIFO",
+      "checks": "Size check on allocation, no consolidation",
+      "fd_only": true
+    },
+    "unsorted_bin": {
+      "type": "doubly-linked circular list",
+      "location": "main_arena + 96",
+      "behavior": "First-fit search, exact match or split",
+      "fd_bk_value": "Both point to main_arena + 96",
+      "leak_potential": "HIGH - FD/BK contain libc addresses"
+    },
+    "small_bin": {
+      "type": "doubly-linked list",
+      "size_ranges": "144 to 1008 (62 bins)",
+      "behavior": "FIFO",
+      "fd_bk_value": "Point to adjacent chunks in list"
+    },
+    "large_bin": {
+      "type": "doubly-linked list with next-size lists",
+      "size_ranges": "> 1008",
+      "behavior": "Sorted by size, best-fit",
+      "additional_fields": [
+        "fd_nextsize",
+        "bk_nextsize"
+      ]
+    }
+  },
+  "main_arena": {
+    "description": "Central heap management structure in libc",
+    "location": "libc + main_arena_symbol",
+    "key_offsets": {
+      "unsorted_bin": 96,
+      "small_bins": 128,
+      "large_bins": 1120,
+      "binmap": 2112,
+      "next": "varies",
+      "next_free": "varies",
+      "system_mem": "varies"
+    },
+    "exploitation_use": "Unsorted bin FD/BK point to main_arena + 96, enabling libc leak"
+  },
+  "heap_regions": {
+    "main_heap": {
+      "description": "Primary heap region, starts at mmap'd address",
+      "growth": "Grows upward via brk()",
+      "top_chunk": "Last chunk in heap, used for allocations when bins are empty"
+    },
+    "mmap_regions": {
+      "description": "Separate mmap'd regions for large allocations (> mmap_threshold)",
+      "behavior": "Not consolidated with main heap",
+      "munmap_on_free": true
+    }
+  },
+  "top_chunk": {
+    "description": "Special chunk at end of heap, used when bins cannot satisfy request",
+    "behavior": "If request fits, split top chunk. If not, extend heap via brk().",
+    "house_of_force": "Overwrite top chunk size to -1 (18446744073709551615) to allocate at arbitrary address"
+  },
+  "tcache_perthread_struct": {
+    "description": "Per-thread tcache management structure",
+    "location": "heap (allocated on first malloc)",
+    "layout": {
+      "counts": {
+        "offset": 0,
+        "size": 64,
+        "description": "Array of 64 bytes, each counting chunks in corresponding tcache bin"
+      },
+      "entries": {
+        "offset": 64,
+        "size": 512,
+        "description": "Array of 64 pointers (8 bytes each), each pointing to first chunk in tcache bin"
+      }
+    },
+    "exploitation_use": "Overwrite tcache struct to redirect allocations (tcache poisoning variant)"
+  },
+  "environ": {
+    "description": "libc variable pointing to stack environment pointer",
+    "location": "libc + environ_symbol",
+    "exploitation_use": "Leak stack address for ROP chain placement",
+    "formula": "stack_addr = *environ - offset_to_return_address"
+  },
+  "tcache_key": {
+    "description": "XOR mask used for safe linking of tcache FD pointers",
+    "location": "Derived from chunk address: key = chunk_addr >> 12",
+    "exploitation_use": "Leak key to bypass safe linking for tcache poisoning",
+    "formula": "real_ptr = encoded_ptr ^ key"
+  }
+}

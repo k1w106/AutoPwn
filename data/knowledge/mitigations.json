@@ -1,0 +1,180 @@
+{
+  "version": "1.0",
+  "description": "Heap security mitigations, checks, and bypass techniques",
+  "safe_linking": {
+    "introduced_in": "glibc 2.32",
+    "applies_to": [
+      "tcache",
+      "fastbin"
+    ],
+    "description": "XOR-encode FD pointers to prevent pointer forgery",
+    "mechanism": {
+      "encode": "fd_encoded = real_target ^ (chunk_address >> 12)",
+      "decode": "real_target = fd_encoded ^ (chunk_address >> 12)"
+    },
+    "bypass": {
+      "method": "Leak heap address, compute XOR key",
+      "requirements": [
+        "heap_leak"
+      ],
+      "formula": "protected_ptr = target ^ (heap_base >> 12)"
+    },
+    "exploitation_impact": "MEDIUM - bypassable with heap leak"
+  },
+  "tcache_double_free_detection": {
+    "introduced_in": "glibc 2.34",
+    "description": "Walk tcache list to detect if chunk already present",
+    "mechanism": "On free, iterate tcache list for matching size, check if chunk address matches any entry",
+    "bypass": {
+      "method_1": "Use different size (goes to different bin)",
+      "method_2": "Free into unsorted bin (tcache full)",
+      "method_3": "Overwrite tcache counts to skip check"
+    },
+    "exploitation_impact": "HIGH - breaks simple double-free into tcache"
+  },
+  "fastbin_size_check": {
+    "description": "Verify returned chunk size matches fastbin index",
+    "mechanism": "fastbin_index(chunksize(victim)) == idx",
+    "bypass": {
+      "method": "Ensure target address - 16 has valid size matching fastbin index",
+      "example": "To allocate at 6291456, need valid 112 size at 393200"
+    },
+    "exploitation_impact": "HIGH - limits fastbin attack targets"
+  },
+  "consolidation_checks": {
+    "prev_inuse_check": {
+      "description": "Check prev_inuse bit of next chunk before freeing",
+      "error": "double free or corruption (!prev)",
+      "bypass": "Set prev_inuse=1 on next chunk",
+      "exploitation_impact": "CRITICAL - must handle when creating fake chunks"
+    },
+    "prev_size_check": {
+      "description": "If prev_inuse=0, verify prev_size matches actual previous chunk size",
+      "error": "corrupted size vs. prev_size while consolidating",
+      "bypass": "Set prev_inuse=1 OR ensure prev_size is correct",
+      "exploitation_impact": "CRITICAL - must handle when creating fake chunks"
+    },
+    "unlink_mitigation": {
+      "description": "Verify chunk size consistency during consolidation",
+      "mechanism": "chunksize(p) must equal prev_size of next chunk",
+      "bypass": "Avoid consolidation by setting prev_inuse=1",
+      "exploitation_impact": "HIGH - prevents arbitrary unlink attacks"
+    }
+  },
+  "house_of_corruption": {
+    "description": "Generic term for heap corruption attacks",
+    "types": {
+      "house_of_spirit": {
+        "description": "Create fake chunk on stack, free it, then allocate at that address",
+        "requirements": [
+          "arbitrary_free",
+          "controlled_data_at_target"
+        ],
+        "mitigations": [
+          "size_check",
+          "next_size_check"
+        ]
+      },
+      "house_of_force": {
+        "description": "Overwrite top chunk size to -1, allocate at arbitrary address",
+        "requirements": [
+          "overflow_to_top_chunk",
+          "large_allocation"
+        ],
+        "mitigations": [
+          "top_chunk_size_validation"
+        ]
+      },
+      "house_of_einherjar": {
+        "description": "Off-by-one to set prev_inuse=0, trigger consolidation",
+        "requirements": [
+          "off_by_one",
+          "controlled_prev_size"
+        ],
+        "mitigations": [
+          "prev_size_check"
+        ]
+      },
+      "house_of_orange": {
+        "description": "Abuse _IO_FILE vtable for code execution",
+        "requirements": [
+          "unsorted_bin_attack",
+          "controlled_vtable"
+        ],
+        "mitigations": [
+          "vtable_verification"
+        ]
+      },
+      "house_of_botcake": {
+        "description": "Combine tcache poisoning with unsorted bin attack",
+        "requirements": [
+          "uaf",
+          "tcache_poisoning"
+        ],
+        "mitigations": [
+          "tcache_double_free_detection"
+        ]
+      },
+      "house_of_key": {
+        "description": "Leak heap key from tcache FD to bypass safe linking",
+        "requirements": [
+          "uaf",
+          "tcache_free"
+        ],
+        "mitigations": [
+          "safe_linking"
+        ]
+      }
+    }
+  },
+  "cet_protections": {
+    "description": "Control-flow Enforcement Technology (glibc 2.40+)",
+    "components": {
+      "SHSTK": {
+        "description": "Shadow Stack - protects return addresses",
+        "impact": "ROP chains targeting return addresses may fail"
+      },
+      "IBT": {
+        "description": "Indirect Branch Tracking - validates indirect jumps",
+        "impact": "One-gadget execution may fail if not ENDBR64 aligned"
+      }
+    },
+    "bypass": {
+      "method": "Use gadgets that are ENDBR64 aligned",
+      "alternative": "Target function pointers instead of return addresses",
+      "note": "CET is binary-level protection, not glibc-level"
+    }
+  },
+  "hook_removal": {
+    "description": "glibc 2.34+ removes __malloc_hook, __free_hook, __realloc_hook",
+    "impact": "Traditional hook-based exploitation no longer works",
+    "alternatives": [
+      "ROP via return address overwrite",
+      "_IO_FILE vtable attack (house of orange)",
+      "tcache struct overwrite",
+      "environ leak + stack pivot"
+    ]
+  },
+  "mitigation_timeline": {
+    "2.26": "tcache introduced (no checks)",
+    "2.29": "tcache double-free check added",
+    "2.32": "safe linking introduced",
+    "2.34": "tcache double-free strengthened, hooks deprecated",
+    "2.35": "more tcache hardening",
+    "2.37": "__malloc_hook, __free_hook removed",
+    "2.40": "CET (SHSTK + IBT) support",
+    "2.41": "CET enforcement enabled by default"
+  },
+  "scanf_malloc_consolidate": {
+    "description": "Large scanf input triggers malloc_consolidate, moving tcache to unsorted bin",
+    "impact": "Can be used to force libc leak without manual tcache fill",
+    "bypass": "Not a mitigation, but an exploitation primitive",
+    "exploitation_use": "HIGH - alternative libc leak method"
+  },
+  "index_confusion": {
+    "description": "Separate index variables for free and NULL operations can create UAF",
+    "mechanism": "chunk_index_a != chunk_index_b allows freed chunk to remain accessible",
+    "bypass": "Overflow index counter to create mismatch",
+    "exploitation_impact": "HIGH - creates UAF from logic bug"
+  }
+}

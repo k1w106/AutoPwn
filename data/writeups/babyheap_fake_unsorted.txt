@@ -1,0 +1,86 @@
+# Babyheap - UAF to ROP via Fake Unsorted Bin Chunk
+
+## Bug
+Use-After-Free trong hàm delete_chunk: free chunk nhưng không set pointer về NULL.
+Binary cho malloc tối đa 21 chunks với size cố định 0x30.
+
+## Malloc Internals Quan Trọng
+
+### 1. Safe Linking (glibc 2.32+)
+- FD pointer trong tcache bị XOR với address >> 12
+- Decode: `real_addr = fd ^ (chunk_addr >> 12)`
+- Encode: `fd_encoded = target ^ (chunk_addr >> 12)`
+
+### 2. Unsorted Bin Threshold
+- Chunk > 0x410 (tcache max size) sẽ vào unsorted bin
+- Fake chunk size 0x421 đủ lớn để bypass tcache
+
+### 3. Free Chunk Validation
+Khi free một chunk, glibc kiểm tra:
+```c
+// Check prev_inuse của chunk tiếp theo
+if (__glibc_unlikely (!prev_inuse(nextchunk)))
+    malloc_printerr ("double free or corruption (!prev)");
+
+// Check consolidation với chunk trước
+if (!prev_inuse(p)) {
+    INTERNAL_SIZE_T prevsize = prev_size (p);
+    size += prevsize;
+    p = chunk_at_offset(p, -((long) prevsize));
+    if (__glibc_unlikely (chunksize(p) != prevsize))
+        malloc_printerr ("corrupted size vs. prev_size while consolidating");
+    unlink_chunk (av, p);
+}
+```
+
+### 4. Fake Chunk Requirements
+Để fake chunk 0x421 thành công cần:
+- **Chunk 0x421**: Size field = 0x421 (PREV_INUSE bit set)
+- **Fake chunk sau 0x421**: prev_inuse bit = 1 (tránh malloc_printerr)
+- **Fake chunk thứ 2**: prev_size match với 0x421 (tránh consolidation + unlink mitigation)
+
+## Exploit Path
+
+### Phase 1: Leak Heap (XOR Safe Linking)
+1. malloc(0, 0x30) → malloc(1, 0x30)
+2. free(0) → FD bị XOR với heap_base >> 12
+3. read(0) → leak 5 bytes FD → `heap_base = xor_key << 12`
+
+### Phase 2: Leak libc (Fake 0x421 Unsorted Bin)
+1. Double free bypass: update(0, p64(0)*2) → free(0)
+2. Poison FD → heap+0x2d0 (vị trí cần overwrite)
+3. malloc(2) → malloc(3, p64(0) + p64(0x421)) → overwrite chunk0 size thành 0x421
+4. Lặp lại double free → poison FD → heap+0x6f0 (vị trí fake chunk sau 0x421)
+5. malloc(4) → malloc(5, p64(0) + p64(0x21) + p64(0)*3 + p64(0x21))
+   - Fake chunk 1: size 0x21, prev_inuse = 1
+   - Fake chunk 2: size 0x21, prev_inuse = 1
+6. free(1) → chunk 0x421 vào unsorted bin
+7. read(1) → leak main_arena → `libc_base = leak - (main_arena + 96)`
+
+### Phase 3: Leak Stack (environ)
+1. Double free bypass → poison FD → libc.sym.environ - 0x18
+2. malloc(6) → malloc(7, 0x18 bytes filler)
+3. read(7) → skip filler → leak stack pointer
+
+### Phase 4: ROP Return Address
+1. Double free bypass → poison FD → stack - 0x158 (return address)
+2. malloc(8) → allocate tại return address
+3. malloc(9, rop_payload) → overwrite return address
+4. ROP chain: xor_rax gadget → one_gadget
+
+## Heap Layout
+
+```
+[chunk0: 0x30] [chunk1: 0x30] [chunk2: 0x30] ... [top chunk]
+                    ↓ overwrite size 0x421
+[chunk0: 0x421] [fake1: 0x21] [fake2: 0x21] [top chunk]
+                    ↓ free chunk0
+[unsorted bin: 0x421] → leak main_arena FD/BK
+```
+
+## Key Learnings
+1. Không cần fill tcache 7 chunks nếu có thể fake size > 0x410
+2. Phải fake prev_inuse và prev_size để tránh malloc_printerr
+3. Unlink mitigation check: chunksize(p) == prevsize
+4. environ leak cho stack pointer trực tiếp, không cần ROP phức tạp
+5. One_gadget + xor_rax gadget bypass one_gadget constraints
