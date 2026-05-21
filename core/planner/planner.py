@@ -183,6 +183,13 @@ class EvolutionaryPlanner:
                 })
 
         # Sort by confidence (most popular first)
+        # Boost confidence if technique was verified by angr
+        verified_techs = self.symbolic_results.get("summary", {}).get("verified_techniques", [])
+        for a in actions:
+            for vt in verified_techs:
+                if vt.lower() in a["action"].lower() or vt.lower() in a["target_state"].lower():
+                    a["confidence"] += 0.5  # Significant priority boost
+                    
         actions.sort(key=lambda a: a["confidence"], reverse=True)
         return actions
 

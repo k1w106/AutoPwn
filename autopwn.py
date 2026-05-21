@@ -72,7 +72,7 @@ class AutoPwnFramework:
 
         # Step 5: angr Symbolic Execution (Module 5 — NEW)
         self.run_stage("angr Symbolic Execution",
-                       f"angr_executor.py --binary {self.target}",
+                       f"angr_executor.py --binary {self.target} --critical {os.path.join(self.internal_artifacts, 'critical_vars.json')}",
                        cwd=os.path.join(self.root_dir, "core", "symbolic_executor"))
 
         # Step 6: Exploit Planning (Module 6 — Evolutionary DFS)
