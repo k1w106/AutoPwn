@@ -49,13 +49,26 @@ class BenchmarkRunner:
         if not os.path.exists(challenge_dir):
             return False
 
-        binary_path = os.path.join(challenge_dir, 'binary')
+        # Look up binary name from config, default to 'binary'
+        binary_name = 'binary'
+        for c in self.config.get('challenges', []):
+            if c.get('id') == challenge_id:
+                binary_name = c.get('binary', 'binary')
+                break
+        binary_path = os.path.join(challenge_dir, binary_name)
         return os.path.exists(binary_path)
 
     def run_autopwn(self, challenge_id: str, use_angr: bool = False) -> bool:
         """Run autopwn on a challenge."""
         challenge_dir = self.get_challenge_dir(challenge_id)
-        binary_path = os.path.join(challenge_dir, 'binary')
+
+        # Look up binary name from config
+        binary_name = 'binary'
+        for c in self.config.get('challenges', []):
+            if c.get('id') == challenge_id:
+                binary_name = c.get('binary', 'binary')
+                break
+        binary_path = os.path.join(challenge_dir, binary_name)
 
         if not os.path.exists(binary_path):
             print(f"  [SKIP] Binary not found: {binary_path}")

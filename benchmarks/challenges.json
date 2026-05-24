@@ -1,188 +1,34 @@
 {
-  "version": "1.0",
-  "description": "AutoPwn Benchmark Suite - Heap Exploitation Challenges",
   "challenges": [
     {
       "id": "justCTF-2025-babyheap",
-      "name": "babyheap",
-      "ctf": "justCTF 2025",
-      "difficulty": "medium",
-      "vulnerability_types": ["uaf", "tcache_poisoning"],
-      "expected_primitives": ["heap_leak", "libc_leak", "arbitrary_write"],
-      "expected_techniques": ["uaf_leak", "tcache_poisoning", "unsorted_bin_fake_chunk"],
-      "libc_version": "2.35+",
-      "mitigations": ["safe_linking", "no_hooks"],
-      "files": {
-        "binary": "binary",
-        "libc": "libc.so.6",
-        "loader": "ld-linux-x86-64.so.2",
-        "solve": "solve.py"
-      },
-      "notes": "UAF in delete function, tcache poisoning for arbitrary read/write, forge fake chunk for unsorted bin leak"
-    },
-    {
-      "id": "amateurs-ctf-2024-heaps-of-fun",
-      "name": "heaps-of-fun",
-      "ctf": "Amateurs CTF 2024",
-      "difficulty": "medium",
+      "name": "JustCTF 2025 - Babyheap",
+      "binary": "binary",
+      "glibc": "2.39",
+      "description": "Simple heap challenge with UAF vulnerability. Provides alloc, edit, free, read operations.",
       "vulnerability_types": ["uaf"],
       "expected_primitives": ["heap_leak", "libc_leak", "stack_leak", "arbitrary_write"],
-      "expected_techniques": ["uaf_leak", "tcache_poisoning", "environ_leak"],
-      "libc_version": "2.35",
-      "mitigations": ["safe_linking", "no_hooks"],
-      "files": {
-        "binary": "binary",
-        "libc": "libc.so.6",
-        "loader": "ld-linux-x86-64.so.2",
-        "solve": "solve.py"
-      },
-      "notes": "UAF allows read/edit freed chunks, leak heap key via safe linking bypass, environ for stack leak, ROP on stack"
+      "expected_techniques": ["tcache_poisoning"]
     },
     {
-      "id": "0ctf-2017-babyheap",
-      "name": "babyheap",
-      "ctf": "0CTF 2017",
-      "difficulty": "hard",
-      "vulnerability_types": ["heap_overflow", "double_free"],
-      "expected_primitives": ["libc_leak", "arbitrary_write"],
-      "expected_techniques": ["heap_consolidation", "fastbin_dup", "malloc_hook_overwrite"],
-      "libc_version": "2.23",
-      "mitigations": ["pie", "relro"],
-      "files": {
-        "binary": "binary",
-        "libc": "libc.so.6",
-        "loader": "ld-linux-x86-64.so.2",
-        "solve": "solve.py"
-      },
-      "notes": "calloc instead of malloc, heap overflow for overlapping chunks, double free for fastbin attack, malloc hook overwrite"
-    },
-    {
-      "id": "defcon-quals-2019-babyheap",
-      "name": "babyheap",
-      "ctf": "DEF CON Quals 2019",
-      "difficulty": "hard",
-      "vulnerability_types": ["off_by_one", "tcache_poisoning"],
-      "expected_primitives": ["libc_leak", "arbitrary_write"],
-      "expected_techniques": ["single_byte_overflow", "tcache_poisoning", "free_hook_overwrite"],
-      "libc_version": "2.29",
-      "mitigations": ["canary", "pie", "relro", "fortify"],
-      "files": {
-        "binary": "binary",
-        "libc": "libc.so.6",
-        "loader": "ld-linux-x86-64.so.2",
-        "solve": "solve.py"
-      },
-      "notes": "Single byte overflow to corrupt chunk size, larger overflow for tcache poisoning, no edit function, free hook overwrite"
-    },
-    {
-      "id": "backdoor-ctf-2021-babyheap",
-      "name": "babyHeap",
-      "ctf": "BackdoorCTF 2021",
-      "difficulty": "medium",
-      "vulnerability_types": ["index_confusion", "uaf"],
-      "expected_primitives": ["libc_leak", "arbitrary_write"],
-      "expected_techniques": ["index_overflow", "uaf_leak", "tcache_poisoning"],
-      "libc_version": "2.31",
-      "mitigations": ["canary", "nx"],
-      "files": {
-        "binary": "binary",
-        "libc": "libc.so.6",
-        "loader": "ld-linux-x86-64.so.2",
-        "solve": "solve.py"
-      },
-      "notes": "Index confusion bug allows UAF, chunk_index_a vs chunk_index_b mismatch, free last chunk only"
-    },
-    {
-      "id": "picoctf-2024-heap3",
-      "name": "heap3",
-      "ctf": "picoCTF 2024",
-      "difficulty": "easy",
+      "id": "dreamhack-toxic-malloc",
+      "name": "Dreamhack - Toxic Malloc",
+      "binary": "chall",
+      "glibc": "2.35",
+      "description": "Heap challenge with create/update/read/delete menu. Uses glibc 2.35 (safe-linking enabled).",
       "vulnerability_types": ["uaf"],
-      "expected_primitives": ["arbitrary_write"],
-      "expected_techniques": ["uaf_write", "tcache_reuse"],
-      "libc_version": "2.35",
-      "mitigations": ["nx"],
-      "files": {
-        "binary": "binary",
-        "libc": "libc.so.6",
-        "loader": "ld-linux-x86-64.so.2",
-        "solve": "solve.py"
-      },
-      "notes": "Simple UAF write-what-where, tcache reuse for same-size allocation, overwrite flag to win condition"
+      "expected_primitives": ["heap_leak", "libc_leak", "arbitrary_write"],
+      "expected_techniques": ["tcache_poisoning"]
+    },
+    {
+      "id": "dreamhack-cats-and-dogs",
+      "name": "Dreamhack - Cats and Dogs",
+      "binary": "main",
+      "glibc": "2.39",
+      "description": "Non-PIE heap challenge with get/see/pet/release menu for cats and dogs.",
+      "vulnerability_types": ["uaf"],
+      "expected_primitives": ["heap_leak", "libc_leak", "arbitrary_write"],
+      "expected_techniques": ["tcache_poisoning"]
     }
-  ],
-  "scoring": {
-    "bug_detection": {
-      "weight": 0.30,
-      "description": "Correct identification of vulnerability type",
-      "metrics": {
-        "correct_vulnerability_type": {
-          "weight": 0.5,
-          "description": "Does the exploit target the correct vulnerability?"
-        },
-        "all_vulnerabilities_found": {
-          "weight": 0.3,
-          "description": "Are all vulnerability types detected?"
-        },
-        "no_false_positives": {
-          "weight": 0.2,
-          "description": "No incorrect vulnerability claims"
-        }
-      }
-    },
-    "primitive_correctness": {
-      "weight": 0.30,
-      "description": "Correct identification and use of exploit primitives",
-      "metrics": {
-        "leak_primitive_valid": {
-          "weight": 0.4,
-          "description": "Leak primitive correctly identified and implemented"
-        },
-        "write_primitive_valid": {
-          "weight": 0.4,
-          "description": "Write primitive correctly identified and implemented"
-        },
-        "primitive_chain_valid": {
-          "weight": 0.2,
-          "description": "Primitives used in correct order"
-        }
-      }
-    },
-    "exploit_chain": {
-      "weight": 0.25,
-      "description": "Logical validity of exploit chain",
-      "metrics": {
-        "stage_order_correct": {
-          "weight": 0.3,
-          "description": "Exploit stages in correct order"
-        },
-        "transitions_valid": {
-          "weight": 0.4,
-          "description": "State transitions between stages are valid"
-        },
-        "technique_appropriate": {
-          "weight": 0.3,
-          "description": "Chosen technique matches challenge requirements"
-        }
-      }
-    },
-    "address_flexibility": {
-      "weight": 0.15,
-      "description": "User can adjust addresses that system may get wrong",
-      "metrics": {
-        "user_adjustable_offsets": {
-          "weight": 0.4,
-          "description": "Stack/ROP offsets clearly marked for adjustment"
-        },
-        "clear_documentation": {
-          "weight": 0.3,
-          "description": "Comments explain what each address does"
-        },
-        "modular_design": {
-          "weight": 0.3,
-          "description": "Address calculations are modular and easy to modify"
-        }
-      }
-    }
-  }
+  ]
 }
