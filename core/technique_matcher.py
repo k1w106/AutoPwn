@@ -96,11 +96,97 @@ class TechniqueMatcher:
 
     # ─── Core matching — uses KB, not hardcoded lists ────────────────
 
+    # ─── 3-Factor Context-Aware Strategy Ranking ─────────────────────
+
+    def _has_complex_interface(self) -> bool:
+        """
+        Detect if the binary has a complex multi-group interface
+        (e.g. cats-and-dogs with separate cat/dog arrays).
+        Returns True when:
+          - total operations > 4 (more than simple CRUD), OR
+          - any role appears more than once (multiple alloc/free/view ops)
+        """
+        ops = self.interface_map.get("operations", {})
+        total_ops = len(ops)
+        if total_ops > 4:
+            return True
+        role_counts = {}
+        for choice, info in ops.items():
+            role = info.get("role", "")
+            if role:
+                role_counts[role] = role_counts.get(role, 0) + 1
+        if any(count >= 2 for count in role_counts.values()):
+            return True
+        return False
+
+    def _get_max_slots(self) -> int:
+        """Detect max allocatable slots from binary strings in interface_map."""
+        ops = self.interface_map.get("operations", {})
+        for choice, info in ops.items():
+            if info.get("role") == "alloc":
+                steps = info.get("steps", [])
+                for s in steps:
+                    if s.get("arg") == "idx":
+                        hint = s.get("type", "")
+                        if "range" in hint.lower() or "0-" in hint:
+                            try:
+                                parts = hint.split("0-")
+                                return int(parts[1].split()[0]) + 1
+                            except (IndexError, ValueError):
+                                pass
+        return 0
+
+    def _esm_mentions_keyword(self, keywords: list) -> bool:
+        """
+        Check if ESM/NLP writeup extraction contains specific keywords
+        (e.g. "botcake", "consolidate", "house_of_botcake").
+        Searches across all ESM state technique names and writeup vars.
+        """
+        esm = self.esm_hints or {}
+        for kw in keywords:
+            kw_lower = kw.lower()
+            # Check in detected_techniques
+            for tech_list_key in ("detected_techniques", "techniques"):
+                techs = esm.get(tech_list_key, [])
+                if isinstance(techs, list):
+                    for t in techs:
+                        if isinstance(t, str) and kw_lower in t.lower():
+                            return True
+                        if isinstance(t, dict) and kw_lower in str(t.get("id", "")).lower():
+                            return True
+                if isinstance(techs, dict):
+                    for k, v in techs.items():
+                        if kw_lower in k.lower():
+                            return True
+                        if isinstance(v, dict) and kw_lower in str(v.get("state", "")).lower():
+                            return True
+            # Check bug/capability lists
+            for list_key in ("detected_bugs", "detected_capabilities"):
+                items = esm.get(list_key, [])
+                for item in items:
+                    if kw_lower in str(item).lower():
+                        return True
+        return False
+
+    def _detect_interface_type(self) -> str:
+        """
+        Classify interface type for context-aware strategy routing.
+        Returns "complex_multi_group" or "simple_crud".
+        """
+        if self._has_complex_interface():
+            return "complex_multi_group"
+        slots = self._get_max_slots()
+        if slots >= 8:
+            return "complex_multi_group"
+        return "simple_crud"
+
     def rank_strategies(self, bugs=None, capabilities=None):
         """
-        Rank exploit strategies using the KnowledgeBase reasoning engine.
-        No hardcoded strategy lists.
-        Returns list of dicts with keys: strategy, techniques, confidence.
+        Rank exploit strategies using 3-factor context-aware decision:
+          Factor 1 (KB Match): base confidence from heap_techniques.json
+          Factor 2 (NLP Hints): writeup keywords like "botcake"/"consolidate"
+          Factor 3 (Interface Caps): simple CRUD vs complex multi-group
+        Returns list of dicts sorted by confidence descending.
         """
         if bugs is None:
             bugs = set()
@@ -110,22 +196,22 @@ class TechniqueMatcher:
         bugs.update(self.detect_bugs_from_interface())
         available_ops = list(self.available_ops)
 
+        # Detect context
+        interface_type = self._detect_interface_type()
+        esm_mentions_botcake = self._esm_mentions_keyword(
+            ["botcake", "house_of_botcake"]
+        )
+        esm_mentions_consolidate = self._esm_mentions_keyword(
+            ["consolidate", "malloc_consolidate", "consolidation"]
+        )
+
         # Query KB for all matching techniques
         matched = self.kb.match_techniques(
             self.glibc_version, list(bugs), list(capabilities), available_ops
         )
 
-        # Group matched techniques by phase to form strategy chains
-        leak_techniques = [m for m in matched if m.get("phase", "").endswith("leak")]
-        primitive_techniques = [m for m in matched if "primitive" in m.get("phase", "")]
-        goal_techniques = [m for m in matched if "goal" in m.get("phase", "") or
-                          m.get("technique", {}).get("produces", []) in
-                          (["control_flow_hijack"], ["arbitrary_write"])]
-
         # Build strategies from KB-matched techniques
         strategies = {}
-
-        # Group techniques by their produces
         for m in matched:
             tech_data = m["technique"]
             tech_id = m["technique_id"]
@@ -133,7 +219,6 @@ class TechniqueMatcher:
             if isinstance(produces, str):
                 produces = [produces]
 
-            # Auto-generate a strategy key from the technique
             strategy_key = self._build_strategy_key(tech_id, produces, matched)
 
             if strategy_key not in strategies:
@@ -150,16 +235,42 @@ class TechniqueMatcher:
                 strategies[strategy_key]["kb_confidence"], m["confidence"]
             )
 
-        # Score each strategy
+        # --- 3-Factor Scoring ---
         results = []
         for sk, sv in strategies.items():
+            # Factor 1: KB base score
             score = sv["kb_confidence"] * 2
 
             # Operation completeness bonus
             if all(o in self.available_ops for o in sv.get("requires", [])):
                 score += len(sv.get("requires", []))
 
-            # Consolidation trigger bonus
+            # Factor 2: NLP Writeup Hints
+            is_house_of_botcake = "house_of_botcake" in sk
+            is_consolidate = "malloc_consolidate" in sk or "consolidate" in sk
+
+            if is_house_of_botcake:
+                if esm_mentions_botcake:
+                    score += 5  # Writeup explicitly mentions botcake → strong boost
+                # If writeup does NOT mention botcake, house_of_botcake gets NO bonus
+            if is_consolidate:
+                if esm_mentions_consolidate:
+                    score += 3  # Consolidation mentioned in writeup → moderate boost
+                # else: no bonus, consolidation is generic
+
+            # Factor 3: Interface Caps
+            if is_house_of_botcake or is_consolidate:
+                if interface_type == "complex_multi_group":
+                    score += 4  # Complex interface → house_of_botcake/consolidate suitable
+                else:
+                    score -= 3  # Simple CRUD → penalize consolidation strategies
+
+            # Simple tcache poison: boost for simple interfaces
+            is_basic_tcache = sk in ("tcache_poisoning", "tcache_poison_stack")
+            if is_basic_tcache and interface_type == "simple_crud":
+                score += 3  # Simple CRUD → prefer basic tcache poison
+
+            # Consolidation trigger bonus (if binary supports large sends)
             if self.detect_consolidation_trigger():
                 has_consolidate = any(
                     "consolidate" in t.lower() for t in sv["techniques"]
@@ -167,30 +278,33 @@ class TechniqueMatcher:
                 if has_consolidate:
                     score += 2
 
-            # Entry-point technique: if leak technique available, boost
-            has_leak = any(
-                "leak" in t.lower() for t in sv["techniques"]
-            )
+            # Leak technique bonus
+            has_leak = any("leak" in t.lower() for t in sv["techniques"])
             if has_leak:
                 score += 3
 
-            # ROP/control flow techniques get final-stage bonus
+            # ROP/control flow bonus
             has_rop = any(
                 t in ("rop_chain", "environ_leak") or
-                "ret_addr" in t.lower() or
-                "stack" in t.lower()
+                "ret_addr" in t.lower() or "stack" in t.lower()
                 for t in sv["techniques"]
             )
             if has_rop:
                 score += 4
 
             confidence = max(0, min(10, score))
+            reasons = (
+                f"kb:{sv['kb_confidence']}"
+                f"_interface:{interface_type}"
+                f"_nlp_botcake:{esm_mentions_botcake}"
+                f"_nlp_consolidate:{esm_mentions_consolidate}"
+            )
             results.append({
                 "strategy": sk,
                 "label": sv["label"],
                 "confidence": confidence,
                 "techniques": sv["techniques"],
-                "reasons": f"kb_match:{sv['kb_confidence']}_ops:{len(self.available_ops)}",
+                "reasons": reasons,
             })
 
         results.sort(key=lambda r: r["confidence"], reverse=True)

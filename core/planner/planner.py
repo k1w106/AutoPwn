@@ -1130,10 +1130,30 @@ class SmartPlanner:
 
     # ─── Strategy Selection ──────────────────────────────────────────
 
+    def _get_interface_type(self) -> str:
+        """Classify interface as simple_crud or complex_multi_group."""
+        ops = self.interface_map.get("operations", {})
+        total_ops = len(ops)
+        if total_ops > 4:
+            return "complex_multi_group"
+        role_counts = {}
+        for choice, info in ops.items():
+            role = info.get("role", "")
+            if role:
+                role_counts[role] = role_counts.get(role, 0) + 1
+        if any(c >= 2 for c in role_counts.values()):
+            return "complex_multi_group"
+        return "simple_crud"
+
     def _select_strategy(self):
-        """Select strategy using KB-driven matcher (no hardcoded lists)."""
+        """
+        Select strategy using 3-factor context-aware routing
+        (KB match + NLP hints + interface caps).
+        No hardcoded glibc-based branching.
+        """
         detected_bugs = set(self.esm_hints.get("detected_bugs", []))
         detected_caps = set(self.esm_hints.get("detected_capabilities", []))
+        interface_type = self._get_interface_type()
 
         try:
             matcher = self._get_technique_matcher()
@@ -1148,9 +1168,10 @@ class SmartPlanner:
             strategy_name = recommended.get("strategy", "tcache_poisoning")
 
             print(f"[Planner] KB-recommended strategy: '{strategy_name}' "
-                  f"(confidence={recommended.get('confidence', 5)}/10)")
+                  f"(confidence={recommended.get('confidence', 5)}/10, "
+                  f"interface={interface_type})")
 
-            # Map strategy name to our known handlers
+            # Map KB strategy names to internal handlers
             if strategy_name == "got_overwrite":
                 return "got_overwrite"
             if strategy_name in ("fastbin_dup", "fastbin_reverse_into_tcache"):
@@ -1159,11 +1180,23 @@ class SmartPlanner:
                 return "tcache_hooks"
             if "tcache" in strategy_name:
                 return "tcache_poison_stack"
+
+            # Context-aware: house_of_botcake only for complex interfaces
+            is_consolidation = strategy_name in (
+                "malloc_consolidate", "house_of_botcake",
+            ) or "consolidate" in strategy_name
+            if is_consolidation:
+                if interface_type == "complex_multi_group":
+                    print(f"[Planner] Complex multi-group interface detected → "
+                          f"using house_of_botcake")
+                    return "house_of_botcake"
+                else:
+                    print(f"[Planner] Simple CRUD interface detected → "
+                          f"using tcache_poison_stack instead of {strategy_name}")
+                    return "tcache_poison_stack"
+
             if strategy_name == "rop_chain":
                 return "tcache_poison_stack"
-
-            if strategy_name == "malloc_consolidate":
-                return "house_of_botcake"
 
             # Unknown strategy — try dynamic dispatch
             handler_name = f"_generate_{strategy_name}"
