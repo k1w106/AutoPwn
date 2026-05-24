@@ -94,18 +94,11 @@ class TechniqueMatcher:
             return True
         return False
 
-    # ─── Core matching — uses KB, not hardcoded lists ────────────────
+    # ─── Core matching — uses KB ────────────────
 
     # ─── 3-Factor Context-Aware Strategy Ranking ─────────────────────
 
     def _has_complex_interface(self) -> bool:
-        """
-        Detect if the binary has a complex multi-group interface
-        (e.g. cats-and-dogs with separate cat/dog arrays).
-        Returns True when:
-          - total operations > 4 (more than simple CRUD), OR
-          - any role appears more than once (multiple alloc/free/view ops)
-        """
         ops = self.interface_map.get("operations", {})
         total_ops = len(ops)
         if total_ops > 4:
@@ -184,7 +177,7 @@ class TechniqueMatcher:
         """
         Rank exploit strategies using 3-factor context-aware decision:
           Factor 1 (KB Match): base confidence from heap_techniques.json
-          Factor 2 (NLP Hints): writeup keywords like "botcake"/"consolidate"
+          Factor 2 (NLP Hints)
           Factor 3 (Interface Caps): simple CRUD vs complex multi-group
         Returns list of dicts sorted by confidence descending.
         """
@@ -268,7 +261,7 @@ class TechniqueMatcher:
             # Simple tcache poison: boost for simple interfaces
             is_basic_tcache = sk in ("tcache_poisoning", "tcache_poison_stack")
             if is_basic_tcache and interface_type == "simple_crud":
-                score += 3  # Simple CRUD → prefer basic tcache poison
+                score += 8  # Simple CRUD → strongly prefer basic tcache poison
 
             # Consolidation trigger bonus (if binary supports large sends)
             if self.detect_consolidation_trigger():
@@ -383,7 +376,7 @@ class TechniqueMatcher:
             capabilities = set()
 
         print("=" * 60)
-        print("  TECHNIQUE MATCHER REPORT v2.0 (KB-driven)")
+        print("  TECHNIQUE MATCHER REPORT (KB-driven)")
         print("=" * 60)
         print(f"  glibc: {self.glibc_version}")
         print(f"  operations: {', '.join(sorted(self.available_ops))}")

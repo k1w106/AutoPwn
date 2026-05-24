@@ -1,0 +1,65 @@
+{
+  "menu_prompt": "b'> '",
+  "operations": {
+    "1": {
+      "role": "alloc",
+      "choice": "1",
+      "steps": [
+        {
+          "prompt": "b'enter index for new data (0-4): '",
+          "type": "int",
+          "arg": "idx"
+        },
+        {
+          "prompt": "b'enter data for creation: '",
+          "type": "bytes",
+          "arg": "data"
+        }
+      ]
+    },
+    "2": {
+      "role": "edit",
+      "choice": "2",
+      "steps": [
+        {
+          "prompt": "b'enter index of data to update (0-4): '",
+          "type": "int",
+          "arg": "idx"
+        },
+        {
+          "prompt": "b''",
+          "type": "bytes",
+          "arg": "data"
+        }
+      ]
+    },
+    "3": {
+      "role": "view",
+      "choice": "3",
+      "steps": [
+        {
+          "prompt": "b'enter index of data to read (0-4): '",
+          "type": "int",
+          "arg": "idx"
+        }
+      ]
+    },
+    "4": {
+      "role": "free",
+      "choice": "4",
+      "steps": [
+        {
+          "prompt": "b'enter index of data to delete (0-4): '",
+          "type": "int",
+          "arg": "idx"
+        }
+      ]
+    }
+  },
+  "features": {
+    "index_base": 0,
+    "letter_commands": false,
+    "view_output_format": "prefixed",
+    "multi_chunk_alloc": false
+  }
+}

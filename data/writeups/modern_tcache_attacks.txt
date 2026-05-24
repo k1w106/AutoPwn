@@ -1,0 +1,16 @@
+The House of Botcake technique allows an attacker to bypass tcache double-free checks in glibc 2.29 and later.
+First, the attacker fills the tcache for a specific size class by freeing seven chunks.
+Then, a victim chunk is freed, which goes into the unsorted bin.
+The attacker frees an adjacent chunk to consolidate it with the victim chunk in the unsorted bin.
+One chunk is allocated from the tcache to create a slot.
+The attacker then frees the victim chunk again. This time it goes into the tcache.
+Now, the victim chunk is simultaneously in the tcache and part of a larger chunk in the unsorted bin, creating a chunk overlap.
+
+The TCache Relative Write technique exploits the lack of bounds checking on tcache indices.
+An attacker first uses a technique like Large Bin Attack to overwrite mp_.tcache_bins with a very large value.
+By allocating and then freeing a chunk with a carefully calculated large size, the attacker triggers an out-of-bounds write relative to the tcache_perthread_struct.
+This allows the attacker to write a heap address (the chunk's pointer) or an incremented counter to an arbitrary location on the heap.
+
+TCache Metadata Poisoning involves overwriting the tcache_perthread_struct, which is typically located at the start of the heap.
+If an attacker can achieve a heap overflow or a relative write that reaches the beginning of the heap, they can modify the entries and counts arrays.
+By setting an entry in the tcache metadata to a target address, the next malloc for that size class will return the target address, enabling arbitrary allocation.

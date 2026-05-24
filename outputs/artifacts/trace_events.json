@@ -1,0 +1,38 @@
+[
+  {
+    "seq": 1,
+    "pid": 1,
+    "comm": "trace",
+    "type": "Alloc",
+    "size": 64,
+    "addr": "0x555555559100",
+    "note": "synthetic_from_fuzzer"
+  },
+  {
+    "seq": 2,
+    "pid": 1,
+    "comm": "trace",
+    "type": "Write",
+    "size": 8,
+    "addr": "0x555555559200",
+    "note": "synthetic_from_fuzzer"
+  },
+  {
+    "seq": 3,
+    "pid": 1,
+    "comm": "trace",
+    "type": "Read",
+    "size": 8,
+    "addr": "0x555555559300",
+    "note": "synthetic_from_fuzzer"
+  },
+  {
+    "seq": 4,
+    "pid": 1,
+    "comm": "trace",
+    "type": "Free",
+    "size": 0,
+    "addr": "0x555555559400",
+    "note": "synthetic_from_fuzzer"
+  }
+]

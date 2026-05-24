@@ -1,0 +1,13 @@
+A Large Bin Attack in modern glibc (2.30+) allows an attacker to write a heap address to an arbitrary location.
+The attacker prepares two large chunks: p1 (larger) already in a large bin, and p2 (smaller) in the unsorted bin.
+The attacker uses a vulnerability to overwrite the bk_nextsize pointer of p1 with (target_address - 0x20).
+When a new allocation triggers the movement of p2 from the unsorted bin into the large bin, the allocator follows p1's bk_nextsize.
+The allocator then writes the address of p2 to p1->bk_nextsize->fd_nextsize, which is the attacker's target_address.
+
+The Tcache Stashing Unlink Attack exploits the mechanism that moves chunks from smallbins to tcache.
+An attacker fills the tcache for a size class but leaves at least two empty slots.
+The attacker then populates a smallbin with at least two chunks and overwrites the bk pointer of the second chunk with (target_address - 0x10).
+When calloc or malloc triggers a smallbin allocation, the first chunk is returned to the user.
+The remaining chunks in the smallbin, including the corrupted one and a fake chunk at the target address, are stashed into the tcache.
+This process performs an unlink operation on the fake chunk, which writes a libc address to the target_address + 0x10.
+Additionally, the target address is now a valid entry in the tcache, allowing for arbitrary allocation.

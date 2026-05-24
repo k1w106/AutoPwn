@@ -1,0 +1,13 @@
+Hệ thống Autopwn đang bị lỗi Regression nghiêm trọng: Sau khi chỉnh sửa để nhận diện 'house_of_botcake' cho bài `dreamhack-cats-and-dogs`, bộ Matcher/Planner lại áp dụng sai kỹ thuật này cho bài `justCTF-2025-babyheap` (cũng chạy Glibc 2.39), dẫn đến sai lệch kịch bản. Lý do là điều kiện kích hoạt chiến thuật quá rộng và bị hardcode vô điều kiện dựa trên phiên bản Glibc.
+
+Hãy sửa lại logic điều phối trong module `core/technique_matcher.py` và `core/smart_planner.py` theo kiến trúc phân nhánh dựa trên Ngữ cảnh đối tượng (Context-Aware):
+
+1. Loại bỏ hoàn toàn các câu lệnh if-else ép cứng chiến thuật theo kiểu `if glibc >= 2.35`.
+2. Trong hàm định tuyến chiến thuật (`rank_strategies`), hệ thống phải dựa trên sự kết hợp của 3 yếu tố độc lập:
+   - Yếu tố 1 (KB Match): Điểm số tin cậy gốc từ tệp tri thức `heap_techniques.json`.
+   - Yếu tố 2 (NLP Writeup Hints): Kiểm tra xem trong tầng `Multi-Writeup NLP Extraction` có xuất hiện từ khóa "botcake" hay "consolidate" không. Nếu writeup của bài đó nhắc tới, mới tăng trọng số (weight) cho kỹ thuật đó.
+   - Yếu tố 3 (Interface Caps): Chiến thuật `house_of_botcake` CHỈ được chọn làm ưu tiên số 1 khi hệ thống nhận diện được menu có cấu trúc quản lý các nhóm thực thể phức tạp hoặc có số lượng slot cho phép alloc lớn (ví dụ: >= 8 slot trở lên như bài cats-and-dogs). Đối với các binary đơn giản chỉ có 4 lệnh cơ bản (Create, Read, Update, Delete) với số lượng slot hạn chế, hãy ưu tiên các chiến thuật Tcache Poisoning chuẩn hoặc các kỹ thuật basic của Glibc đời cao.
+
+3. Đảm bảo khôi phục lại luồng Planner cũ cho bài `justCTF-2025-babyheap` để nó chọn đúng kỹ thuật dựa trên bảng điểm KB gốc của nó.
+
+Hãy xuất ra đoạn mã nguồn được refactor lại một cách tường minh, sạch sẽ và có comment giải thích rõ ràng điều kiện rẽ nhánh.
