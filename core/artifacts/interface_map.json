@@ -6,23 +6,34 @@
       "choice": "1",
       "steps": [
         {
-          "prompt": "b'enter index for new data (0-4): '",
+          "prompt": "b'Index? '",
           "type": "int",
           "arg": "idx"
         },
         {
-          "prompt": "b'enter data for creation: '",
+          "prompt": "b'Content? '",
           "type": "bytes",
           "arg": "data"
         }
       ]
     },
     "2": {
-      "role": "edit",
+      "role": "view",
       "choice": "2",
       "steps": [
         {
-          "prompt": "b'enter index of data to update (0-4): '",
+          "prompt": "b'Index? '",
+          "type": "int",
+          "arg": "idx"
+        }
+      ]
+    },
+    "3": {
+      "role": "edit",
+      "choice": "3",
+      "steps": [
+        {
+          "prompt": "b'Index? '",
           "type": "int",
           "arg": "idx"
         },
@@ -33,23 +44,12 @@
         }
       ]
     },
-    "3": {
-      "role": "view",
-      "choice": "3",
-      "steps": [
-        {
-          "prompt": "b'enter index of data to read (0-4): '",
-          "type": "int",
-          "arg": "idx"
-        }
-      ]
-    },
     "4": {
       "role": "free",
       "choice": "4",
       "steps": [
         {
-          "prompt": "b'enter index of data to delete (0-4): '",
+          "prompt": "b'Index? '",
           "type": "int",
           "arg": "idx"
         }
@@ -59,7 +59,7 @@
   "features": {
     "index_base": 0,
     "letter_commands": false,
-    "view_output_format": "prefixed",
+    "view_output_format": "raw",
     "multi_chunk_alloc": false
   }
 }

@@ -5,7 +5,7 @@
             "exit_code": -1,
             "stdout": "",
             "stderr": "Timeout after 15s",
-            "duration": 15.021656274795532,
+            "duration": 15.02072286605835,
             "leaked_values": {},
             "error_type": "timeout",
             "error_detail": "Exploit exceeded 15s timeout",
@@ -18,7 +18,7 @@
             "exit_code": -1,
             "stdout": "",
             "stderr": "Timeout after 15s",
-            "duration": 15.022501945495605,
+            "duration": 15.020866394042969,
             "leaked_values": {},
             "error_type": "timeout",
             "error_detail": "Exploit exceeded 15s timeout",
@@ -35,6 +35,6 @@
         "last_feedback": [
             "Exploit too slow - check for infinite loops or blocking recv"
         ],
-        "duration": 15.022501945495605
+        "duration": 15.020866394042969
     }
 }

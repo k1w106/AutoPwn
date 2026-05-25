@@ -1,7 +1,6 @@
 ## 1. Chuẩn bị Môi trường
 
 ```bash
-cd /home/kiwi/UIT-DoAn/NT521
 source venv/bin/activate
 pip install -r requirements.txt
 python3 -m spacy download en_core_web_sm
@@ -9,8 +8,7 @@ python3 -m spacy download en_core_web_sm
 
 ## 2. Các chế độ chạy chính
 
-### Chế độ 1: DynamoRIO + Deep Verification (Nhanh & Thông minh)
-Sử dụng khi có script `solve.py`. angr sẽ xác thực kỹ thuật dựa trên tri thức NLP.
+### Chế độ 1: DynamoRIO + Deep Verification 
 
 ```bash
 python3 autopwn.py ./benchmarks/justCTF-2025-babyheap/binary

@@ -2,7 +2,7 @@
     "taint_sources": [
         {
             "type": "stdin",
-            "offset": 2,
+            "offset": 1,
             "size": 8
         }
     ],
@@ -14,16 +14,16 @@
             "operation": "malloc(64)"
         },
         {
-            "type": "heap_write",
+            "type": "heap_read",
             "address": "0x555555559200",
             "size": 8,
-            "operation": "write(0x555555559200, 8)"
+            "operation": "read(0x555555559200, 8)"
         },
         {
-            "type": "heap_read",
+            "type": "heap_write",
             "address": "0x555555559300",
             "size": 8,
-            "operation": "read(0x555555559300, 8)"
+            "operation": "write(0x555555559300, 8)"
         },
         {
             "type": "free",
@@ -34,36 +34,36 @@
     ],
     "taint_paths": [
         {
-            "source_offset": 2,
+            "source_offset": 1,
             "sink_address": "0x555555559100",
             "taint_type": "data_taint",
-            "path_length": 2
+            "path_length": 3
         },
         {
-            "source_offset": 2,
+            "source_offset": 1,
             "sink_address": "0x555555559200",
-            "taint_type": "data_taint",
-            "path_length": 2
-        },
-        {
-            "source_offset": 2,
-            "sink_address": "0x555555559300",
             "taint_type": "info_leak",
-            "path_length": 2
+            "path_length": 3
         },
         {
-            "source_offset": 2,
+            "source_offset": 1,
+            "sink_address": "0x555555559300",
+            "taint_type": "data_taint",
+            "path_length": 3
+        },
+        {
+            "source_offset": 1,
             "sink_address": "0x555555559400",
             "taint_type": "control_taint",
-            "path_length": 2
+            "path_length": 3
         }
     ],
     "vulnerability_paths": [
         {
             "vulnerability": "info_leak",
-            "source_offset": 2,
-            "sink_address": "0x555555559300",
-            "path_length": 2,
+            "source_offset": 1,
+            "sink_address": "0x555555559200",
+            "path_length": 3,
             "taint_type": "info_leak"
         }
     ],
@@ -72,7 +72,7 @@
             "ev_0_Alloc"
         ],
         "0x555555559100": [
-            "ev_1_Write"
+            "ev_2_Write"
         ]
     },
     "summary": {

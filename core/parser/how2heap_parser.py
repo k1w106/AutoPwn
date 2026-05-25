@@ -32,26 +32,36 @@ def extract_technique_name(filename: str) -> str:
 
 
 def extract_description(content: str) -> str:
-    m = re.search(
-        r'(?:This file demonstrates|This is a|The following)[^.]*\.',
-        content,
-        re.IGNORECASE
-    )
-    if m:
-        return m.group(0).strip()
+    patterns = [
+        r'(?:This file demonstrates|This is a|The following|Technique:)[^.]*\.',
+        r'(?:Purpose:|Goal:)[^.]*\.',
+        r'(?:Demonstrates|Shows)[^.]*\.',
+    ]
+    for p in patterns:
+        m = re.search(p, content, re.IGNORECASE)
+        if m:
+            return m.group(0).strip()
     m = re.search(r'printf\("([^"]{10,200})"\)', content)
     if m:
         return m.group(1).strip()
+    # Fallback: first non-empty comment
+    for line in content.split('\n'):
+        line = line.strip()
+        if line.startswith('/*') and len(line) > 15:
+            return line.strip('/* ').strip('*/').strip()
     return ""
 
 
 def extract_glibc_version_mention(content: str) -> Optional[str]:
-    m = re.search(r'tested\s+(?:on|against|with)\s+glibc\s+([0-9]+\.[0-9]+)', content, re.IGNORECASE)
-    if m:
-        return m.group(1)
-    m = re.search(r'glibc\s+([0-9]+\.[0-9]+)', content, re.IGNORECASE)
-    if m:
-        return m.group(1)
+    patterns = [
+        r'tested\s+(?:on|against|with)\s+glibc\s+([0-9]+\.[0-9]+)',
+        r'glibc\s+([0-9]+\.[0-9]+)',
+        r'for\s+glibc\s+([0-9]+\.[0-9]+)',
+    ]
+    for p in patterns:
+        m = re.search(p, content, re.IGNORECASE)
+        if m:
+            return m.group(1)
     return None
 
 
@@ -85,39 +95,90 @@ def extract_bug_types(content: str) -> List[str]:
 
 def extract_heap_operations(content: str) -> List[Dict[str, Any]]:
     operations = []
-    lines = content.split('\n')
+    content_lower = content.lower()
+    # Track already-seen variables to avoid duplicates
+    seen_vars = set()
+
+    # Join continuation lines (ending with \)
+    lines = content.replace('\\\n', ' ').split('\n')
+
     for line in lines:
         stripped = line.strip()
-        m_alloc = re.match(r'.*\b(\w+\s*)\s*=\s*malloc\((\d+)\)', stripped)
-        if m_alloc and 'int' in line:
-            name = m_alloc.group(1).strip().rstrip('*')
-            size = int(m_alloc.group(2))
-            operations.append({
-                "op": "ALLOC", "var": name, "size": size,
-                "line": stripped[:80]
-            })
+        if not stripped or stripped.startswith('//') or stripped.startswith('/*'):
             continue
-        m_free = re.match(r'.*\bfree\((\w+)\)', stripped)
+
+        # 1. ALLOC: malloc/calloc/realloc with or without cast
+        # Patterns: type *var = malloc(SIZE);
+        #           var = (cast)malloc(SIZE);
+        #           var = malloc(SIZE);
+        m_alloc = re.search(
+            r'(?:\w+\s+\*?\s*)?(\w+)\s*=\s*(?:\([^)]*\))?\s*(malloc|calloc|realloc)\s*\((\d+|sizeof\s*\([^)]+\))\s*\)',
+            stripped
+        )
+        if m_alloc:
+            var = m_alloc.group(1)
+            size_str = m_alloc.group(3)
+            # Skip if it's a fake/vulnerability comment or type definition
+            if var in ('ret', 'return', 'if', 'while', 'for') or var in seen_vars:
+                if var not in ('ret', 'return', 'if', 'while', 'for'):
+                    continue  # skip duplicates for same variable
+            if var not in ('ret', 'return', 'if', 'while', 'for'):
+                try:
+                    size = int(size_str)
+                except ValueError:
+                    size = 0x100  # default for sizeof expressions
+                seen_vars.add(var)
+                operations.append({
+                    "op": "ALLOC", "var": var, "size": size,
+                    "line": stripped[:80]
+                })
+                continue
+
+        # 2. FREE: free(var) — exclude only clearly non-heap vars  
+        m_free = re.search(r'\bfree\s*\((\w+)\)', stripped)
         if m_free:
             name = m_free.group(1)
-            if name not in ('stdin', 'stdout', 'stderr', 'buf'):
+            if name not in ('stdin', 'stdout', 'stderr', 'stdbuf'):
                 operations.append({
                     "op": "FREE", "var": name,
                     "line": stripped[:80]
                 })
-            continue
-        m_write = re.match(r'.*(\w+)\[.*\]\s*=\s*\(?\(?\w+\)?\s*\(?\s*\(?\(?\(?\s*(\w+)', stripped)
-        if m_write and 'VULNERABILITY' in content.upper():
-            var = m_write.group(1)
-            val = m_write.group(2)
-            operations.append({
-                "op": "OVERWRITE",
-                "target_var": var,
-                "source_var": val,
-                "line": stripped[:80]
-            })
 
-    return operations
+        # 3. OVERWRITE: arr[idx] = value, *ptr = value (write operations)
+        # Detect patterns like: a[i] = val; *ptr = val;
+        m_write_idx = re.search(r'(\w+)\s*\[\s*\w+\s*\]\s*=\s*([^;]+)', stripped)
+        m_write_ptr = re.search(r'\*\s*(\w+)\s*=\s*([^;]+)', stripped)
+        if m_write_idx:
+            target = m_write_idx.group(1)
+            val = m_write_idx.group(2).strip()
+            if target not in ('ret', 'return', 'if') and not target.startswith('int'):
+                operations.append({
+                    "op": "OVERWRITE", "target_var": target,
+                    "source_var": val.split()[-1] if val.split() else val,
+                    "value": val[:30],
+                    "line": stripped[:80]
+                })
+
+        # 4. memcpy/read into heap: memcpy(var, src, n);
+        m_cpy = re.search(r'(?:memcpy|memmove|strcpy|read)\s*\(\s*(\w+)', stripped)
+        if m_cpy:
+            target = m_cpy.group(1)
+            # Only track if target looks like a heap variable (was allocated)
+            if target in seen_vars:
+                operations.append({
+                    "op": "WRITE_DATA", "target_var": target,
+                    "line": stripped[:80]
+                })
+
+    # Deduplicate: keep first occurrence of each (op, var) pair
+    seen_pairs = set()
+    deduped = []
+    for op in operations:
+        key = (op['op'], op.get('var', op.get('target_var', '')))
+        if key not in seen_pairs:
+            seen_pairs.add(key)
+            deduped.append(op)
+    return deduped
 
 
 def parse_single_file(filepath: str, glibc_version: str) -> Optional[Dict[str, Any]]:

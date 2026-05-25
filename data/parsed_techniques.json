@@ -6,7 +6,7 @@
       "id": "decrypt_safe_linking",
       "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.34/decrypt_safe_linking.c",
       "glibc_dir_version": "2.34",
-      "description": "decrypt_safe_linking technique",
+      "description": "demonstrates how to recover the original content from a poisoned\n\t * value because of the safe-linking mechanism.",
       "glibc_versions": {
         "min": "2.34",
         "max": "2.34"
@@ -41,24 +41,21 @@
       ],
       "heap_operations": [
         {
-          "op": "FREE",
-          "var": "a",
-          "line": "free(a);"
+          "op": "OVERWRITE",
+          "target_var": "ptrs",
+          "source_var": "malloc(8)",
+          "value": "malloc(8)",
+          "line": "ptrs[i] = malloc(8);"
         },
         {
           "op": "FREE",
           "var": "a",
-          "line": "// free(a);"
+          "line": "free(a);"
         },
         {
           "op": "FREE",
           "var": "b",
           "line": "free(b);"
-        },
-        {
-          "op": "FREE",
-          "var": "a",
-          "line": "free(a);"
         }
       ]
     },
@@ -78,19 +75,15 @@
       "heap_operations": [
         {
           "op": "OVERWRITE",
-          "target_var": "r",
-          "source_var": "0x40",
+          "target_var": "ptr",
+          "source_var": "malloc(0x40)",
+          "value": "malloc(0x40)",
           "line": "ptr[i] = malloc(0x40);"
         },
         {
           "op": "FREE",
           "var": "p1",
           "line": "free(p1);"
-        },
-        {
-          "op": "FREE",
-          "var": "p1",
-          "line": "free(p1); // vulnerability (double free)"
         }
       ]
     },
@@ -98,7 +91,7 @@
       "id": "fastbin_dup_into_stack",
       "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.34/fastbin_dup_into_stack.c",
       "glibc_dir_version": "2.34",
-      "description": "fastbin_dup_into_stack technique",
+      "description": "VULNERABILITY",
       "glibc_versions": {
         "min": "2.34",
         "max": "2.34"
@@ -110,8 +103,9 @@
       "heap_operations": [
         {
           "op": "OVERWRITE",
-          "target_var": "s",
-          "source_var": "8",
+          "target_var": "ptrs",
+          "source_var": "malloc(8)",
+          "value": "malloc(8)",
           "line": "ptrs[i] = malloc(8);"
         },
         {
@@ -125,19 +119,10 @@
           "line": "free(b);"
         },
         {
-          "op": "FREE",
-          "var": "a",
-          "line": "//Calling free(a) twice renders the program vulnerable to Double Free"
-        },
-        {
-          "op": "FREE",
-          "var": "a",
-          "line": "free(a);"
-        },
-        {
           "op": "OVERWRITE",
-          "target_var": "r",
-          "source_var": "0",
+          "target_var": "stack_var",
+          "source_var": "0x20",
+          "value": "0x20",
           "line": "stack_var[1] = 0x20;"
         }
       ]
@@ -158,8 +143,9 @@
       "heap_operations": [
         {
           "op": "OVERWRITE",
-          "target_var": "s",
-          "source_var": "allocsize",
+          "target_var": "ptrs",
+          "source_var": "malloc(allocsize)",
+          "value": "malloc(allocsize)",
           "line": "ptrs[i] = malloc(allocsize);"
         },
         {
@@ -171,12 +157,6 @@
           "op": "FREE",
           "var": "victim",
           "line": "free(victim);"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "s",
-          "source_var": "allocsize",
-          "line": "for (i = 0; i < 7; i++) ptrs[i] = malloc(allocsize);"
         }
       ]
     },
@@ -197,7 +177,8 @@
         {
           "op": "OVERWRITE",
           "target_var": "x",
-          "source_var": "0x100",
+          "source_var": "malloc(0x100)",
+          "value": "malloc(0x100)",
           "line": "x[i] = malloc(0x100);"
         },
         {
@@ -211,21 +192,18 @@
           "line": "free(prev);"
         },
         {
-          "op": "FREE",
-          "var": "a",
-          "line": "free(a);// a is already freed"
-        },
-        {
           "op": "OVERWRITE",
-          "target_var": "d",
-          "source_var": "a",
-          "line": "unsorted[0x110/sizeof(intptr_t)] = ((long)a >> 12) ^ (long)stack_var;"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "t",
-          "source_var": "e",
+          "target_var": "target",
+          "source_var": "0xcafebabe",
+          "value": "0xcafebabe",
           "line": "target[0] = 0xcafebabe;"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "stack_var",
+          "source_var": "0xcafebabe)",
+          "value": "= 0xcafebabe)",
+          "line": "assert(stack_var[0] == 0xcafebabe);"
         }
       ]
     },
@@ -249,36 +227,21 @@
           "op": "OVERWRITE",
           "target_var": "a",
           "source_var": "0",
-          "line": "a[1] = 0x60; // size"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "a",
-          "source_var": "a",
-          "line": "a[2] = (size_t) a; // fwd"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "a",
-          "source_var": "a",
-          "line": "a[3] = (size_t) a; // bck"
+          "value": "0",
+          "line": "a[0] = 0;\t// prev_size (Not Used)"
         },
         {
           "op": "OVERWRITE",
           "target_var": "b",
-          "source_var": "e",
-          "line": "*(size_t*) &b[real_b_size-sizeof(size_t)] = fake_size;"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "a",
-          "source_var": "e",
-          "line": "a[1] = fake_size;"
+          "source_var": "0",
+          "value": "0",
+          "line": "b[real_b_size] = 0;"
         },
         {
           "op": "OVERWRITE",
           "target_var": "x",
-          "source_var": "0xf8",
+          "source_var": "malloc(0xf8)",
+          "value": "malloc(0xf8)",
           "line": "x[i] = malloc(0xf8);"
         },
         {
@@ -295,12 +258,6 @@
           "op": "FREE",
           "var": "b",
           "line": "free(b);"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "d",
-          "source_var": "target",
-          "line": "d[0x30 / 8] = (long)target ^ ((long)&d[0x30/8] >> 12);"
         }
       ]
     },
@@ -319,50 +276,42 @@
       "heap_operations": [
         {
           "op": "OVERWRITE",
-          "target_var": "s",
-          "source_var": "0x100",
+          "target_var": "stack_buffer_1",
+          "source_var": "{0}",
+          "value": "{0}",
+          "line": "intptr_t* stack_buffer_1[4] = {0};"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "stack_buffer_2",
+          "source_var": "{0}",
+          "value": "{0}",
+          "line": "intptr_t* stack_buffer_2[4] = {0};"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "dummies",
+          "source_var": "malloc(0x100)",
+          "value": "malloc(0x100)",
           "line": "for(int i=0; i<7; i++) dummies[i] = malloc(0x100);"
         },
         {
-          "op": "OVERWRITE",
-          "target_var": "t",
-          "source_var": "t",
-          "line": "fake_freelist[i][3] = fake_freelist[i+1];"
+          "op": "ALLOC",
+          "var": "p5",
+          "size": 1000,
+          "line": "void *p5 = malloc(1000);"
+        },
+        {
+          "op": "ALLOC",
+          "var": "p2",
+          "size": 1200,
+          "line": "void *p2 = malloc(1200);"
         },
         {
           "op": "OVERWRITE",
-          "target_var": "t",
-          "source_var": "L",
-          "line": "fake_freelist[6][3] = NULL;"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "1",
-          "source_var": "k",
-          "line": "stack_buffer_1[2] = victim_chunk;"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "1",
-          "source_var": "t",
-          "line": "stack_buffer_1[3] = (intptr_t*)stack_buffer_2;"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "2",
-          "source_var": "t",
-          "line": "stack_buffer_2[2] = (intptr_t*)stack_buffer_1;"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "2",
-          "source_var": "t",
-          "line": "stack_buffer_2[3] = (intptr_t *)fake_freelist[0];"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "m",
-          "source_var": "stack_buffer_1",
+          "target_var": "victim",
+          "source_var": "(intptr_t)stack_buffer_1",
+          "value": "(intptr_t)stack_buffer_1",
           "line": "victim[1] = (intptr_t)stack_buffer_1; // victim->bk is pointing to stack"
         }
       ]
@@ -383,38 +332,30 @@
       "heap_operations": [
         {
           "op": "OVERWRITE",
-          "target_var": "a",
-          "source_var": "F",
+          "target_var": "fake_arena",
+          "source_var": "0xFF",
+          "value": "0xFF",
           "line": "fake_arena[0x888] = 0xFF;"
         },
         {
           "op": "OVERWRITE",
-          "target_var": "a",
-          "source_var": "F",
-          "line": "fake_arena[0x889] = 0xFF;"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "a",
-          "source_var": "F",
-          "line": "fake_arena[0x88a] = 0xFF;"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "s",
-          "source_var": "0x50",
+          "target_var": "tcache_chunks",
+          "source_var": "malloc(0x50)",
+          "value": "malloc(0x50)",
           "line": "tcache_chunks[i] = malloc(0x50);"
         },
         {
           "op": "OVERWRITE",
-          "target_var": "o",
+          "target_var": "fake_heap_info",
           "source_var": "fake_arena",
+          "value": "(uint64_t) fake_arena",
           "line": "fake_heap_info[0] = (uint64_t) fake_arena; // Setting the fake ar_ptr (arena)"
         },
         {
           "op": "OVERWRITE",
-          "target_var": "r",
-          "source_var": "0",
+          "target_var": "chunk_ptr",
+          "source_var": "0x4",
+          "value": "0x60 | 0x4",
           "line": "chunk_ptr[1] = 0x60 | 0x4; // Setting the non-main arena bit"
         },
         {
@@ -438,6 +379,20 @@
       ],
       "heap_operations": [
         {
+          "op": "OVERWRITE",
+          "target_var": "chunks",
+          "source_var": "malloc(0x30)",
+          "value": "malloc(0x30)",
+          "line": "chunks[i] = malloc(0x30);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "fake_chunks",
+          "source_var": "0x40",
+          "value": "0x40",
+          "line": "fake_chunks[1] = 0x40; // this is the size"
+        },
+        {
           "op": "FREE",
           "var": "victim",
           "line": "free(victim);"
@@ -456,7 +411,15 @@
       "bug_types": [
         "uaf"
       ],
-      "heap_operations": []
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "win",
+          "source_var": "\"WIN\\0WIN\\0WIN\\0\\x06\\xfe\\x1b\\xe2\"",
+          "value": "\"WIN\\0WIN\\0WIN\\0\\x06\\xfe\\x1b\\x",
+          "line": "char win[0x10] = \"WIN\\0WIN\\0WIN\\0\\x06\\xfe\\x1b\\xe2\";"
+        }
+      ]
     },
     {
       "id": "house_of_water",
@@ -477,7 +440,8 @@
         {
           "op": "OVERWRITE",
           "target_var": "x",
-          "source_var": "0x88",
+          "source_var": "malloc(0x88)",
+          "value": "malloc(0x88)",
           "line": "x[i] = malloc(0x88);"
         },
         {
@@ -487,28 +451,13 @@
         },
         {
           "op": "FREE",
-          "var": "small_end",
-          "line": "free(small_end);"
-        },
-        {
-          "op": "FREE",
           "var": "relative_chunk",
           "line": "puts(\"\\t> free(relative_chunk);\");"
         },
         {
           "op": "FREE",
-          "var": "relative_chunk",
-          "line": "free(relative_chunk);"
-        },
-        {
-          "op": "FREE",
           "var": "small_start",
           "line": "puts(\"\\t> free(small_start);\");"
-        },
-        {
-          "op": "FREE",
-          "var": "small_start",
-          "line": "free(small_start);"
         }
       ]
     },
@@ -534,6 +483,13 @@
           "op": "FREE",
           "var": "p2",
           "line": "free(p2);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "p1",
+          "source_var": "(size_t)((&target)-4)",
+          "value": "(size_t)((&target)-4)",
+          "line": "p1[3] = (size_t)((&target)-4);"
         }
       ]
     },
@@ -552,26 +508,22 @@
       ],
       "heap_operations": [
         {
-          "op": "OVERWRITE",
-          "target_var": "3",
-          "source_var": "D",
-          "line": "mmap_chunk_3[-1] = (0xFFFFFFFFFD & mmap_chunk_3[-1]) + (0xFFFFFFFFFD & mmap_chun"
-        },
-        {
           "op": "FREE",
           "var": "mmap_chunk_3",
           "line": "free(mmap_chunk_3);"
         },
         {
           "op": "OVERWRITE",
-          "target_var": "2",
-          "source_var": "f",
+          "target_var": "mmap_chunk_2",
+          "source_var": "0xdeadbeef",
+          "value": "0xdeadbeef",
           "line": "mmap_chunk_2[0] = 0xdeadbeef;"
         },
         {
           "op": "OVERWRITE",
-          "target_var": "k",
-          "source_var": "8",
+          "target_var": "overlapping_chunk",
+          "source_var": "0x1122334455667788",
+          "value": "0x1122334455667788",
           "line": "overlapping_chunk[distance] = 0x1122334455667788;"
         }
       ]
@@ -601,7 +553,7 @@
       "id": "poison_null_byte",
       "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.34/poison_null_byte.c",
       "glibc_dir_version": "2.34",
-      "description": "poison_null_byte technique",
+      "description": "VULNERABILITY",
       "glibc_versions": {
         "min": "2.34",
         "max": "2.34"
@@ -631,11 +583,6 @@
           "op": "FREE",
           "var": "a2",
           "line": "free(a2);"
-        },
-        {
-          "op": "FREE",
-          "var": "victim",
-          "line": "free(victim);"
         },
         {
           "op": "FREE",
@@ -707,6 +654,13 @@
       ],
       "heap_operations": [
         {
+          "op": "OVERWRITE",
+          "target_var": "fake_chunks",
+          "source_var": "0x40",
+          "value": "0x40",
+          "line": "fake_chunks[1] = 0x40; // this is the size"
+        },
+        {
           "op": "FREE",
           "var": "a",
           "line": "free(a);"
@@ -717,7 +671,7 @@
       "id": "tcache_metadata_poisoning",
       "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.34/tcache_metadata_poisoning.c",
       "glibc_dir_version": "2.34",
-      "description": "tcache_metadata_poisoning technique",
+      "description": "demonstrates what an attacker can achieve by controlling\\n\"\n       \"the metadata chunk of the tcache.",
       "glibc_versions": {
         "min": "2.34",
         "max": "2.34"
@@ -725,7 +679,22 @@
       "bug_types": [
         "uaf"
       ],
-      "heap_operations": []
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "counts",
+          "source_var": "1",
+          "value": "1",
+          "line": "metadata->counts[1] = 1;"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "entries",
+          "source_var": "&stack_target",
+          "value": "&stack_target",
+          "line": "metadata->entries[1] = &stack_target;"
+        }
+      ]
     },
     {
       "id": "tcache_poisoning",
@@ -765,7 +734,8 @@
         {
           "op": "OVERWRITE",
           "target_var": "b",
-          "source_var": "long",
+          "source_var": "12)",
+          "value": "(intptr_t)((long)target ^ (lon",
           "line": "b[0] = (intptr_t)((long)target ^ (long)b >> 12);"
         },
         {
@@ -806,9 +776,11 @@
           "line": "free(p2);"
         },
         {
-          "op": "FREE",
-          "var": "p",
-          "line": "free(p);"
+          "op": "OVERWRITE",
+          "target_var": "p1",
+          "source_var": "long)p)",
+          "value": "= (unsigned long)p)",
+          "line": "assert(p1[0] == (unsigned long)p);"
         }
       ]
     },
@@ -827,21 +799,17 @@
       "heap_operations": [
         {
           "op": "OVERWRITE",
-          "target_var": "r",
-          "source_var": "long",
-          "line": "stack_var[3] = (unsigned long)(&stack_var[2]);"
+          "target_var": "stack_var",
+          "source_var": "{0}",
+          "value": "{0}",
+          "line": "unsigned long stack_var[0x10] = {0};"
         },
         {
           "op": "OVERWRITE",
-          "target_var": "s",
-          "source_var": "long",
-          "line": "chunk_lis[i] = (unsigned long*)malloc(0x90);"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "s",
-          "source_var": "long",
-          "line": "chunk_lis[2][1] = (unsigned long)stack_var;"
+          "target_var": "chunk_lis",
+          "source_var": "{0}",
+          "value": "{0}",
+          "line": "unsigned long *chunk_lis[0x10] = {0};"
         }
       ]
     },
@@ -859,6 +827,20 @@
       ],
       "heap_operations": [
         {
+          "op": "OVERWRITE",
+          "target_var": "chunk0_ptr",
+          "source_var": "0x10",
+          "value": "chunk0_ptr[-1] - 0x10",
+          "line": "chunk0_ptr[1] = chunk0_ptr[-1] - 0x10;"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "chunk1_hdr",
+          "source_var": "malloc_size",
+          "value": "malloc_size",
+          "line": "chunk1_hdr[0] = malloc_size;"
+        },
+        {
           "op": "FREE",
           "var": "chunk1_ptr",
           "line": "free(chunk1_ptr);"
@@ -869,7 +851,7 @@
       "id": "decrypt_safe_linking",
       "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.35/decrypt_safe_linking.c",
       "glibc_dir_version": "2.35",
-      "description": "decrypt_safe_linking technique",
+      "description": "demonstrates how to recover the original content from a poisoned\n\t * value because of the safe-linking mechanism.",
       "glibc_versions": {
         "min": "2.35",
         "max": "2.35"
@@ -904,24 +886,21 @@
       ],
       "heap_operations": [
         {
-          "op": "FREE",
-          "var": "a",
-          "line": "free(a);"
+          "op": "OVERWRITE",
+          "target_var": "ptrs",
+          "source_var": "malloc(8)",
+          "value": "malloc(8)",
+          "line": "ptrs[i] = malloc(8);"
         },
         {
           "op": "FREE",
           "var": "a",
-          "line": "// free(a);"
+          "line": "free(a);"
         },
         {
           "op": "FREE",
           "var": "b",
           "line": "free(b);"
-        },
-        {
-          "op": "FREE",
-          "var": "a",
-          "line": "free(a);"
         }
       ]
     },
@@ -941,19 +920,15 @@
       "heap_operations": [
         {
           "op": "OVERWRITE",
-          "target_var": "r",
-          "source_var": "0x40",
+          "target_var": "ptr",
+          "source_var": "malloc(0x40)",
+          "value": "malloc(0x40)",
           "line": "ptr[i] = malloc(0x40);"
         },
         {
           "op": "FREE",
           "var": "p1",
           "line": "free(p1);"
-        },
-        {
-          "op": "FREE",
-          "var": "p1",
-          "line": "free(p1); // vulnerability (double free)"
         }
       ]
     },
@@ -961,7 +936,7 @@
       "id": "fastbin_dup_into_stack",
       "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.35/fastbin_dup_into_stack.c",
       "glibc_dir_version": "2.35",
-      "description": "fastbin_dup_into_stack technique",
+      "description": "VULNERABILITY",
       "glibc_versions": {
         "min": "2.35",
         "max": "2.35"
@@ -973,8 +948,9 @@
       "heap_operations": [
         {
           "op": "OVERWRITE",
-          "target_var": "s",
-          "source_var": "8",
+          "target_var": "ptrs",
+          "source_var": "malloc(8)",
+          "value": "malloc(8)",
           "line": "ptrs[i] = malloc(8);"
         },
         {
@@ -988,19 +964,10 @@
           "line": "free(b);"
         },
         {
-          "op": "FREE",
-          "var": "a",
-          "line": "//Calling free(a) twice renders the program vulnerable to Double Free"
-        },
-        {
-          "op": "FREE",
-          "var": "a",
-          "line": "free(a);"
-        },
-        {
           "op": "OVERWRITE",
-          "target_var": "r",
-          "source_var": "0",
+          "target_var": "stack_var",
+          "source_var": "0x20",
+          "value": "0x20",
           "line": "stack_var[1] = 0x20;"
         }
       ]
@@ -1021,8 +988,9 @@
       "heap_operations": [
         {
           "op": "OVERWRITE",
-          "target_var": "s",
-          "source_var": "allocsize",
+          "target_var": "ptrs",
+          "source_var": "malloc(allocsize)",
+          "value": "malloc(allocsize)",
           "line": "ptrs[i] = malloc(allocsize);"
         },
         {
@@ -1034,12 +1002,6 @@
           "op": "FREE",
           "var": "victim",
           "line": "free(victim);"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "s",
-          "source_var": "allocsize",
-          "line": "for (i = 0; i < 7; i++) ptrs[i] = malloc(allocsize);"
         }
       ]
     },
@@ -1060,7 +1022,8 @@
         {
           "op": "OVERWRITE",
           "target_var": "x",
-          "source_var": "0x100",
+          "source_var": "malloc(0x100)",
+          "value": "malloc(0x100)",
           "line": "x[i] = malloc(0x100);"
         },
         {
@@ -1074,21 +1037,18 @@
           "line": "free(prev);"
         },
         {
-          "op": "FREE",
-          "var": "a",
-          "line": "free(a);// a is already freed"
-        },
-        {
           "op": "OVERWRITE",
-          "target_var": "d",
-          "source_var": "a",
-          "line": "unsorted[0x110/sizeof(intptr_t)] = ((long)a >> 12) ^ (long)stack_var;"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "t",
-          "source_var": "e",
+          "target_var": "target",
+          "source_var": "0xcafebabe",
+          "value": "0xcafebabe",
           "line": "target[0] = 0xcafebabe;"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "stack_var",
+          "source_var": "0xcafebabe)",
+          "value": "= 0xcafebabe)",
+          "line": "assert(stack_var[0] == 0xcafebabe);"
         }
       ]
     },
@@ -1112,36 +1072,21 @@
           "op": "OVERWRITE",
           "target_var": "a",
           "source_var": "0",
-          "line": "a[1] = 0x60; // size"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "a",
-          "source_var": "a",
-          "line": "a[2] = (size_t) a; // fwd"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "a",
-          "source_var": "a",
-          "line": "a[3] = (size_t) a; // bck"
+          "value": "0",
+          "line": "a[0] = 0;\t// prev_size (Not Used)"
         },
         {
           "op": "OVERWRITE",
           "target_var": "b",
-          "source_var": "e",
-          "line": "*(size_t*) &b[real_b_size-sizeof(size_t)] = fake_size;"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "a",
-          "source_var": "e",
-          "line": "a[1] = fake_size;"
+          "source_var": "0",
+          "value": "0",
+          "line": "b[real_b_size] = 0;"
         },
         {
           "op": "OVERWRITE",
           "target_var": "x",
-          "source_var": "0xf8",
+          "source_var": "malloc(0xf8)",
+          "value": "malloc(0xf8)",
           "line": "x[i] = malloc(0xf8);"
         },
         {
@@ -1158,12 +1103,6 @@
           "op": "FREE",
           "var": "b",
           "line": "free(b);"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "d",
-          "source_var": "target",
-          "line": "d[0x30 / 8] = (long)target ^ ((long)&d[0x30/8] >> 12);"
         }
       ]
     },
@@ -1182,50 +1121,42 @@
       "heap_operations": [
         {
           "op": "OVERWRITE",
-          "target_var": "s",
-          "source_var": "0x100",
+          "target_var": "stack_buffer_1",
+          "source_var": "{0}",
+          "value": "{0}",
+          "line": "intptr_t* stack_buffer_1[4] = {0};"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "stack_buffer_2",
+          "source_var": "{0}",
+          "value": "{0}",
+          "line": "intptr_t* stack_buffer_2[4] = {0};"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "dummies",
+          "source_var": "malloc(0x100)",
+          "value": "malloc(0x100)",
           "line": "for(int i=0; i<7; i++) dummies[i] = malloc(0x100);"
         },
         {
-          "op": "OVERWRITE",
-          "target_var": "t",
-          "source_var": "t",
-          "line": "fake_freelist[i][3] = fake_freelist[i+1];"
+          "op": "ALLOC",
+          "var": "p5",
+          "size": 1000,
+          "line": "void *p5 = malloc(1000);"
+        },
+        {
+          "op": "ALLOC",
+          "var": "p2",
+          "size": 1200,
+          "line": "void *p2 = malloc(1200);"
         },
         {
           "op": "OVERWRITE",
-          "target_var": "t",
-          "source_var": "L",
-          "line": "fake_freelist[6][3] = NULL;"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "1",
-          "source_var": "k",
-          "line": "stack_buffer_1[2] = victim_chunk;"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "1",
-          "source_var": "t",
-          "line": "stack_buffer_1[3] = (intptr_t*)stack_buffer_2;"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "2",
-          "source_var": "t",
-          "line": "stack_buffer_2[2] = (intptr_t*)stack_buffer_1;"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "2",
-          "source_var": "t",
-          "line": "stack_buffer_2[3] = (intptr_t *)fake_freelist[0];"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "m",
-          "source_var": "stack_buffer_1",
+          "target_var": "victim",
+          "source_var": "(intptr_t)stack_buffer_1",
+          "value": "(intptr_t)stack_buffer_1",
           "line": "victim[1] = (intptr_t)stack_buffer_1; // victim->bk is pointing to stack"
         }
       ]
@@ -1246,38 +1177,30 @@
       "heap_operations": [
         {
           "op": "OVERWRITE",
-          "target_var": "a",
-          "source_var": "F",
+          "target_var": "fake_arena",
+          "source_var": "0xFF",
+          "value": "0xFF",
           "line": "fake_arena[0x888] = 0xFF;"
         },
         {
           "op": "OVERWRITE",
-          "target_var": "a",
-          "source_var": "F",
-          "line": "fake_arena[0x889] = 0xFF;"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "a",
-          "source_var": "F",
-          "line": "fake_arena[0x88a] = 0xFF;"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "s",
-          "source_var": "0x50",
+          "target_var": "tcache_chunks",
+          "source_var": "malloc(0x50)",
+          "value": "malloc(0x50)",
           "line": "tcache_chunks[i] = malloc(0x50);"
         },
         {
           "op": "OVERWRITE",
-          "target_var": "o",
+          "target_var": "fake_heap_info",
           "source_var": "fake_arena",
+          "value": "(uint64_t) fake_arena",
           "line": "fake_heap_info[0] = (uint64_t) fake_arena; // Setting the fake ar_ptr (arena)"
         },
         {
           "op": "OVERWRITE",
-          "target_var": "r",
-          "source_var": "0",
+          "target_var": "chunk_ptr",
+          "source_var": "0x4",
+          "value": "0x60 | 0x4",
           "line": "chunk_ptr[1] = 0x60 | 0x4; // Setting the non-main arena bit"
         },
         {
@@ -1301,6 +1224,20 @@
       ],
       "heap_operations": [
         {
+          "op": "OVERWRITE",
+          "target_var": "chunks",
+          "source_var": "malloc(0x30)",
+          "value": "malloc(0x30)",
+          "line": "chunks[i] = malloc(0x30);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "fake_chunks",
+          "source_var": "0x40",
+          "value": "0x40",
+          "line": "fake_chunks[1] = 0x40; // this is the size"
+        },
+        {
           "op": "FREE",
           "var": "victim",
           "line": "free(victim);"
@@ -1319,7 +1256,15 @@
       "bug_types": [
         "uaf"
       ],
-      "heap_operations": []
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "win",
+          "source_var": "\"WIN\\0WIN\\0WIN\\0\\x06\\xfe\\x1b\\xe2\"",
+          "value": "\"WIN\\0WIN\\0WIN\\0\\x06\\xfe\\x1b\\x",
+          "line": "char win[0x10] = \"WIN\\0WIN\\0WIN\\0\\x06\\xfe\\x1b\\xe2\";"
+        }
+      ]
     },
     {
       "id": "house_of_water",
@@ -1340,7 +1285,8 @@
         {
           "op": "OVERWRITE",
           "target_var": "x",
-          "source_var": "0x88",
+          "source_var": "malloc(0x88)",
+          "value": "malloc(0x88)",
           "line": "x[i] = malloc(0x88);"
         },
         {
@@ -1350,28 +1296,13 @@
         },
         {
           "op": "FREE",
-          "var": "small_end",
-          "line": "free(small_end);"
-        },
-        {
-          "op": "FREE",
           "var": "relative_chunk",
           "line": "puts(\"\\t> free(relative_chunk);\");"
         },
         {
           "op": "FREE",
-          "var": "relative_chunk",
-          "line": "free(relative_chunk);"
-        },
-        {
-          "op": "FREE",
           "var": "small_start",
           "line": "puts(\"\\t> free(small_start);\");"
-        },
-        {
-          "op": "FREE",
-          "var": "small_start",
-          "line": "free(small_start);"
         }
       ]
     },
@@ -1397,6 +1328,13 @@
           "op": "FREE",
           "var": "p2",
           "line": "free(p2);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "p1",
+          "source_var": "(size_t)((&target)-4)",
+          "value": "(size_t)((&target)-4)",
+          "line": "p1[3] = (size_t)((&target)-4);"
         }
       ]
     },
@@ -1415,26 +1353,22 @@
       ],
       "heap_operations": [
         {
-          "op": "OVERWRITE",
-          "target_var": "3",
-          "source_var": "D",
-          "line": "mmap_chunk_3[-1] = (0xFFFFFFFFFD & mmap_chunk_3[-1]) + (0xFFFFFFFFFD & mmap_chun"
-        },
-        {
           "op": "FREE",
           "var": "mmap_chunk_3",
           "line": "free(mmap_chunk_3);"
         },
         {
           "op": "OVERWRITE",
-          "target_var": "2",
-          "source_var": "f",
+          "target_var": "mmap_chunk_2",
+          "source_var": "0xdeadbeef",
+          "value": "0xdeadbeef",
           "line": "mmap_chunk_2[0] = 0xdeadbeef;"
         },
         {
           "op": "OVERWRITE",
-          "target_var": "k",
-          "source_var": "8",
+          "target_var": "overlapping_chunk",
+          "source_var": "0x1122334455667788",
+          "value": "0x1122334455667788",
           "line": "overlapping_chunk[distance] = 0x1122334455667788;"
         }
       ]
@@ -1464,7 +1398,7 @@
       "id": "poison_null_byte",
       "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.35/poison_null_byte.c",
       "glibc_dir_version": "2.35",
-      "description": "poison_null_byte technique",
+      "description": "VULNERABILITY",
       "glibc_versions": {
         "min": "2.35",
         "max": "2.35"
@@ -1494,11 +1428,6 @@
           "op": "FREE",
           "var": "a2",
           "line": "free(a2);"
-        },
-        {
-          "op": "FREE",
-          "var": "victim",
-          "line": "free(victim);"
         },
         {
           "op": "FREE",
@@ -1570,6 +1499,13 @@
       ],
       "heap_operations": [
         {
+          "op": "OVERWRITE",
+          "target_var": "fake_chunks",
+          "source_var": "0x40",
+          "value": "0x40",
+          "line": "fake_chunks[1] = 0x40; // this is the size"
+        },
+        {
           "op": "FREE",
           "var": "a",
           "line": "free(a);"
@@ -1580,7 +1516,7 @@
       "id": "tcache_metadata_poisoning",
       "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.35/tcache_metadata_poisoning.c",
       "glibc_dir_version": "2.35",
-      "description": "tcache_metadata_poisoning technique",
+      "description": "demonstrates what an attacker can achieve by controlling\\n\"\n       \"the metadata chunk of the tcache.",
       "glibc_versions": {
         "min": "2.35",
         "max": "2.35"
@@ -1588,7 +1524,22 @@
       "bug_types": [
         "uaf"
       ],
-      "heap_operations": []
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "counts",
+          "source_var": "1",
+          "value": "1",
+          "line": "metadata->counts[1] = 1;"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "entries",
+          "source_var": "&stack_target",
+          "value": "&stack_target",
+          "line": "metadata->entries[1] = &stack_target;"
+        }
+      ]
     },
     {
       "id": "tcache_poisoning",
@@ -1628,7 +1579,8 @@
         {
           "op": "OVERWRITE",
           "target_var": "b",
-          "source_var": "long",
+          "source_var": "12)",
+          "value": "(intptr_t)((long)target ^ (lon",
           "line": "b[0] = (intptr_t)((long)target ^ (long)b >> 12);"
         },
         {
@@ -1669,9 +1621,11 @@
           "line": "free(p2);"
         },
         {
-          "op": "FREE",
-          "var": "p",
-          "line": "free(p);"
+          "op": "OVERWRITE",
+          "target_var": "p1",
+          "source_var": "long)p)",
+          "value": "= (unsigned long)p)",
+          "line": "assert(p1[0] == (unsigned long)p);"
         }
       ]
     },
@@ -1690,21 +1644,17 @@
       "heap_operations": [
         {
           "op": "OVERWRITE",
-          "target_var": "r",
-          "source_var": "long",
-          "line": "stack_var[3] = (unsigned long)(&stack_var[2]);"
+          "target_var": "stack_var",
+          "source_var": "{0}",
+          "value": "{0}",
+          "line": "unsigned long stack_var[0x10] = {0};"
         },
         {
           "op": "OVERWRITE",
-          "target_var": "s",
-          "source_var": "long",
-          "line": "chunk_lis[i] = (unsigned long*)malloc(0x90);"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "s",
-          "source_var": "long",
-          "line": "chunk_lis[2][1] = (unsigned long)stack_var;"
+          "target_var": "chunk_lis",
+          "source_var": "{0}",
+          "value": "{0}",
+          "line": "unsigned long *chunk_lis[0x10] = {0};"
         }
       ]
     },
@@ -1722,6 +1672,20 @@
       ],
       "heap_operations": [
         {
+          "op": "OVERWRITE",
+          "target_var": "chunk0_ptr",
+          "source_var": "0x10",
+          "value": "chunk0_ptr[-1] - 0x10",
+          "line": "chunk0_ptr[1] = chunk0_ptr[-1] - 0x10;"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "chunk1_hdr",
+          "source_var": "malloc_size",
+          "value": "malloc_size",
+          "line": "chunk1_hdr[0] = malloc_size;"
+        },
+        {
           "op": "FREE",
           "var": "chunk1_ptr",
           "line": "free(chunk1_ptr);"
@@ -1732,7 +1696,7 @@
       "id": "decrypt_safe_linking",
       "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.36/decrypt_safe_linking.c",
       "glibc_dir_version": "2.36",
-      "description": "decrypt_safe_linking technique",
+      "description": "demonstrates how to recover the original content from a poisoned\n\t * value because of the safe-linking mechanism.",
       "glibc_versions": {
         "min": "2.36",
         "max": "2.36"
@@ -1767,24 +1731,21 @@
       ],
       "heap_operations": [
         {
-          "op": "FREE",
-          "var": "a",
-          "line": "free(a);"
+          "op": "OVERWRITE",
+          "target_var": "ptrs",
+          "source_var": "malloc(8)",
+          "value": "malloc(8)",
+          "line": "ptrs[i] = malloc(8);"
         },
         {
           "op": "FREE",
           "var": "a",
-          "line": "// free(a);"
+          "line": "free(a);"
         },
         {
           "op": "FREE",
           "var": "b",
           "line": "free(b);"
-        },
-        {
-          "op": "FREE",
-          "var": "a",
-          "line": "free(a);"
         }
       ]
     },
@@ -1804,19 +1765,15 @@
       "heap_operations": [
         {
           "op": "OVERWRITE",
-          "target_var": "r",
-          "source_var": "0x40",
+          "target_var": "ptr",
+          "source_var": "malloc(0x40)",
+          "value": "malloc(0x40)",
           "line": "ptr[i] = malloc(0x40);"
         },
         {
           "op": "FREE",
           "var": "p1",
           "line": "free(p1);"
-        },
-        {
-          "op": "FREE",
-          "var": "p1",
-          "line": "free(p1); // vulnerability (double free)"
         }
       ]
     },
@@ -1824,7 +1781,7 @@
       "id": "fastbin_dup_into_stack",
       "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.36/fastbin_dup_into_stack.c",
       "glibc_dir_version": "2.36",
-      "description": "fastbin_dup_into_stack technique",
+      "description": "VULNERABILITY",
       "glibc_versions": {
         "min": "2.36",
         "max": "2.36"
@@ -1836,8 +1793,9 @@
       "heap_operations": [
         {
           "op": "OVERWRITE",
-          "target_var": "s",
-          "source_var": "8",
+          "target_var": "ptrs",
+          "source_var": "malloc(8)",
+          "value": "malloc(8)",
           "line": "ptrs[i] = malloc(8);"
         },
         {
@@ -1851,19 +1809,10 @@
           "line": "free(b);"
         },
         {
-          "op": "FREE",
-          "var": "a",
-          "line": "//Calling free(a) twice renders the program vulnerable to Double Free"
-        },
-        {
-          "op": "FREE",
-          "var": "a",
-          "line": "free(a);"
-        },
-        {
           "op": "OVERWRITE",
-          "target_var": "r",
-          "source_var": "0",
+          "target_var": "stack_var",
+          "source_var": "0x20",
+          "value": "0x20",
           "line": "stack_var[1] = 0x20;"
         }
       ]
@@ -1884,8 +1833,9 @@
       "heap_operations": [
         {
           "op": "OVERWRITE",
-          "target_var": "s",
-          "source_var": "allocsize",
+          "target_var": "ptrs",
+          "source_var": "malloc(allocsize)",
+          "value": "malloc(allocsize)",
           "line": "ptrs[i] = malloc(allocsize);"
         },
         {
@@ -1897,12 +1847,6 @@
           "op": "FREE",
           "var": "victim",
           "line": "free(victim);"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "s",
-          "source_var": "allocsize",
-          "line": "for (i = 0; i < 7; i++) ptrs[i] = malloc(allocsize);"
         }
       ]
     },
@@ -1923,7 +1867,8 @@
         {
           "op": "OVERWRITE",
           "target_var": "x",
-          "source_var": "0x100",
+          "source_var": "malloc(0x100)",
+          "value": "malloc(0x100)",
           "line": "x[i] = malloc(0x100);"
         },
         {
@@ -1937,21 +1882,18 @@
           "line": "free(prev);"
         },
         {
-          "op": "FREE",
-          "var": "a",
-          "line": "free(a);// a is already freed"
-        },
-        {
           "op": "OVERWRITE",
-          "target_var": "d",
-          "source_var": "a",
-          "line": "unsorted[0x110/sizeof(intptr_t)] = ((long)a >> 12) ^ (long)stack_var;"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "t",
-          "source_var": "e",
+          "target_var": "target",
+          "source_var": "0xcafebabe",
+          "value": "0xcafebabe",
           "line": "target[0] = 0xcafebabe;"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "stack_var",
+          "source_var": "0xcafebabe)",
+          "value": "= 0xcafebabe)",
+          "line": "assert(stack_var[0] == 0xcafebabe);"
         }
       ]
     },
@@ -1975,36 +1917,21 @@
           "op": "OVERWRITE",
           "target_var": "a",
           "source_var": "0",
-          "line": "a[1] = 0x60; // size"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "a",
-          "source_var": "a",
-          "line": "a[2] = (size_t) a; // fwd"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "a",
-          "source_var": "a",
-          "line": "a[3] = (size_t) a; // bck"
+          "value": "0",
+          "line": "a[0] = 0;\t// prev_size (Not Used)"
         },
         {
           "op": "OVERWRITE",
           "target_var": "b",
-          "source_var": "e",
-          "line": "*(size_t*) &b[real_b_size-sizeof(size_t)] = fake_size;"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "a",
-          "source_var": "e",
-          "line": "a[1] = fake_size;"
+          "source_var": "0",
+          "value": "0",
+          "line": "b[real_b_size] = 0;"
         },
         {
           "op": "OVERWRITE",
           "target_var": "x",
-          "source_var": "0xf8",
+          "source_var": "malloc(0xf8)",
+          "value": "malloc(0xf8)",
           "line": "x[i] = malloc(0xf8);"
         },
         {
@@ -2021,12 +1948,6 @@
           "op": "FREE",
           "var": "b",
           "line": "free(b);"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "d",
-          "source_var": "target",
-          "line": "d[0x30 / 8] = (long)target ^ ((long)&d[0x30/8] >> 12);"
         }
       ]
     },
@@ -2045,50 +1966,42 @@
       "heap_operations": [
         {
           "op": "OVERWRITE",
-          "target_var": "s",
-          "source_var": "0x100",
+          "target_var": "stack_buffer_1",
+          "source_var": "{0}",
+          "value": "{0}",
+          "line": "intptr_t* stack_buffer_1[4] = {0};"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "stack_buffer_2",
+          "source_var": "{0}",
+          "value": "{0}",
+          "line": "intptr_t* stack_buffer_2[4] = {0};"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "dummies",
+          "source_var": "malloc(0x100)",
+          "value": "malloc(0x100)",
           "line": "for(int i=0; i<7; i++) dummies[i] = malloc(0x100);"
         },
         {
-          "op": "OVERWRITE",
-          "target_var": "t",
-          "source_var": "t",
-          "line": "fake_freelist[i][3] = fake_freelist[i+1];"
+          "op": "ALLOC",
+          "var": "p5",
+          "size": 1000,
+          "line": "void *p5 = malloc(1000);"
+        },
+        {
+          "op": "ALLOC",
+          "var": "p2",
+          "size": 1200,
+          "line": "void *p2 = malloc(1200);"
         },
         {
           "op": "OVERWRITE",
-          "target_var": "t",
-          "source_var": "L",
-          "line": "fake_freelist[6][3] = NULL;"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "1",
-          "source_var": "k",
-          "line": "stack_buffer_1[2] = victim_chunk;"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "1",
-          "source_var": "t",
-          "line": "stack_buffer_1[3] = (intptr_t*)stack_buffer_2;"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "2",
-          "source_var": "t",
-          "line": "stack_buffer_2[2] = (intptr_t*)stack_buffer_1;"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "2",
-          "source_var": "t",
-          "line": "stack_buffer_2[3] = (intptr_t *)fake_freelist[0];"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "m",
-          "source_var": "stack_buffer_1",
+          "target_var": "victim",
+          "source_var": "(intptr_t)stack_buffer_1",
+          "value": "(intptr_t)stack_buffer_1",
           "line": "victim[1] = (intptr_t)stack_buffer_1; // victim->bk is pointing to stack"
         }
       ]
@@ -2109,38 +2022,30 @@
       "heap_operations": [
         {
           "op": "OVERWRITE",
-          "target_var": "a",
-          "source_var": "F",
+          "target_var": "fake_arena",
+          "source_var": "0xFF",
+          "value": "0xFF",
           "line": "fake_arena[0x888] = 0xFF;"
         },
         {
           "op": "OVERWRITE",
-          "target_var": "a",
-          "source_var": "F",
-          "line": "fake_arena[0x889] = 0xFF;"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "a",
-          "source_var": "F",
-          "line": "fake_arena[0x88a] = 0xFF;"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "s",
-          "source_var": "0x50",
+          "target_var": "tcache_chunks",
+          "source_var": "malloc(0x50)",
+          "value": "malloc(0x50)",
           "line": "tcache_chunks[i] = malloc(0x50);"
         },
         {
           "op": "OVERWRITE",
-          "target_var": "o",
+          "target_var": "fake_heap_info",
           "source_var": "fake_arena",
+          "value": "(uint64_t) fake_arena",
           "line": "fake_heap_info[0] = (uint64_t) fake_arena; // Setting the fake ar_ptr (arena)"
         },
         {
           "op": "OVERWRITE",
-          "target_var": "r",
-          "source_var": "0",
+          "target_var": "chunk_ptr",
+          "source_var": "0x4",
+          "value": "0x60 | 0x4",
           "line": "chunk_ptr[1] = 0x60 | 0x4; // Setting the non-main arena bit"
         },
         {
@@ -2164,6 +2069,20 @@
       ],
       "heap_operations": [
         {
+          "op": "OVERWRITE",
+          "target_var": "chunks",
+          "source_var": "malloc(0x30)",
+          "value": "malloc(0x30)",
+          "line": "chunks[i] = malloc(0x30);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "fake_chunks",
+          "source_var": "0x40",
+          "value": "0x40",
+          "line": "fake_chunks[1] = 0x40; // this is the size"
+        },
+        {
           "op": "FREE",
           "var": "victim",
           "line": "free(victim);"
@@ -2182,7 +2101,15 @@
       "bug_types": [
         "uaf"
       ],
-      "heap_operations": []
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "win",
+          "source_var": "\"WIN\\0WIN\\0WIN\\0\\x06\\xfe\\x1b\\xe2\"",
+          "value": "\"WIN\\0WIN\\0WIN\\0\\x06\\xfe\\x1b\\x",
+          "line": "char win[0x10] = \"WIN\\0WIN\\0WIN\\0\\x06\\xfe\\x1b\\xe2\";"
+        }
+      ]
     },
     {
       "id": "house_of_water",
@@ -2203,7 +2130,8 @@
         {
           "op": "OVERWRITE",
           "target_var": "x",
-          "source_var": "0x88",
+          "source_var": "malloc(0x88)",
+          "value": "malloc(0x88)",
           "line": "x[i] = malloc(0x88);"
         },
         {
@@ -2213,28 +2141,13 @@
         },
         {
           "op": "FREE",
-          "var": "small_end",
-          "line": "free(small_end);"
-        },
-        {
-          "op": "FREE",
           "var": "relative_chunk",
           "line": "puts(\"\\t> free(relative_chunk);\");"
         },
         {
           "op": "FREE",
-          "var": "relative_chunk",
-          "line": "free(relative_chunk);"
-        },
-        {
-          "op": "FREE",
           "var": "small_start",
           "line": "puts(\"\\t> free(small_start);\");"
-        },
-        {
-          "op": "FREE",
-          "var": "small_start",
-          "line": "free(small_start);"
         }
       ]
     },
@@ -2260,6 +2173,13 @@
           "op": "FREE",
           "var": "p2",
           "line": "free(p2);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "p1",
+          "source_var": "(size_t)((&target)-4)",
+          "value": "(size_t)((&target)-4)",
+          "line": "p1[3] = (size_t)((&target)-4);"
         }
       ]
     },
@@ -2278,26 +2198,22 @@
       ],
       "heap_operations": [
         {
-          "op": "OVERWRITE",
-          "target_var": "3",
-          "source_var": "D",
-          "line": "mmap_chunk_3[-1] = (0xFFFFFFFFFD & mmap_chunk_3[-1]) + (0xFFFFFFFFFD & mmap_chun"
-        },
-        {
           "op": "FREE",
           "var": "mmap_chunk_3",
           "line": "free(mmap_chunk_3);"
         },
         {
           "op": "OVERWRITE",
-          "target_var": "2",
-          "source_var": "f",
+          "target_var": "mmap_chunk_2",
+          "source_var": "0xdeadbeef",
+          "value": "0xdeadbeef",
           "line": "mmap_chunk_2[0] = 0xdeadbeef;"
         },
         {
           "op": "OVERWRITE",
-          "target_var": "k",
-          "source_var": "8",
+          "target_var": "overlapping_chunk",
+          "source_var": "0x1122334455667788",
+          "value": "0x1122334455667788",
           "line": "overlapping_chunk[distance] = 0x1122334455667788;"
         }
       ]
@@ -2327,7 +2243,7 @@
       "id": "poison_null_byte",
       "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.36/poison_null_byte.c",
       "glibc_dir_version": "2.36",
-      "description": "poison_null_byte technique",
+      "description": "VULNERABILITY",
       "glibc_versions": {
         "min": "2.36",
         "max": "2.36"
@@ -2357,11 +2273,6 @@
           "op": "FREE",
           "var": "a2",
           "line": "free(a2);"
-        },
-        {
-          "op": "FREE",
-          "var": "victim",
-          "line": "free(victim);"
         },
         {
           "op": "FREE",
@@ -2433,6 +2344,13 @@
       ],
       "heap_operations": [
         {
+          "op": "OVERWRITE",
+          "target_var": "fake_chunks",
+          "source_var": "0x40",
+          "value": "0x40",
+          "line": "fake_chunks[1] = 0x40; // this is the size"
+        },
+        {
           "op": "FREE",
           "var": "a",
           "line": "free(a);"
@@ -2443,7 +2361,7 @@
       "id": "tcache_metadata_poisoning",
       "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.36/tcache_metadata_poisoning.c",
       "glibc_dir_version": "2.36",
-      "description": "tcache_metadata_poisoning technique",
+      "description": "demonstrates what an attacker can achieve by controlling\\n\"\n       \"the metadata chunk of the tcache.",
       "glibc_versions": {
         "min": "2.36",
         "max": "2.36"
@@ -2451,7 +2369,22 @@
       "bug_types": [
         "uaf"
       ],
-      "heap_operations": []
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "counts",
+          "source_var": "1",
+          "value": "1",
+          "line": "metadata->counts[1] = 1;"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "entries",
+          "source_var": "&stack_target",
+          "value": "&stack_target",
+          "line": "metadata->entries[1] = &stack_target;"
+        }
+      ]
     },
     {
       "id": "tcache_poisoning",
@@ -2491,7 +2424,8 @@
         {
           "op": "OVERWRITE",
           "target_var": "b",
-          "source_var": "long",
+          "source_var": "12)",
+          "value": "(intptr_t)((long)target ^ (lon",
           "line": "b[0] = (intptr_t)((long)target ^ (long)b >> 12);"
         },
         {
@@ -2532,9 +2466,11 @@
           "line": "free(p2);"
         },
         {
-          "op": "FREE",
-          "var": "p",
-          "line": "free(p);"
+          "op": "OVERWRITE",
+          "target_var": "p1",
+          "source_var": "long)p)",
+          "value": "= (unsigned long)p)",
+          "line": "assert(p1[0] == (unsigned long)p);"
         }
       ]
     },
@@ -2553,21 +2489,17 @@
       "heap_operations": [
         {
           "op": "OVERWRITE",
-          "target_var": "r",
-          "source_var": "long",
-          "line": "stack_var[3] = (unsigned long)(&stack_var[2]);"
+          "target_var": "stack_var",
+          "source_var": "{0}",
+          "value": "{0}",
+          "line": "unsigned long stack_var[0x10] = {0};"
         },
         {
           "op": "OVERWRITE",
-          "target_var": "s",
-          "source_var": "long",
-          "line": "chunk_lis[i] = (unsigned long*)malloc(0x90);"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "s",
-          "source_var": "long",
-          "line": "chunk_lis[2][1] = (unsigned long)stack_var;"
+          "target_var": "chunk_lis",
+          "source_var": "{0}",
+          "value": "{0}",
+          "line": "unsigned long *chunk_lis[0x10] = {0};"
         }
       ]
     },
@@ -2585,6 +2517,20 @@
       ],
       "heap_operations": [
         {
+          "op": "OVERWRITE",
+          "target_var": "chunk0_ptr",
+          "source_var": "0x10",
+          "value": "chunk0_ptr[-1] - 0x10",
+          "line": "chunk0_ptr[1] = chunk0_ptr[-1] - 0x10;"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "chunk1_hdr",
+          "source_var": "malloc_size",
+          "value": "malloc_size",
+          "line": "chunk1_hdr[0] = malloc_size;"
+        },
+        {
           "op": "FREE",
           "var": "chunk1_ptr",
           "line": "free(chunk1_ptr);"
@@ -2595,7 +2541,7 @@
       "id": "decrypt_safe_linking",
       "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.37/decrypt_safe_linking.c",
       "glibc_dir_version": "2.37",
-      "description": "decrypt_safe_linking technique",
+      "description": "demonstrates how to recover the original content from a poisoned\n\t * value because of the safe-linking mechanism.",
       "glibc_versions": {
         "min": "2.37",
         "max": "2.37"
@@ -2630,24 +2576,21 @@
       ],
       "heap_operations": [
         {
-          "op": "FREE",
-          "var": "a",
-          "line": "free(a);"
+          "op": "OVERWRITE",
+          "target_var": "ptrs",
+          "source_var": "malloc(8)",
+          "value": "malloc(8)",
+          "line": "ptrs[i] = malloc(8);"
         },
         {
           "op": "FREE",
           "var": "a",
-          "line": "// free(a);"
+          "line": "free(a);"
         },
         {
           "op": "FREE",
           "var": "b",
           "line": "free(b);"
-        },
-        {
-          "op": "FREE",
-          "var": "a",
-          "line": "free(a);"
         }
       ]
     },
@@ -2667,19 +2610,15 @@
       "heap_operations": [
         {
           "op": "OVERWRITE",
-          "target_var": "r",
-          "source_var": "0x40",
+          "target_var": "ptr",
+          "source_var": "malloc(0x40)",
+          "value": "malloc(0x40)",
           "line": "ptr[i] = malloc(0x40);"
         },
         {
           "op": "FREE",
           "var": "p1",
           "line": "free(p1);"
-        },
-        {
-          "op": "FREE",
-          "var": "p1",
-          "line": "free(p1); // vulnerability (double free)"
         }
       ]
     },
@@ -2687,7 +2626,7 @@
       "id": "fastbin_dup_into_stack",
       "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.37/fastbin_dup_into_stack.c",
       "glibc_dir_version": "2.37",
-      "description": "fastbin_dup_into_stack technique",
+      "description": "VULNERABILITY",
       "glibc_versions": {
         "min": "2.37",
         "max": "2.37"
@@ -2699,8 +2638,9 @@
       "heap_operations": [
         {
           "op": "OVERWRITE",
-          "target_var": "s",
-          "source_var": "8",
+          "target_var": "ptrs",
+          "source_var": "malloc(8)",
+          "value": "malloc(8)",
           "line": "ptrs[i] = malloc(8);"
         },
         {
@@ -2714,19 +2654,10 @@
           "line": "free(b);"
         },
         {
-          "op": "FREE",
-          "var": "a",
-          "line": "//Calling free(a) twice renders the program vulnerable to Double Free"
-        },
-        {
-          "op": "FREE",
-          "var": "a",
-          "line": "free(a);"
-        },
-        {
           "op": "OVERWRITE",
-          "target_var": "r",
-          "source_var": "0",
+          "target_var": "stack_var",
+          "source_var": "0x20",
+          "value": "0x20",
           "line": "stack_var[1] = 0x20;"
         }
       ]
@@ -2747,8 +2678,9 @@
       "heap_operations": [
         {
           "op": "OVERWRITE",
-          "target_var": "s",
-          "source_var": "allocsize",
+          "target_var": "ptrs",
+          "source_var": "malloc(allocsize)",
+          "value": "malloc(allocsize)",
           "line": "ptrs[i] = malloc(allocsize);"
         },
         {
@@ -2760,12 +2692,6 @@
           "op": "FREE",
           "var": "victim",
           "line": "free(victim);"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "s",
-          "source_var": "allocsize",
-          "line": "for (i = 0; i < 7; i++) ptrs[i] = malloc(allocsize);"
         }
       ]
     },
@@ -2786,7 +2712,8 @@
         {
           "op": "OVERWRITE",
           "target_var": "x",
-          "source_var": "0x100",
+          "source_var": "malloc(0x100)",
+          "value": "malloc(0x100)",
           "line": "x[i] = malloc(0x100);"
         },
         {
@@ -2800,21 +2727,18 @@
           "line": "free(prev);"
         },
         {
-          "op": "FREE",
-          "var": "a",
-          "line": "free(a);// a is already freed"
-        },
-        {
           "op": "OVERWRITE",
-          "target_var": "d",
-          "source_var": "a",
-          "line": "unsorted[0x110/sizeof(intptr_t)] = ((long)a >> 12) ^ (long)stack_var;"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "t",
-          "source_var": "e",
+          "target_var": "target",
+          "source_var": "0xcafebabe",
+          "value": "0xcafebabe",
           "line": "target[0] = 0xcafebabe;"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "stack_var",
+          "source_var": "0xcafebabe)",
+          "value": "= 0xcafebabe)",
+          "line": "assert(stack_var[0] == 0xcafebabe);"
         }
       ]
     },
@@ -2838,36 +2762,21 @@
           "op": "OVERWRITE",
           "target_var": "a",
           "source_var": "0",
-          "line": "a[1] = 0x60; // size"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "a",
-          "source_var": "a",
-          "line": "a[2] = (size_t) a; // fwd"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "a",
-          "source_var": "a",
-          "line": "a[3] = (size_t) a; // bck"
+          "value": "0",
+          "line": "a[0] = 0;\t// prev_size (Not Used)"
         },
         {
           "op": "OVERWRITE",
           "target_var": "b",
-          "source_var": "e",
-          "line": "*(size_t*) &b[real_b_size-sizeof(size_t)] = fake_size;"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "a",
-          "source_var": "e",
-          "line": "a[1] = fake_size;"
+          "source_var": "0",
+          "value": "0",
+          "line": "b[real_b_size] = 0;"
         },
         {
           "op": "OVERWRITE",
           "target_var": "x",
-          "source_var": "0xf8",
+          "source_var": "malloc(0xf8)",
+          "value": "malloc(0xf8)",
           "line": "x[i] = malloc(0xf8);"
         },
         {
@@ -2884,12 +2793,6 @@
           "op": "FREE",
           "var": "b",
           "line": "free(b);"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "d",
-          "source_var": "target",
-          "line": "d[0x30 / 8] = (long)target ^ ((long)&d[0x30/8] >> 12);"
         }
       ]
     },
@@ -2908,50 +2811,42 @@
       "heap_operations": [
         {
           "op": "OVERWRITE",
-          "target_var": "s",
-          "source_var": "0x100",
+          "target_var": "stack_buffer_1",
+          "source_var": "{0}",
+          "value": "{0}",
+          "line": "intptr_t* stack_buffer_1[4] = {0};"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "stack_buffer_2",
+          "source_var": "{0}",
+          "value": "{0}",
+          "line": "intptr_t* stack_buffer_2[4] = {0};"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "dummies",
+          "source_var": "malloc(0x100)",
+          "value": "malloc(0x100)",
           "line": "for(int i=0; i<7; i++) dummies[i] = malloc(0x100);"
         },
         {
-          "op": "OVERWRITE",
-          "target_var": "t",
-          "source_var": "t",
-          "line": "fake_freelist[i][3] = fake_freelist[i+1];"
+          "op": "ALLOC",
+          "var": "p5",
+          "size": 1000,
+          "line": "void *p5 = malloc(1000);"
+        },
+        {
+          "op": "ALLOC",
+          "var": "p2",
+          "size": 1200,
+          "line": "void *p2 = malloc(1200);"
         },
         {
           "op": "OVERWRITE",
-          "target_var": "t",
-          "source_var": "L",
-          "line": "fake_freelist[6][3] = NULL;"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "1",
-          "source_var": "k",
-          "line": "stack_buffer_1[2] = victim_chunk;"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "1",
-          "source_var": "t",
-          "line": "stack_buffer_1[3] = (intptr_t*)stack_buffer_2;"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "2",
-          "source_var": "t",
-          "line": "stack_buffer_2[2] = (intptr_t*)stack_buffer_1;"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "2",
-          "source_var": "t",
-          "line": "stack_buffer_2[3] = (intptr_t *)fake_freelist[0];"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "m",
-          "source_var": "stack_buffer_1",
+          "target_var": "victim",
+          "source_var": "(intptr_t)stack_buffer_1",
+          "value": "(intptr_t)stack_buffer_1",
           "line": "victim[1] = (intptr_t)stack_buffer_1; // victim->bk is pointing to stack"
         }
       ]
@@ -2972,38 +2867,30 @@
       "heap_operations": [
         {
           "op": "OVERWRITE",
-          "target_var": "a",
-          "source_var": "F",
+          "target_var": "fake_arena",
+          "source_var": "0xFF",
+          "value": "0xFF",
           "line": "fake_arena[0x888] = 0xFF;"
         },
         {
           "op": "OVERWRITE",
-          "target_var": "a",
-          "source_var": "F",
-          "line": "fake_arena[0x889] = 0xFF;"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "a",
-          "source_var": "F",
-          "line": "fake_arena[0x88a] = 0xFF;"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "s",
-          "source_var": "0x50",
+          "target_var": "tcache_chunks",
+          "source_var": "malloc(0x50)",
+          "value": "malloc(0x50)",
           "line": "tcache_chunks[i] = malloc(0x50);"
         },
         {
           "op": "OVERWRITE",
-          "target_var": "o",
+          "target_var": "fake_heap_info",
           "source_var": "fake_arena",
+          "value": "(uint64_t) fake_arena",
           "line": "fake_heap_info[0] = (uint64_t) fake_arena; // Setting the fake ar_ptr (arena)"
         },
         {
           "op": "OVERWRITE",
-          "target_var": "r",
-          "source_var": "0",
+          "target_var": "chunk_ptr",
+          "source_var": "0x4",
+          "value": "0x60 | 0x4",
           "line": "chunk_ptr[1] = 0x60 | 0x4; // Setting the non-main arena bit"
         },
         {
@@ -3027,6 +2914,20 @@
       ],
       "heap_operations": [
         {
+          "op": "OVERWRITE",
+          "target_var": "chunks",
+          "source_var": "malloc(0x30)",
+          "value": "malloc(0x30)",
+          "line": "chunks[i] = malloc(0x30);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "fake_chunks",
+          "source_var": "0x40",
+          "value": "0x40",
+          "line": "fake_chunks[1] = 0x40; // this is the size"
+        },
+        {
           "op": "FREE",
           "var": "victim",
           "line": "free(victim);"
@@ -3045,7 +2946,15 @@
       "bug_types": [
         "uaf"
       ],
-      "heap_operations": []
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "win",
+          "source_var": "\"WIN\\0WIN\\0WIN\\0\\x06\\xfe\\x1b\\xe2\"",
+          "value": "\"WIN\\0WIN\\0WIN\\0\\x06\\xfe\\x1b\\x",
+          "line": "char win[0x10] = \"WIN\\0WIN\\0WIN\\0\\x06\\xfe\\x1b\\xe2\";"
+        }
+      ]
     },
     {
       "id": "house_of_water",
@@ -3066,7 +2975,8 @@
         {
           "op": "OVERWRITE",
           "target_var": "x",
-          "source_var": "0x88",
+          "source_var": "malloc(0x88)",
+          "value": "malloc(0x88)",
           "line": "x[i] = malloc(0x88);"
         },
         {
@@ -3076,28 +2986,13 @@
         },
         {
           "op": "FREE",
-          "var": "small_end",
-          "line": "free(small_end);"
-        },
-        {
-          "op": "FREE",
           "var": "relative_chunk",
           "line": "puts(\"\\t> free(relative_chunk);\");"
         },
         {
           "op": "FREE",
-          "var": "relative_chunk",
-          "line": "free(relative_chunk);"
-        },
-        {
-          "op": "FREE",
           "var": "small_start",
           "line": "puts(\"\\t> free(small_start);\");"
-        },
-        {
-          "op": "FREE",
-          "var": "small_start",
-          "line": "free(small_start);"
         }
       ]
     },
@@ -3123,6 +3018,13 @@
           "op": "FREE",
           "var": "p2",
           "line": "free(p2);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "p1",
+          "source_var": "(size_t)((&target)-4)",
+          "value": "(size_t)((&target)-4)",
+          "line": "p1[3] = (size_t)((&target)-4);"
         }
       ]
     },
@@ -3141,26 +3043,22 @@
       ],
       "heap_operations": [
         {
-          "op": "OVERWRITE",
-          "target_var": "3",
-          "source_var": "D",
-          "line": "mmap_chunk_3[-1] = (0xFFFFFFFFFD & mmap_chunk_3[-1]) + (0xFFFFFFFFFD & mmap_chun"
-        },
-        {
           "op": "FREE",
           "var": "mmap_chunk_3",
           "line": "free(mmap_chunk_3);"
         },
         {
           "op": "OVERWRITE",
-          "target_var": "2",
-          "source_var": "f",
+          "target_var": "mmap_chunk_2",
+          "source_var": "0xdeadbeef",
+          "value": "0xdeadbeef",
           "line": "mmap_chunk_2[0] = 0xdeadbeef;"
         },
         {
           "op": "OVERWRITE",
-          "target_var": "k",
-          "source_var": "8",
+          "target_var": "overlapping_chunk",
+          "source_var": "0x1122334455667788",
+          "value": "0x1122334455667788",
           "line": "overlapping_chunk[distance] = 0x1122334455667788;"
         }
       ]
@@ -3190,7 +3088,7 @@
       "id": "poison_null_byte",
       "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.37/poison_null_byte.c",
       "glibc_dir_version": "2.37",
-      "description": "poison_null_byte technique",
+      "description": "VULNERABILITY",
       "glibc_versions": {
         "min": "2.37",
         "max": "2.37"
@@ -3220,11 +3118,6 @@
           "op": "FREE",
           "var": "a2",
           "line": "free(a2);"
-        },
-        {
-          "op": "FREE",
-          "var": "victim",
-          "line": "free(victim);"
         },
         {
           "op": "FREE",
@@ -3296,6 +3189,13 @@
       ],
       "heap_operations": [
         {
+          "op": "OVERWRITE",
+          "target_var": "fake_chunks",
+          "source_var": "0x40",
+          "value": "0x40",
+          "line": "fake_chunks[1] = 0x40; // this is the size"
+        },
+        {
           "op": "FREE",
           "var": "a",
           "line": "free(a);"
@@ -3306,7 +3206,7 @@
       "id": "tcache_metadata_poisoning",
       "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.37/tcache_metadata_poisoning.c",
       "glibc_dir_version": "2.37",
-      "description": "tcache_metadata_poisoning technique",
+      "description": "demonstrates what an attacker can achieve by controlling\\n\"\n       \"the metadata chunk of the tcache.",
       "glibc_versions": {
         "min": "2.37",
         "max": "2.37"
@@ -3314,7 +3214,22 @@
       "bug_types": [
         "uaf"
       ],
-      "heap_operations": []
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "counts",
+          "source_var": "1",
+          "value": "1",
+          "line": "metadata->counts[1] = 1;"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "entries",
+          "source_var": "&stack_target",
+          "value": "&stack_target",
+          "line": "metadata->entries[1] = &stack_target;"
+        }
+      ]
     },
     {
       "id": "tcache_poisoning",
@@ -3354,7 +3269,8 @@
         {
           "op": "OVERWRITE",
           "target_var": "b",
-          "source_var": "long",
+          "source_var": "12)",
+          "value": "(intptr_t)((long)target ^ (lon",
           "line": "b[0] = (intptr_t)((long)target ^ (long)b >> 12);"
         },
         {
@@ -3395,9 +3311,11 @@
           "line": "free(p2);"
         },
         {
-          "op": "FREE",
-          "var": "p",
-          "line": "free(p);"
+          "op": "OVERWRITE",
+          "target_var": "p1",
+          "source_var": "long)p)",
+          "value": "= (unsigned long)p)",
+          "line": "assert(p1[0] == (unsigned long)p);"
         }
       ]
     },
@@ -3416,21 +3334,17 @@
       "heap_operations": [
         {
           "op": "OVERWRITE",
-          "target_var": "r",
-          "source_var": "long",
-          "line": "stack_var[3] = (unsigned long)(&stack_var[2]);"
+          "target_var": "stack_var",
+          "source_var": "{0}",
+          "value": "{0}",
+          "line": "unsigned long stack_var[0x10] = {0};"
         },
         {
           "op": "OVERWRITE",
-          "target_var": "s",
-          "source_var": "long",
-          "line": "chunk_lis[i] = (unsigned long*)malloc(0x90);"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "s",
-          "source_var": "long",
-          "line": "chunk_lis[2][1] = (unsigned long)stack_var;"
+          "target_var": "chunk_lis",
+          "source_var": "{0}",
+          "value": "{0}",
+          "line": "unsigned long *chunk_lis[0x10] = {0};"
         }
       ]
     },
@@ -3448,6 +3362,20 @@
       ],
       "heap_operations": [
         {
+          "op": "OVERWRITE",
+          "target_var": "chunk0_ptr",
+          "source_var": "0x10",
+          "value": "chunk0_ptr[-1] - 0x10",
+          "line": "chunk0_ptr[1] = chunk0_ptr[-1] - 0x10;"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "chunk1_hdr",
+          "source_var": "malloc_size",
+          "value": "malloc_size",
+          "line": "chunk1_hdr[0] = malloc_size;"
+        },
+        {
           "op": "FREE",
           "var": "chunk1_ptr",
           "line": "free(chunk1_ptr);"
@@ -3458,7 +3386,7 @@
       "id": "decrypt_safe_linking",
       "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.38/decrypt_safe_linking.c",
       "glibc_dir_version": "2.38",
-      "description": "decrypt_safe_linking technique",
+      "description": "demonstrates how to recover the original content from a poisoned\n\t * value because of the safe-linking mechanism.",
       "glibc_versions": {
         "min": "2.38",
         "max": "2.38"
@@ -3493,24 +3421,21 @@
       ],
       "heap_operations": [
         {
-          "op": "FREE",
-          "var": "a",
-          "line": "free(a);"
+          "op": "OVERWRITE",
+          "target_var": "ptrs",
+          "source_var": "malloc(8)",
+          "value": "malloc(8)",
+          "line": "ptrs[i] = malloc(8);"
         },
         {
           "op": "FREE",
           "var": "a",
-          "line": "// free(a);"
+          "line": "free(a);"
         },
         {
           "op": "FREE",
           "var": "b",
           "line": "free(b);"
-        },
-        {
-          "op": "FREE",
-          "var": "a",
-          "line": "free(a);"
         }
       ]
     },
@@ -3530,19 +3455,15 @@
       "heap_operations": [
         {
           "op": "OVERWRITE",
-          "target_var": "r",
-          "source_var": "0x40",
+          "target_var": "ptr",
+          "source_var": "malloc(0x40)",
+          "value": "malloc(0x40)",
           "line": "ptr[i] = malloc(0x40);"
         },
         {
           "op": "FREE",
           "var": "p1",
           "line": "free(p1);"
-        },
-        {
-          "op": "FREE",
-          "var": "p1",
-          "line": "free(p1); // vulnerability (double free)"
         }
       ]
     },
@@ -3550,7 +3471,7 @@
       "id": "fastbin_dup_into_stack",
       "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.38/fastbin_dup_into_stack.c",
       "glibc_dir_version": "2.38",
-      "description": "fastbin_dup_into_stack technique",
+      "description": "VULNERABILITY",
       "glibc_versions": {
         "min": "2.38",
         "max": "2.38"
@@ -3562,8 +3483,9 @@
       "heap_operations": [
         {
           "op": "OVERWRITE",
-          "target_var": "s",
-          "source_var": "8",
+          "target_var": "ptrs",
+          "source_var": "malloc(8)",
+          "value": "malloc(8)",
           "line": "ptrs[i] = malloc(8);"
         },
         {
@@ -3577,19 +3499,10 @@
           "line": "free(b);"
         },
         {
-          "op": "FREE",
-          "var": "a",
-          "line": "//Calling free(a) twice renders the program vulnerable to Double Free"
-        },
-        {
-          "op": "FREE",
-          "var": "a",
-          "line": "free(a);"
-        },
-        {
           "op": "OVERWRITE",
-          "target_var": "r",
-          "source_var": "0",
+          "target_var": "stack_var",
+          "source_var": "0x20",
+          "value": "0x20",
           "line": "stack_var[1] = 0x20;"
         }
       ]
@@ -3610,8 +3523,9 @@
       "heap_operations": [
         {
           "op": "OVERWRITE",
-          "target_var": "s",
-          "source_var": "allocsize",
+          "target_var": "ptrs",
+          "source_var": "malloc(allocsize)",
+          "value": "malloc(allocsize)",
           "line": "ptrs[i] = malloc(allocsize);"
         },
         {
@@ -3623,12 +3537,6 @@
           "op": "FREE",
           "var": "victim",
           "line": "free(victim);"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "s",
-          "source_var": "allocsize",
-          "line": "for (i = 0; i < 7; i++) ptrs[i] = malloc(allocsize);"
         }
       ]
     },
@@ -3649,7 +3557,8 @@
         {
           "op": "OVERWRITE",
           "target_var": "x",
-          "source_var": "0x100",
+          "source_var": "malloc(0x100)",
+          "value": "malloc(0x100)",
           "line": "x[i] = malloc(0x100);"
         },
         {
@@ -3663,21 +3572,18 @@
           "line": "free(prev);"
         },
         {
-          "op": "FREE",
-          "var": "a",
-          "line": "free(a);// a is already freed"
-        },
-        {
           "op": "OVERWRITE",
-          "target_var": "d",
-          "source_var": "a",
-          "line": "unsorted[0x110/sizeof(intptr_t)] = ((long)a >> 12) ^ (long)stack_var;"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "t",
-          "source_var": "e",
+          "target_var": "target",
+          "source_var": "0xcafebabe",
+          "value": "0xcafebabe",
           "line": "target[0] = 0xcafebabe;"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "stack_var",
+          "source_var": "0xcafebabe)",
+          "value": "= 0xcafebabe)",
+          "line": "assert(stack_var[0] == 0xcafebabe);"
         }
       ]
     },
@@ -3701,36 +3607,21 @@
           "op": "OVERWRITE",
           "target_var": "a",
           "source_var": "0",
-          "line": "a[1] = 0x60; // size"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "a",
-          "source_var": "a",
-          "line": "a[2] = (size_t) a; // fwd"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "a",
-          "source_var": "a",
-          "line": "a[3] = (size_t) a; // bck"
+          "value": "0",
+          "line": "a[0] = 0;\t// prev_size (Not Used)"
         },
         {
           "op": "OVERWRITE",
           "target_var": "b",
-          "source_var": "e",
-          "line": "*(size_t*) &b[real_b_size-sizeof(size_t)] = fake_size;"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "a",
-          "source_var": "e",
-          "line": "a[1] = fake_size;"
+          "source_var": "0",
+          "value": "0",
+          "line": "b[real_b_size] = 0;"
         },
         {
           "op": "OVERWRITE",
           "target_var": "x",
-          "source_var": "0xf8",
+          "source_var": "malloc(0xf8)",
+          "value": "malloc(0xf8)",
           "line": "x[i] = malloc(0xf8);"
         },
         {
@@ -3747,12 +3638,6 @@
           "op": "FREE",
           "var": "b",
           "line": "free(b);"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "d",
-          "source_var": "target",
-          "line": "d[0x30 / 8] = (long)target ^ ((long)&d[0x30/8] >> 12);"
         }
       ]
     },
@@ -3771,50 +3656,42 @@
       "heap_operations": [
         {
           "op": "OVERWRITE",
-          "target_var": "s",
-          "source_var": "0x100",
+          "target_var": "stack_buffer_1",
+          "source_var": "{0}",
+          "value": "{0}",
+          "line": "intptr_t* stack_buffer_1[4] = {0};"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "stack_buffer_2",
+          "source_var": "{0}",
+          "value": "{0}",
+          "line": "intptr_t* stack_buffer_2[4] = {0};"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "dummies",
+          "source_var": "malloc(0x100)",
+          "value": "malloc(0x100)",
           "line": "for(int i=0; i<7; i++) dummies[i] = malloc(0x100);"
         },
         {
-          "op": "OVERWRITE",
-          "target_var": "t",
-          "source_var": "t",
-          "line": "fake_freelist[i][3] = fake_freelist[i+1];"
+          "op": "ALLOC",
+          "var": "p5",
+          "size": 1000,
+          "line": "void *p5 = malloc(1000);"
+        },
+        {
+          "op": "ALLOC",
+          "var": "p2",
+          "size": 1200,
+          "line": "void *p2 = malloc(1200);"
         },
         {
           "op": "OVERWRITE",
-          "target_var": "t",
-          "source_var": "L",
-          "line": "fake_freelist[6][3] = NULL;"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "1",
-          "source_var": "k",
-          "line": "stack_buffer_1[2] = victim_chunk;"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "1",
-          "source_var": "t",
-          "line": "stack_buffer_1[3] = (intptr_t*)stack_buffer_2;"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "2",
-          "source_var": "t",
-          "line": "stack_buffer_2[2] = (intptr_t*)stack_buffer_1;"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "2",
-          "source_var": "t",
-          "line": "stack_buffer_2[3] = (intptr_t *)fake_freelist[0];"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "m",
-          "source_var": "stack_buffer_1",
+          "target_var": "victim",
+          "source_var": "(intptr_t)stack_buffer_1",
+          "value": "(intptr_t)stack_buffer_1",
           "line": "victim[1] = (intptr_t)stack_buffer_1; // victim->bk is pointing to stack"
         }
       ]
@@ -3835,38 +3712,30 @@
       "heap_operations": [
         {
           "op": "OVERWRITE",
-          "target_var": "a",
-          "source_var": "F",
+          "target_var": "fake_arena",
+          "source_var": "0xFF",
+          "value": "0xFF",
           "line": "fake_arena[0x888] = 0xFF;"
         },
         {
           "op": "OVERWRITE",
-          "target_var": "a",
-          "source_var": "F",
-          "line": "fake_arena[0x889] = 0xFF;"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "a",
-          "source_var": "F",
-          "line": "fake_arena[0x88a] = 0xFF;"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "s",
-          "source_var": "0x50",
+          "target_var": "tcache_chunks",
+          "source_var": "malloc(0x50)",
+          "value": "malloc(0x50)",
           "line": "tcache_chunks[i] = malloc(0x50);"
         },
         {
           "op": "OVERWRITE",
-          "target_var": "o",
+          "target_var": "fake_heap_info",
           "source_var": "fake_arena",
+          "value": "(uint64_t) fake_arena",
           "line": "fake_heap_info[0] = (uint64_t) fake_arena; // Setting the fake ar_ptr (arena)"
         },
         {
           "op": "OVERWRITE",
-          "target_var": "r",
-          "source_var": "0",
+          "target_var": "chunk_ptr",
+          "source_var": "0x4",
+          "value": "0x60 | 0x4",
           "line": "chunk_ptr[1] = 0x60 | 0x4; // Setting the non-main arena bit"
         },
         {
@@ -3890,6 +3759,20 @@
       ],
       "heap_operations": [
         {
+          "op": "OVERWRITE",
+          "target_var": "chunks",
+          "source_var": "malloc(0x30)",
+          "value": "malloc(0x30)",
+          "line": "chunks[i] = malloc(0x30);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "fake_chunks",
+          "source_var": "0x40",
+          "value": "0x40",
+          "line": "fake_chunks[1] = 0x40; // this is the size"
+        },
+        {
           "op": "FREE",
           "var": "victim",
           "line": "free(victim);"
@@ -3908,7 +3791,15 @@
       "bug_types": [
         "uaf"
       ],
-      "heap_operations": []
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "win",
+          "source_var": "\"WIN\\0WIN\\0WIN\\0\\x06\\xfe\\x1b\\xe2\"",
+          "value": "\"WIN\\0WIN\\0WIN\\0\\x06\\xfe\\x1b\\x",
+          "line": "char win[0x10] = \"WIN\\0WIN\\0WIN\\0\\x06\\xfe\\x1b\\xe2\";"
+        }
+      ]
     },
     {
       "id": "house_of_water",
@@ -3929,7 +3820,8 @@
         {
           "op": "OVERWRITE",
           "target_var": "x",
-          "source_var": "0x88",
+          "source_var": "malloc(0x88)",
+          "value": "malloc(0x88)",
           "line": "x[i] = malloc(0x88);"
         },
         {
@@ -3939,28 +3831,13 @@
         },
         {
           "op": "FREE",
-          "var": "small_end",
-          "line": "free(small_end);"
-        },
-        {
-          "op": "FREE",
           "var": "relative_chunk",
           "line": "puts(\"\\t> free(relative_chunk);\");"
         },
         {
           "op": "FREE",
-          "var": "relative_chunk",
-          "line": "free(relative_chunk);"
-        },
-        {
-          "op": "FREE",
           "var": "small_start",
           "line": "puts(\"\\t> free(small_start);\");"
-        },
-        {
-          "op": "FREE",
-          "var": "small_start",
-          "line": "free(small_start);"
         }
       ]
     },
@@ -3986,6 +3863,13 @@
           "op": "FREE",
           "var": "p2",
           "line": "free(p2);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "p1",
+          "source_var": "(size_t)((&target)-4)",
+          "value": "(size_t)((&target)-4)",
+          "line": "p1[3] = (size_t)((&target)-4);"
         }
       ]
     },
@@ -4004,26 +3888,22 @@
       ],
       "heap_operations": [
         {
-          "op": "OVERWRITE",
-          "target_var": "3",
-          "source_var": "D",
-          "line": "mmap_chunk_3[-1] = (0xFFFFFFFFFD & mmap_chunk_3[-1]) + (0xFFFFFFFFFD & mmap_chun"
-        },
-        {
           "op": "FREE",
           "var": "mmap_chunk_3",
           "line": "free(mmap_chunk_3);"
         },
         {
           "op": "OVERWRITE",
-          "target_var": "2",
-          "source_var": "f",
+          "target_var": "mmap_chunk_2",
+          "source_var": "0xdeadbeef",
+          "value": "0xdeadbeef",
           "line": "mmap_chunk_2[0] = 0xdeadbeef;"
         },
         {
           "op": "OVERWRITE",
-          "target_var": "k",
-          "source_var": "8",
+          "target_var": "overlapping_chunk",
+          "source_var": "0x1122334455667788",
+          "value": "0x1122334455667788",
           "line": "overlapping_chunk[distance] = 0x1122334455667788;"
         }
       ]
@@ -4053,7 +3933,7 @@
       "id": "poison_null_byte",
       "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.38/poison_null_byte.c",
       "glibc_dir_version": "2.38",
-      "description": "poison_null_byte technique",
+      "description": "VULNERABILITY",
       "glibc_versions": {
         "min": "2.38",
         "max": "2.38"
@@ -4083,11 +3963,6 @@
           "op": "FREE",
           "var": "a2",
           "line": "free(a2);"
-        },
-        {
-          "op": "FREE",
-          "var": "victim",
-          "line": "free(victim);"
         },
         {
           "op": "FREE",
@@ -4159,6 +4034,13 @@
       ],
       "heap_operations": [
         {
+          "op": "OVERWRITE",
+          "target_var": "fake_chunks",
+          "source_var": "0x40",
+          "value": "0x40",
+          "line": "fake_chunks[1] = 0x40; // this is the size"
+        },
+        {
           "op": "FREE",
           "var": "a",
           "line": "free(a);"
@@ -4169,7 +4051,7 @@
       "id": "tcache_metadata_poisoning",
       "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.38/tcache_metadata_poisoning.c",
       "glibc_dir_version": "2.38",
-      "description": "tcache_metadata_poisoning technique",
+      "description": "demonstrates what an attacker can achieve by controlling\\n\"\n       \"the metadata chunk of the tcache.",
       "glibc_versions": {
         "min": "2.38",
         "max": "2.38"
@@ -4177,7 +4059,22 @@
       "bug_types": [
         "uaf"
       ],
-      "heap_operations": []
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "counts",
+          "source_var": "1",
+          "value": "1",
+          "line": "metadata->counts[1] = 1;"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "entries",
+          "source_var": "&stack_target",
+          "value": "&stack_target",
+          "line": "metadata->entries[1] = &stack_target;"
+        }
+      ]
     },
     {
       "id": "tcache_poisoning",
@@ -4217,7 +4114,8 @@
         {
           "op": "OVERWRITE",
           "target_var": "b",
-          "source_var": "long",
+          "source_var": "12)",
+          "value": "(intptr_t)((long)target ^ (lon",
           "line": "b[0] = (intptr_t)((long)target ^ (long)b >> 12);"
         },
         {
@@ -4258,9 +4156,11 @@
           "line": "free(p2);"
         },
         {
-          "op": "FREE",
-          "var": "p",
-          "line": "free(p);"
+          "op": "OVERWRITE",
+          "target_var": "p1",
+          "source_var": "long)p)",
+          "value": "= (unsigned long)p)",
+          "line": "assert(p1[0] == (unsigned long)p);"
         }
       ]
     },
@@ -4279,21 +4179,17 @@
       "heap_operations": [
         {
           "op": "OVERWRITE",
-          "target_var": "r",
-          "source_var": "long",
-          "line": "stack_var[3] = (unsigned long)(&stack_var[2]);"
+          "target_var": "stack_var",
+          "source_var": "{0}",
+          "value": "{0}",
+          "line": "unsigned long stack_var[0x10] = {0};"
         },
         {
           "op": "OVERWRITE",
-          "target_var": "s",
-          "source_var": "long",
-          "line": "chunk_lis[i] = (unsigned long*)malloc(0x90);"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "s",
-          "source_var": "long",
-          "line": "chunk_lis[2][1] = (unsigned long)stack_var;"
+          "target_var": "chunk_lis",
+          "source_var": "{0}",
+          "value": "{0}",
+          "line": "unsigned long *chunk_lis[0x10] = {0};"
         }
       ]
     },
@@ -4311,6 +4207,20 @@
       ],
       "heap_operations": [
         {
+          "op": "OVERWRITE",
+          "target_var": "chunk0_ptr",
+          "source_var": "0x10",
+          "value": "chunk0_ptr[-1] - 0x10",
+          "line": "chunk0_ptr[1] = chunk0_ptr[-1] - 0x10;"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "chunk1_hdr",
+          "source_var": "malloc_size",
+          "value": "malloc_size",
+          "line": "chunk1_hdr[0] = malloc_size;"
+        },
+        {
           "op": "FREE",
           "var": "chunk1_ptr",
           "line": "free(chunk1_ptr);"
@@ -4321,7 +4231,7 @@
       "id": "decrypt_safe_linking",
       "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.39/decrypt_safe_linking.c",
       "glibc_dir_version": "2.39",
-      "description": "decrypt_safe_linking technique",
+      "description": "demonstrates how to recover the original content from a poisoned\n\t * value because of the safe-linking mechanism.",
       "glibc_versions": {
         "min": "2.39",
         "max": "2.39"
@@ -4356,24 +4266,21 @@
       ],
       "heap_operations": [
         {
-          "op": "FREE",
-          "var": "a",
-          "line": "free(a);"
+          "op": "OVERWRITE",
+          "target_var": "ptrs",
+          "source_var": "malloc(8)",
+          "value": "malloc(8)",
+          "line": "ptrs[i] = malloc(8);"
         },
         {
           "op": "FREE",
           "var": "a",
-          "line": "// free(a);"
+          "line": "free(a);"
         },
         {
           "op": "FREE",
           "var": "b",
           "line": "free(b);"
-        },
-        {
-          "op": "FREE",
-          "var": "a",
-          "line": "free(a);"
         }
       ]
     },
@@ -4393,19 +4300,15 @@
       "heap_operations": [
         {
           "op": "OVERWRITE",
-          "target_var": "r",
-          "source_var": "0x40",
+          "target_var": "ptr",
+          "source_var": "malloc(0x40)",
+          "value": "malloc(0x40)",
           "line": "ptr[i] = malloc(0x40);"
         },
         {
           "op": "FREE",
           "var": "p1",
           "line": "free(p1);"
-        },
-        {
-          "op": "FREE",
-          "var": "p1",
-          "line": "free(p1); // vulnerability (double free)"
         }
       ]
     },
@@ -4413,7 +4316,7 @@
       "id": "fastbin_dup_into_stack",
       "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.39/fastbin_dup_into_stack.c",
       "glibc_dir_version": "2.39",
-      "description": "fastbin_dup_into_stack technique",
+      "description": "VULNERABILITY",
       "glibc_versions": {
         "min": "2.39",
         "max": "2.39"
@@ -4425,8 +4328,9 @@
       "heap_operations": [
         {
           "op": "OVERWRITE",
-          "target_var": "s",
-          "source_var": "8",
+          "target_var": "ptrs",
+          "source_var": "malloc(8)",
+          "value": "malloc(8)",
           "line": "ptrs[i] = malloc(8);"
         },
         {
@@ -4440,19 +4344,10 @@
           "line": "free(b);"
         },
         {
-          "op": "FREE",
-          "var": "a",
-          "line": "//Calling free(a) twice renders the program vulnerable to Double Free"
-        },
-        {
-          "op": "FREE",
-          "var": "a",
-          "line": "free(a);"
-        },
-        {
           "op": "OVERWRITE",
-          "target_var": "r",
-          "source_var": "0",
+          "target_var": "stack_var",
+          "source_var": "0x20",
+          "value": "0x20",
           "line": "stack_var[1] = 0x20;"
         }
       ]
@@ -4473,8 +4368,9 @@
       "heap_operations": [
         {
           "op": "OVERWRITE",
-          "target_var": "s",
-          "source_var": "allocsize",
+          "target_var": "ptrs",
+          "source_var": "malloc(allocsize)",
+          "value": "malloc(allocsize)",
           "line": "ptrs[i] = malloc(allocsize);"
         },
         {
@@ -4486,12 +4382,6 @@
           "op": "FREE",
           "var": "victim",
           "line": "free(victim);"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "s",
-          "source_var": "allocsize",
-          "line": "for (i = 0; i < 7; i++) ptrs[i] = malloc(allocsize);"
         }
       ]
     },
@@ -4512,7 +4402,8 @@
         {
           "op": "OVERWRITE",
           "target_var": "x",
-          "source_var": "0x100",
+          "source_var": "malloc(0x100)",
+          "value": "malloc(0x100)",
           "line": "x[i] = malloc(0x100);"
         },
         {
@@ -4526,21 +4417,18 @@
           "line": "free(prev);"
         },
         {
-          "op": "FREE",
-          "var": "a",
-          "line": "free(a);// a is already freed"
-        },
-        {
           "op": "OVERWRITE",
-          "target_var": "d",
-          "source_var": "a",
-          "line": "unsorted[0x110/sizeof(intptr_t)] = ((long)a >> 12) ^ (long)stack_var;"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "t",
-          "source_var": "e",
+          "target_var": "target",
+          "source_var": "0xcafebabe",
+          "value": "0xcafebabe",
           "line": "target[0] = 0xcafebabe;"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "stack_var",
+          "source_var": "0xcafebabe)",
+          "value": "= 0xcafebabe)",
+          "line": "assert(stack_var[0] == 0xcafebabe);"
         }
       ]
     },
@@ -4564,36 +4452,21 @@
           "op": "OVERWRITE",
           "target_var": "a",
           "source_var": "0",
-          "line": "a[1] = 0x60; // size"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "a",
-          "source_var": "a",
-          "line": "a[2] = (size_t) a; // fwd"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "a",
-          "source_var": "a",
-          "line": "a[3] = (size_t) a; // bck"
+          "value": "0",
+          "line": "a[0] = 0;\t// prev_size (Not Used)"
         },
         {
           "op": "OVERWRITE",
           "target_var": "b",
-          "source_var": "e",
-          "line": "*(size_t*) &b[real_b_size-sizeof(size_t)] = fake_size;"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "a",
-          "source_var": "e",
-          "line": "a[1] = fake_size;"
+          "source_var": "0",
+          "value": "0",
+          "line": "b[real_b_size] = 0;"
         },
         {
           "op": "OVERWRITE",
           "target_var": "x",
-          "source_var": "0xf8",
+          "source_var": "malloc(0xf8)",
+          "value": "malloc(0xf8)",
           "line": "x[i] = malloc(0xf8);"
         },
         {
@@ -4610,12 +4483,6 @@
           "op": "FREE",
           "var": "b",
           "line": "free(b);"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "d",
-          "source_var": "target",
-          "line": "d[0x30 / 8] = (long)target ^ ((long)&d[0x30/8] >> 12);"
         }
       ]
     },
@@ -4634,50 +4501,42 @@
       "heap_operations": [
         {
           "op": "OVERWRITE",
-          "target_var": "s",
-          "source_var": "0x100",
+          "target_var": "stack_buffer_1",
+          "source_var": "{0}",
+          "value": "{0}",
+          "line": "intptr_t* stack_buffer_1[4] = {0};"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "stack_buffer_2",
+          "source_var": "{0}",
+          "value": "{0}",
+          "line": "intptr_t* stack_buffer_2[4] = {0};"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "dummies",
+          "source_var": "malloc(0x100)",
+          "value": "malloc(0x100)",
           "line": "for(int i=0; i<7; i++) dummies[i] = malloc(0x100);"
         },
         {
-          "op": "OVERWRITE",
-          "target_var": "t",
-          "source_var": "t",
-          "line": "fake_freelist[i][3] = fake_freelist[i+1];"
+          "op": "ALLOC",
+          "var": "p5",
+          "size": 1000,
+          "line": "void *p5 = malloc(1000);"
+        },
+        {
+          "op": "ALLOC",
+          "var": "p2",
+          "size": 1200,
+          "line": "void *p2 = malloc(1200);"
         },
         {
           "op": "OVERWRITE",
-          "target_var": "t",
-          "source_var": "L",
-          "line": "fake_freelist[6][3] = NULL;"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "1",
-          "source_var": "k",
-          "line": "stack_buffer_1[2] = victim_chunk;"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "1",
-          "source_var": "t",
-          "line": "stack_buffer_1[3] = (intptr_t*)stack_buffer_2;"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "2",
-          "source_var": "t",
-          "line": "stack_buffer_2[2] = (intptr_t*)stack_buffer_1;"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "2",
-          "source_var": "t",
-          "line": "stack_buffer_2[3] = (intptr_t *)fake_freelist[0];"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "m",
-          "source_var": "stack_buffer_1",
+          "target_var": "victim",
+          "source_var": "(intptr_t)stack_buffer_1",
+          "value": "(intptr_t)stack_buffer_1",
           "line": "victim[1] = (intptr_t)stack_buffer_1; // victim->bk is pointing to stack"
         }
       ]
@@ -4698,38 +4557,30 @@
       "heap_operations": [
         {
           "op": "OVERWRITE",
-          "target_var": "a",
-          "source_var": "F",
+          "target_var": "fake_arena",
+          "source_var": "0xFF",
+          "value": "0xFF",
           "line": "fake_arena[0x888] = 0xFF;"
         },
         {
           "op": "OVERWRITE",
-          "target_var": "a",
-          "source_var": "F",
-          "line": "fake_arena[0x889] = 0xFF;"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "a",
-          "source_var": "F",
-          "line": "fake_arena[0x88a] = 0xFF;"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "s",
-          "source_var": "0x50",
+          "target_var": "tcache_chunks",
+          "source_var": "malloc(0x50)",
+          "value": "malloc(0x50)",
           "line": "tcache_chunks[i] = malloc(0x50);"
         },
         {
           "op": "OVERWRITE",
-          "target_var": "o",
+          "target_var": "fake_heap_info",
           "source_var": "fake_arena",
+          "value": "(uint64_t) fake_arena",
           "line": "fake_heap_info[0] = (uint64_t) fake_arena; // Setting the fake ar_ptr (arena)"
         },
         {
           "op": "OVERWRITE",
-          "target_var": "r",
-          "source_var": "0",
+          "target_var": "chunk_ptr",
+          "source_var": "0x4",
+          "value": "0x60 | 0x4",
           "line": "chunk_ptr[1] = 0x60 | 0x4; // Setting the non-main arena bit"
         },
         {
@@ -4753,6 +4604,20 @@
       ],
       "heap_operations": [
         {
+          "op": "OVERWRITE",
+          "target_var": "chunks",
+          "source_var": "malloc(0x30)",
+          "value": "malloc(0x30)",
+          "line": "chunks[i] = malloc(0x30);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "fake_chunks",
+          "source_var": "0x40",
+          "value": "0x40",
+          "line": "fake_chunks[1] = 0x40; // this is the size"
+        },
+        {
           "op": "FREE",
           "var": "victim",
           "line": "free(victim);"
@@ -4771,7 +4636,15 @@
       "bug_types": [
         "uaf"
       ],
-      "heap_operations": []
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "win",
+          "source_var": "\"WIN\\0WIN\\0WIN\\0\\x06\\xfe\\x1b\\xe2\"",
+          "value": "\"WIN\\0WIN\\0WIN\\0\\x06\\xfe\\x1b\\x",
+          "line": "char win[0x10] = \"WIN\\0WIN\\0WIN\\0\\x06\\xfe\\x1b\\xe2\";"
+        }
+      ]
     },
     {
       "id": "house_of_water",
@@ -4792,7 +4665,8 @@
         {
           "op": "OVERWRITE",
           "target_var": "x",
-          "source_var": "0x88",
+          "source_var": "malloc(0x88)",
+          "value": "malloc(0x88)",
           "line": "x[i] = malloc(0x88);"
         },
         {
@@ -4802,28 +4676,13 @@
         },
         {
           "op": "FREE",
-          "var": "small_end",
-          "line": "free(small_end);"
-        },
-        {
-          "op": "FREE",
           "var": "relative_chunk",
           "line": "puts(\"\\t> free(relative_chunk);\");"
         },
         {
           "op": "FREE",
-          "var": "relative_chunk",
-          "line": "free(relative_chunk);"
-        },
-        {
-          "op": "FREE",
           "var": "small_start",
           "line": "puts(\"\\t> free(small_start);\");"
-        },
-        {
-          "op": "FREE",
-          "var": "small_start",
-          "line": "free(small_start);"
         }
       ]
     },
@@ -4849,6 +4708,13 @@
           "op": "FREE",
           "var": "p2",
           "line": "free(p2);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "p1",
+          "source_var": "(size_t)((&target)-4)",
+          "value": "(size_t)((&target)-4)",
+          "line": "p1[3] = (size_t)((&target)-4);"
         }
       ]
     },
@@ -4867,26 +4733,22 @@
       ],
       "heap_operations": [
         {
-          "op": "OVERWRITE",
-          "target_var": "3",
-          "source_var": "D",
-          "line": "mmap_chunk_3[-1] = (0xFFFFFFFFFD & mmap_chunk_3[-1]) + (0xFFFFFFFFFD & mmap_chun"
-        },
-        {
           "op": "FREE",
           "var": "mmap_chunk_3",
           "line": "free(mmap_chunk_3);"
         },
         {
           "op": "OVERWRITE",
-          "target_var": "2",
-          "source_var": "f",
+          "target_var": "mmap_chunk_2",
+          "source_var": "0xdeadbeef",
+          "value": "0xdeadbeef",
           "line": "mmap_chunk_2[0] = 0xdeadbeef;"
         },
         {
           "op": "OVERWRITE",
-          "target_var": "k",
-          "source_var": "8",
+          "target_var": "overlapping_chunk",
+          "source_var": "0x1122334455667788",
+          "value": "0x1122334455667788",
           "line": "overlapping_chunk[distance] = 0x1122334455667788;"
         }
       ]
@@ -4916,7 +4778,7 @@
       "id": "poison_null_byte",
       "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.39/poison_null_byte.c",
       "glibc_dir_version": "2.39",
-      "description": "poison_null_byte technique",
+      "description": "VULNERABILITY",
       "glibc_versions": {
         "min": "2.39",
         "max": "2.39"
@@ -4946,11 +4808,6 @@
           "op": "FREE",
           "var": "a2",
           "line": "free(a2);"
-        },
-        {
-          "op": "FREE",
-          "var": "victim",
-          "line": "free(victim);"
         },
         {
           "op": "FREE",
@@ -5022,6 +4879,13 @@
       ],
       "heap_operations": [
         {
+          "op": "OVERWRITE",
+          "target_var": "fake_chunks",
+          "source_var": "0x40",
+          "value": "0x40",
+          "line": "fake_chunks[1] = 0x40; // this is the size"
+        },
+        {
           "op": "FREE",
           "var": "a",
           "line": "free(a);"
@@ -5032,7 +4896,7 @@
       "id": "tcache_metadata_poisoning",
       "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.39/tcache_metadata_poisoning.c",
       "glibc_dir_version": "2.39",
-      "description": "tcache_metadata_poisoning technique",
+      "description": "demonstrates what an attacker can achieve by controlling\\n\"\n       \"the metadata chunk of the tcache.",
       "glibc_versions": {
         "min": "2.39",
         "max": "2.39"
@@ -5040,7 +4904,22 @@
       "bug_types": [
         "uaf"
       ],
-      "heap_operations": []
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "counts",
+          "source_var": "1",
+          "value": "1",
+          "line": "metadata->counts[1] = 1;"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "entries",
+          "source_var": "&stack_target",
+          "value": "&stack_target",
+          "line": "metadata->entries[1] = &stack_target;"
+        }
+      ]
     },
     {
       "id": "tcache_poisoning",
@@ -5080,7 +4959,8 @@
         {
           "op": "OVERWRITE",
           "target_var": "b",
-          "source_var": "long",
+          "source_var": "12)",
+          "value": "(intptr_t)((long)target ^ (lon",
           "line": "b[0] = (intptr_t)((long)target ^ (long)b >> 12);"
         },
         {
@@ -5121,9 +5001,11 @@
           "line": "free(p2);"
         },
         {
-          "op": "FREE",
-          "var": "p",
-          "line": "free(p);"
+          "op": "OVERWRITE",
+          "target_var": "p1",
+          "source_var": "long)p)",
+          "value": "= (unsigned long)p)",
+          "line": "assert(p1[0] == (unsigned long)p);"
         }
       ]
     },
@@ -5142,21 +5024,17 @@
       "heap_operations": [
         {
           "op": "OVERWRITE",
-          "target_var": "r",
-          "source_var": "long",
-          "line": "stack_var[3] = (unsigned long)(&stack_var[2]);"
+          "target_var": "stack_var",
+          "source_var": "{0}",
+          "value": "{0}",
+          "line": "unsigned long stack_var[0x10] = {0};"
         },
         {
           "op": "OVERWRITE",
-          "target_var": "s",
-          "source_var": "long",
-          "line": "chunk_lis[i] = (unsigned long*)malloc(0x90);"
-        },
-        {
-          "op": "OVERWRITE",
-          "target_var": "s",
-          "source_var": "long",
-          "line": "chunk_lis[2][1] = (unsigned long)stack_var;"
+          "target_var": "chunk_lis",
+          "source_var": "{0}",
+          "value": "{0}",
+          "line": "unsigned long *chunk_lis[0x10] = {0};"
         }
       ]
     },
@@ -5173,6 +5051,20 @@
         "overflow"
       ],
       "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "chunk0_ptr",
+          "source_var": "0x10",
+          "value": "chunk0_ptr[-1] - 0x10",
+          "line": "chunk0_ptr[1] = chunk0_ptr[-1] - 0x10;"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "chunk1_hdr",
+          "source_var": "malloc_size",
+          "value": "malloc_size",
+          "line": "chunk1_hdr[0] = malloc_size;"
+        },
         {
           "op": "FREE",
           "var": "chunk1_ptr",

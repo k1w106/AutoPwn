@@ -12,20 +12,6 @@ Framework tự động sinh mã khai thác lỗi Heap cho CTF PWN, lấy cảm h
 - **Modern glibc aware**: Tự động nhận diện và bypass các cơ chế bảo mật hiện đại như **Safe Linking** (glibc 2.34+).
 - **Interface Transplantation**: Tự động dò tìm giao diện menu và tham số của binary mục tiêu bằng thực thi tượng trưng.
 
-## Kiến trúc hệ thống
-
-```
-autopwn.py                          # Orchestrator điều phối chính
-core/
-├── nlp_engine/extract_vars.py      # Module 1: Multi-Writeup NLP
-├── tracer/                         # Module 2: Hybrid Tracer (DynamoRIO)
-├── generalizer/                    # Module 3: Operation Generalizer (Algorithm 1)
-├── knowledge_fusion/esm.py         # Module 4: Composite ESM
-├── symbolic_executor/              # Module 5: angr Deep Verifier (NEW)
-├── planner/planner.py              # Module 6: Evolutionary Planner (Algorithm 2)
-└── codegen/synthesizer.py          # Module 7: Synthesizer (Exploit Generator)
-```
-
 ## Cài đặt nhanh
 
 ```bash
@@ -34,7 +20,7 @@ pip install pwntools angr spacy
 python3 -m spacy download en_core_web_sm
 
 # Chạy thử nghiệm với một thử thách
-python3 autopwn.py ./benchmarks/justCTF-2025-babyheap/binary
+python3 autopwn.py ./benchmarks/<path_to_binary>
 ```
 
 ## Tài liệu chi tiết
