@@ -10,6 +10,7 @@ Framework tự động sinh mã khai thác lỗi Heap cho CTF PWN, lấy cảm h
 - **Deep Technique Verification**: Sử dụng **angr** để xác thực tính khả thi của các kỹ thuật khai thác (như Tcache Poisoning, House of Force) trước khi sinh mã.
 - **Evolutionary Planner**: Thuật toán DFSExplore tìm kiếm chuỗi khai thác tối ưu, ưu tiên các kỹ thuật đã được xác thực bởi phân tích tượng trưng.
 - **Modern glibc aware**: Tự động nhận diện và bypass các cơ chế bảo mật hiện đại như **Safe Linking** (glibc 2.34+).
+- **/proc/mem technique**: Khi heap techniques bị ảnh hưởng bởi custom ld-linux, tự động chuyển sang kỹ thuật OS-level: đọc `/proc/pid/maps` để leak libc, đọc `environ` qua `/proc/pid/mem` để leak stack, và ghi ROP chain trực tiếp qua `os.pwrite`.
 - **Interface Transplantation**: Tự động dò tìm giao diện menu và tham số của binary mục tiêu bằng thực thi tượng trưng.
 
 ## Cài đặt nhanh

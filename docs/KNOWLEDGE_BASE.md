@@ -105,7 +105,31 @@ Tài liệu này cung cấp danh sách toàn diện các kỹ thuật khai thác
 
 ---
 
-## 5. Các cấu trúc dữ liệu glibc hiện đại
+## 5. Các kỹ thuật /proc/mem (OS-level Primitive)
+
+### Proc Mem Libc Leak
+- **Mô tả:** Đọc file `/proc/pid/maps` để tìm địa chỉ base của libc thông qua mapping `r--p` chứa chuỗi "libc".
+- **Yêu cầu:** Quyền truy cập proc filesystem (cùng UID hoặc root), process PID từ pwntools.
+- **Primitive:** Libc Leak (không cần heap manipulation).
+- **Cơ chế bảo mật bypass:** ASLR (đọc trực tiếp từ kernel).
+- **Giới hạn:** Không hoạt động trong môi trường container không có `/proc` hoặc có `ptrace scope` hạn chế.
+
+### Proc Mem Stack Leak
+- **Mô tả:** Đọc biến `environ` từ libc BSS qua `/proc/pid/mem` để lấy địa chỉ stack, sau đó quét vùng stack để tìm địa chỉ return của `main` (`libc + 0x2a1ca` trong glibc 2.39).
+- **Yêu cầu:** Libc Leak (để biết địa chỉ `environ` và return address pattern), proc filesystem access.
+- **Primitive:** Stack Leak.
+- **Cơ chế bảo mật bypass:** ASLR, Stack Canary (không động đến stack qua heap).
+
+### Proc Mem Stack Write (Arbitrary Write)
+- **Mô tả:** Ghi trực tiếp ROP chain vào stack qua `/proc/pid/mem` sử dụng `os.pwrite` (unbuffered I/O — buffered I/O silently fails trên `/proc/pid/mem`). ROP chain được sinh động qua `ROP(libc)` class (không hardcode gadget offsets).
+- **Yêu cầu:** Libc Leak (cho gadgets), Stack Leak (cho địa chỉ return), proc filesystem access với quyền ghi.
+- **Primitive:** Arbitrary Write → Code Execution (shell).
+- **Cơ chế bảo mật bypass:** ASLR, NX, RELRO, PIE, Stack Canary.
+- **ROP chain structure:** `ret*3 + pop_rdi; ret + /bin/sh + system` (3 ret gadgets cho 16-byte stack alignment).
+
+---
+
+## 6. Các cấu trúc dữ liệu glibc hiện đại
 
 - **`tcache_perthread_struct`:** Nằm ở đầu heap. Chứa các mảng `counts` và `entries`.
 - **`heap_info`:** Metadata ở đầu mỗi vùng heap. Chứa `ar_ptr` (con trỏ arena).

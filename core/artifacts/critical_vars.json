@@ -1,3332 +1,3287 @@
 {
-    "composite_taxonomy": {
+  "composite_taxonomy": {
+    "bugs": [
+      "double_free",
+      "overflow",
+      "uaf"
+    ],
+    "primitives": [
+      "arbitrary_allocation",
+      "arbitrary_free",
+      "arbitrary_write",
+      "heap_leak"
+    ],
+    "hooks": [
+      "__free_hook",
+      "__malloc_hook",
+      "got"
+    ],
+    "functions": [
+      "free",
+      "malloc",
+      "one_gadget",
+      "shell",
+      "system"
+    ],
+    "leak_targets": [
+      "__environ",
+      "main_arena",
+      "stack_canary",
+      "xor_key"
+    ],
+    "capabilities": [
+      "control_flow_hijack",
+      "libc_leak",
+      "stack_leak"
+    ],
+    "leaks": [
+      "heap_base",
+      "libc_base",
+      "stack_base"
+    ],
+    "structures": [
+      "chunk",
+      "fake_chunk",
+      "fastbin",
+      "largebin",
+      "smallbin",
+      "tcache",
+      "tcache_perthread_struct",
+      "top_chunk",
+      "unsorted_bin"
+    ],
+    "metadata_fields": [
+      "bk",
+      "chunk_size",
+      "fd",
+      "prev_inuse",
+      "prev_size",
+      "size"
+    ],
+    "techniques": [
+      "chunk_overlap",
+      "consolidation",
+      "environ_leak",
+      "fake_unsorted_bin",
+      "fastbin_attack",
+      "house_of_force",
+      "rop_chain",
+      "safe_linking",
+      "tcache_poisoning",
+      "unlink_chunk",
+      "unsortedbin_leak"
+    ],
+    "goals": [
+      "control_flow_hijack"
+    ],
+    "gadgets": [
+      "pop_rdi",
+      "return_address"
+    ],
+    "others": [
+      "0x290",
+      "rop_payload",
+      "address",
+      "ptr",
+      "fixed offset",
+      "size check on allocation",
+      "__glibc_unlikely",
+      "writable address",
+      "↓ overwrite size",
+      "/sh string address",
+      "heap metadata",
+      "our target address",
+      "(size",
+      "fake size",
+      "ptr xor",
+      "0x23",
+      "0x120",
+      "0x20",
+      "0x68",
+      "0x158",
+      "thể fake size",
+      "0x70",
+      "leaked_addr",
+      "rip",
+      "neighbor metadata",
+      "0x18",
+      "/bin/sh",
+      "0x180",
+      "internal_size_t",
+      "p64(target_addr)",
+      "carefully calculated large size",
+      "offset",
+      "0x0100",
+      "stack_pointer",
+      "0xffffffffffffffff",
+      "target_address",
+      "0x80",
+      "fixed size",
+      "attacker-controlled address",
+      "p64(0x421)",
+      "target address",
+      "huge size",
+      "requested size",
+      "size class",
+      "known offset",
+      "0x410",
+      "attacker's target_address",
+      "0x30",
+      "neighbor's metadata",
+      "address of p2",
+      "0x6f0",
+      "overwrite heap metadata",
+      "right offset",
+      "(ptr ^ key",
+      "0x2d0",
+      "base address",
+      "(\"corrupted size",
+      "size check",
+      "libc address",
+      "bin size",
+      "libc address to target_address",
+      "next_ptr",
+      "specific size",
+      "arbitrary address",
+      "0x421",
+      "\"size\" field",
+      "(uint16_t",
+      "p64(0x21)",
+      "0x7f",
+      "offset (partial byte",
+      "0x60",
+      "0x21",
+      "dynamic offset",
+      "0x10",
+      "_",
+      "specific size class"
+    ]
+  },
+  "composite_exploit_ir": {
+    "bugs": [
+      "double_free",
+      "overflow",
+      "uaf"
+    ],
+    "primitives": [
+      "arbitrary_allocation",
+      "arbitrary_free",
+      "arbitrary_write",
+      "heap_leak"
+    ],
+    "techniques": [
+      "chunk_overlap",
+      "consolidation",
+      "environ_leak",
+      "fake_unsorted_bin",
+      "fastbin_attack",
+      "house_of_force",
+      "rop_chain",
+      "safe_linking",
+      "tcache_poisoning",
+      "unlink_chunk",
+      "unsortedbin_leak"
+    ],
+    "capabilities": [
+      "control_flow_hijack",
+      "libc_leak",
+      "stack_leak"
+    ],
+    "leak_targets": [
+      "__environ",
+      "main_arena",
+      "stack_canary",
+      "xor_key"
+    ],
+    "targets": [
+      "__environ",
+      "__free_hook",
+      "__malloc_hook",
+      "bk",
+      "fd",
+      "got",
+      "heap_base",
+      "libc_base",
+      "main_arena",
+      "return_address",
+      "rip",
+      "stack_base",
+      "stack_canary"
+    ],
+    "goals": [
+      "control_flow_hijack"
+    ],
+    "transitions": [
+      {
+        "from": "uaf",
+        "to": "arbitrary_free",
+        "action": "trigger_uaf",
+        "confidence": 0.46153846153846156
+      },
+      {
+        "from": "fake_unsorted_bin",
+        "to": "libc_leak",
+        "action": "read_fake_main_arena",
+        "confidence": 0.3076923076923077
+      },
+      {
+        "from": "libc_leak",
+        "to": "stack_leak",
+        "action": "read_environ",
+        "confidence": 0.38461538461538464
+      },
+      {
+        "from": "environ_leak",
+        "to": "stack_leak",
+        "action": "read_environ_ptr",
+        "confidence": 0.3076923076923077
+      },
+      {
+        "from": "arbitrary_free",
+        "to": "tcache_poisoning",
+        "action": "poison_bin",
+        "confidence": 0.3076923076923077
+      },
+      {
+        "from": "tcache_poisoning",
+        "to": "arbitrary_allocation",
+        "action": "malloc_at_target",
+        "confidence": 0.5384615384615384
+      },
+      {
+        "from": "arbitrary_allocation",
+        "to": "arbitrary_write",
+        "action": "write_at_allocated_target",
+        "confidence": 0.38461538461538464
+      },
+      {
+        "from": "arbitrary_write",
+        "to": "control_flow_hijack",
+        "action": "overwrite_hook_or_ret",
+        "confidence": 0.38461538461538464
+      },
+      {
+        "from": "fastbin_attack",
+        "to": "arbitrary_allocation",
+        "action": "malloc_at_fastbin_target",
+        "confidence": 0.07692307692307693
+      },
+      {
+        "from": "rop_chain",
+        "to": "control_flow_hijack",
+        "action": "execute_rop",
+        "confidence": 0.15384615384615385
+      },
+      {
+        "from": "consolidation",
+        "to": "arbitrary_allocation",
+        "action": "consolidate_to_target",
+        "confidence": 0.07692307692307693
+      },
+      {
+        "from": "unsortedbin_leak",
+        "to": "libc_leak",
+        "action": "read_main_arena",
+        "confidence": 0.15384615384615385
+      },
+      {
+        "from": "chunk_overlap",
+        "to": "heap_leak",
+        "action": "read_oob",
+        "confidence": 0.07692307692307693
+      }
+    ],
+    "metadata": {
+      "source": "multi_writeup_composite",
+      "writeup_count": 13,
+      "confidence_score": 0.9,
+      "fusion_ready": true,
+      "engine_version": "3.0-multi-writeup"
+    }
+  },
+  "composite_states": [
+    {
+      "subject": "they",
+      "relation": "redirect",
+      "object": "tcache"
+    },
+    {
+      "subject": "size",
+      "relation": "of",
+      "object": "top_chunk"
+    },
+    {
+      "subject": "an attacker",
+      "relation": "allocate",
+      "object": "chunk"
+    },
+    {
+      "subject": "the attacker",
+      "relation": "write",
+      "object": "chunk"
+    },
+    {
+      "subject": "we",
+      "relation": "leak",
+      "object": "stack_base"
+    },
+    {
+      "subject": "we",
+      "relation": "overwrite",
+      "object": "system"
+    },
+    {
+      "subject": "malloc",
+      "relation": "trigger",
+      "object": "shell"
+    },
+    {
+      "subject": "top_chunk",
+      "relation": "be",
+      "object": "chunk"
+    },
+    {
+      "subject": "we",
+      "relation": "read",
+      "object": "chunk"
+    },
+    {
+      "subject": "we",
+      "relation": "free",
+      "object": "uaf"
+    },
+    {
+      "subject": "we",
+      "relation": "free",
+      "object": "chunk"
+    },
+    {
+      "subject": "an attacker",
+      "relation": "write",
+      "object": "heap_base"
+    },
+    {
+      "subject": "the attacker",
+      "relation": "overwrite",
+      "object": "bk"
+    },
+    {
+      "subject": "a new allocation",
+      "relation": "trigger",
+      "object": "unsorted_bin"
+    },
+    {
+      "subject": "a new allocation",
+      "relation": "trigger",
+      "object": "largebin"
+    },
+    {
+      "subject": "tcache",
+      "relation": "exploit",
+      "object": "tcache"
+    },
+    {
+      "subject": "the attacker",
+      "relation": "free",
+      "object": "chunk"
+    },
+    {
+      "subject": "chunk",
+      "relation": "allocate",
+      "object": "tcache"
+    },
+    {
+      "subject": "chunk",
+      "relation": "be",
+      "object": "tcache"
+    },
+    {
+      "subject": "an attacker",
+      "relation": "overwrite",
+      "object": "tcache"
+    },
+    {
+      "subject": "the attacker",
+      "relation": "trigger",
+      "object": "tcache"
+    },
+    {
+      "subject": "the attacker",
+      "relation": "write",
+      "object": "heap_base"
+    },
+    {
+      "subject": "tcache",
+      "relation": "overwrite",
+      "object": "tcache"
+    },
+    {
+      "subject": "rop_chain",
+      "relation": "hijack",
+      "object": "system"
+    },
+    {
+      "subject": "rop_chain",
+      "relation": "write",
+      "object": "return_address"
+    },
+    {
+      "subject": "we",
+      "relation": "overwrite",
+      "object": "rip"
+    },
+    {
+      "subject": "we",
+      "relation": "allocate",
+      "object": "chunk"
+    },
+    {
+      "subject": "it",
+      "relation": "free",
+      "object": "chunk"
+    },
+    {
+      "subject": "we",
+      "relation": "leak",
+      "object": "heap_base"
+    },
+    {
+      "subject": "we",
+      "relation": "read",
+      "object": "fd"
+    },
+    {
+      "subject": "we",
+      "relation": "overwrite",
+      "object": "fd"
+    },
+    {
+      "subject": "we",
+      "relation": "poison",
+      "object": "tcache"
+    },
+    {
+      "subject": "we",
+      "relation": "allocate",
+      "object": "got"
+    },
+    {
+      "subject": "we",
+      "relation": "leak",
+      "object": "libc_base"
+    },
+    {
+      "subject": "we",
+      "relation": "forge",
+      "object": "tcache"
+    },
+    {
+      "subject": "we",
+      "relation": "overwrite",
+      "object": "chunk"
+    },
+    {
+      "subject": "we",
+      "relation": "trigger",
+      "object": "free"
+    },
+    {
+      "subject": "we",
+      "relation": "trigger",
+      "object": "shell"
+    },
+    {
+      "subject": "we",
+      "relation": "bypass",
+      "object": "tcache"
+    },
+    {
+      "subject": "chunk",
+      "relation": "poison",
+      "object": "fd"
+    },
+    {
+      "subject": "the structure",
+      "relation": "allocate",
+      "object": "chunk"
+    },
+    {
+      "subject": "chunk",
+      "relation": "be",
+      "object": "heap_base"
+    },
+    {
+      "subject": "we",
+      "relation": "bypass",
+      "object": "safe_linking"
+    },
+    {
+      "subject": "this",
+      "relation": "corrupt",
+      "object": "tcache"
+    },
+    {
+      "subject": "we",
+      "relation": "allocate",
+      "object": "tcache"
+    },
+    {
+      "subject": "chunk",
+      "relation": "free",
+      "object": "tcache"
+    },
+    {
+      "subject": "fd",
+      "relation": "contain",
+      "object": "tcache"
+    },
+    {
+      "subject": "libc_base",
+      "relation": "leak",
+      "object": "stack_base"
+    },
+    {
+      "subject": "us",
+      "relation": "free",
+      "object": "chunk"
+    },
+    {
+      "subject": "we",
+      "relation": "write",
+      "object": "chunk"
+    },
+    {
+      "subject": "unsorted_bin",
+      "relation": "contain",
+      "object": "main_arena"
+    },
+    {
+      "subject": "we",
+      "relation": "corrupt",
+      "object": "chunk"
+    },
+    {
+      "subject": "chunk",
+      "relation": "be",
+      "object": "unsorted_bin"
+    }
+  ],
+  "writeup_sources": {
+    "_": [
+      "advanced_house_attacks.txt"
+    ],
+    "arbitrary address": [
+      "advanced_house_attacks.txt"
+    ],
+    "attacker-controlled address": [
+      "advanced_house_attacks.txt"
+    ],
+    "bk": [
+      "advanced_house_attacks.txt",
+      "babyheap_fake_unsorted.txt",
+      "fastbin_attack.txt",
+      "largebin_and_stashing.txt",
+      "uaf_leak.txt",
+      "unsorted_bin_leak.txt"
+    ],
+    "chunk": [
+      "advanced_house_attacks.txt",
+      "babyheap_fake_unsorted.txt",
+      "environ_stack_leak.txt",
+      "fastbin_attack.txt",
+      "house_of_force.txt",
+      "largebin_and_stashing.txt",
+      "modern_tcache_attacks.txt",
+      "safe_linking_bypasses.txt",
+      "tcache_poisoning.txt",
+      "tcache_struct_overwrite.txt",
+      "uaf_leak.txt",
+      "unsorted_bin_leak.txt"
+    ],
+    "chunk_size": [
+      "advanced_house_attacks.txt",
+      "babyheap_fake_unsorted.txt",
+      "fastbin_attack.txt",
+      "house_of_force.txt",
+      "tcache_poisoning.txt",
+      "uaf_leak.txt",
+      "unsorted_bin_leak.txt"
+    ],
+    "fake_chunk": [
+      "advanced_house_attacks.txt",
+      "babyheap_fake_unsorted.txt",
+      "fastbin_attack.txt",
+      "largebin_and_stashing.txt",
+      "tcache_poisoning.txt",
+      "uaf_leak.txt",
+      "unsorted_bin_leak.txt"
+    ],
+    "fastbin": [
+      "advanced_house_attacks.txt",
+      "fastbin_attack.txt",
+      "safe_linking_bypasses.txt"
+    ],
+    "free": [
+      "advanced_house_attacks.txt",
+      "babyheap_fake_unsorted.txt",
+      "fastbin_attack.txt",
+      "house_of_force.txt",
+      "modern_tcache_attacks.txt",
+      "tcache_poisoning.txt",
+      "tcache_struct_overwrite.txt",
+      "uaf_leak.txt",
+      "unsorted_bin_leak.txt"
+    ],
+    "malloc": [
+      "advanced_house_attacks.txt",
+      "babyheap_fake_unsorted.txt",
+      "environ_stack_leak.txt",
+      "fastbin_attack.txt",
+      "house_of_force.txt",
+      "largebin_and_stashing.txt",
+      "modern_tcache_attacks.txt",
+      "tcache_struct_overwrite.txt"
+    ],
+    "overflow": [
+      "advanced_house_attacks.txt",
+      "house_of_force.txt",
+      "modern_tcache_attacks.txt",
+      "tcache_struct_overwrite.txt"
+    ],
+    "size": [
+      "advanced_house_attacks.txt",
+      "babyheap_fake_unsorted.txt",
+      "fastbin_attack.txt",
+      "house_of_force.txt",
+      "tcache_struct_overwrite.txt"
+    ],
+    "size class": [
+      "advanced_house_attacks.txt",
+      "largebin_and_stashing.txt",
+      "modern_tcache_attacks.txt"
+    ],
+    "smallbin": [
+      "advanced_house_attacks.txt"
+    ],
+    "target address": [
+      "advanced_house_attacks.txt",
+      "house_of_force.txt",
+      "largebin_and_stashing.txt",
+      "modern_tcache_attacks.txt",
+      "tcache_poisoning.txt",
+      "tcache_struct_overwrite.txt"
+    ],
+    "tcache": [
+      "advanced_house_attacks.txt",
+      "babyheap_fake_unsorted.txt",
+      "environ_stack_leak.txt",
+      "fastbin_attack.txt",
+      "largebin_and_stashing.txt",
+      "modern_tcache_attacks.txt",
+      "rop_chain.txt",
+      "safe_linking_bypasses.txt",
+      "tcache_poisoning.txt",
+      "tcache_struct_overwrite.txt",
+      "uaf_leak.txt",
+      "unsorted_bin_leak.txt"
+    ],
+    "tcache_poisoning": [
+      "advanced_house_attacks.txt",
+      "environ_stack_leak.txt",
+      "tcache_poisoning.txt",
+      "uaf_leak.txt"
+    ],
+    "top_chunk": [
+      "advanced_house_attacks.txt",
+      "babyheap_fake_unsorted.txt",
+      "house_of_force.txt"
+    ],
+    "unsorted_bin": [
+      "advanced_house_attacks.txt",
+      "babyheap_fake_unsorted.txt",
+      "largebin_and_stashing.txt",
+      "modern_tcache_attacks.txt",
+      "rop_chain.txt",
+      "tcache_poisoning.txt",
+      "uaf_leak.txt",
+      "unsorted_bin_leak.txt"
+    ],
+    "(\"corrupted size": [
+      "babyheap_fake_unsorted.txt"
+    ],
+    "0x158": [
+      "babyheap_fake_unsorted.txt"
+    ],
+    "0x18": [
+      "babyheap_fake_unsorted.txt",
+      "environ_stack_leak.txt"
+    ],
+    "0x21": [
+      "babyheap_fake_unsorted.txt"
+    ],
+    "0x2d0": [
+      "babyheap_fake_unsorted.txt"
+    ],
+    "0x30": [
+      "babyheap_fake_unsorted.txt"
+    ],
+    "0x410": [
+      "babyheap_fake_unsorted.txt",
+      "tcache_poisoning.txt",
+      "unsorted_bin_leak.txt"
+    ],
+    "0x421": [
+      "babyheap_fake_unsorted.txt"
+    ],
+    "0x6f0": [
+      "babyheap_fake_unsorted.txt"
+    ],
+    "__environ": [
+      "babyheap_fake_unsorted.txt",
+      "environ_stack_leak.txt",
+      "rop_chain.txt",
+      "uaf_leak.txt"
+    ],
+    "__glibc_unlikely": [
+      "babyheap_fake_unsorted.txt"
+    ],
+    "consolidation": [
+      "babyheap_fake_unsorted.txt"
+    ],
+    "double_free": [
+      "babyheap_fake_unsorted.txt",
+      "tcache_poisoning.txt",
+      "uaf_leak.txt"
+    ],
+    "environ_leak": [
+      "babyheap_fake_unsorted.txt"
+    ],
+    "fd": [
+      "babyheap_fake_unsorted.txt",
+      "environ_stack_leak.txt",
+      "fastbin_attack.txt",
+      "largebin_and_stashing.txt",
+      "rop_chain.txt",
+      "tcache_poisoning.txt",
+      "tcache_struct_overwrite.txt",
+      "uaf_leak.txt",
+      "unsorted_bin_leak.txt"
+    ],
+    "heap_base": [
+      "babyheap_fake_unsorted.txt",
+      "house_of_force.txt",
+      "largebin_and_stashing.txt",
+      "modern_tcache_attacks.txt",
+      "tcache_poisoning.txt",
+      "tcache_struct_overwrite.txt",
+      "uaf_leak.txt",
+      "unsorted_bin_leak.txt"
+    ],
+    "internal_size_t": [
+      "babyheap_fake_unsorted.txt"
+    ],
+    "libc_base": [
+      "babyheap_fake_unsorted.txt",
+      "environ_stack_leak.txt",
+      "rop_chain.txt",
+      "tcache_poisoning.txt",
+      "uaf_leak.txt",
+      "unsorted_bin_leak.txt"
+    ],
+    "main_arena": [
+      "babyheap_fake_unsorted.txt",
+      "uaf_leak.txt",
+      "unsorted_bin_leak.txt"
+    ],
+    "one_gadget": [
+      "babyheap_fake_unsorted.txt",
+      "fastbin_attack.txt"
+    ],
+    "p64(0x21)": [
+      "babyheap_fake_unsorted.txt"
+    ],
+    "p64(0x421)": [
+      "babyheap_fake_unsorted.txt"
+    ],
+    "prev_inuse": [
+      "babyheap_fake_unsorted.txt"
+    ],
+    "prev_size": [
+      "babyheap_fake_unsorted.txt",
+      "unsorted_bin_leak.txt"
+    ],
+    "return_address": [
+      "babyheap_fake_unsorted.txt",
+      "environ_stack_leak.txt",
+      "house_of_force.txt",
+      "rop_chain.txt",
+      "tcache_struct_overwrite.txt",
+      "uaf_leak.txt"
+    ],
+    "rop_chain": [
+      "babyheap_fake_unsorted.txt",
+      "environ_stack_leak.txt",
+      "house_of_force.txt",
+      "rop_chain.txt"
+    ],
+    "rop_payload": [
+      "babyheap_fake_unsorted.txt"
+    ],
+    "safe_linking": [
+      "babyheap_fake_unsorted.txt",
+      "environ_stack_leak.txt",
+      "safe_linking_bypasses.txt",
+      "tcache_poisoning.txt",
+      "tcache_struct_overwrite.txt",
+      "uaf_leak.txt"
+    ],
+    "stack_pointer": [
+      "babyheap_fake_unsorted.txt",
+      "environ_stack_leak.txt",
+      "uaf_leak.txt"
+    ],
+    "thể fake size": [
+      "babyheap_fake_unsorted.txt"
+    ],
+    "uaf": [
+      "babyheap_fake_unsorted.txt",
+      "environ_stack_leak.txt",
+      "house_of_force.txt",
+      "tcache_poisoning.txt",
+      "tcache_struct_overwrite.txt",
+      "uaf_leak.txt"
+    ],
+    "unlink_chunk": [
+      "babyheap_fake_unsorted.txt",
+      "largebin_and_stashing.txt"
+    ],
+    "↓ overwrite size": [
+      "babyheap_fake_unsorted.txt"
+    ],
+    "0x120": [
+      "environ_stack_leak.txt"
+    ],
+    "0x180": [
+      "environ_stack_leak.txt"
+    ],
+    "address": [
+      "environ_stack_leak.txt",
+      "house_of_force.txt",
+      "largebin_and_stashing.txt",
+      "rop_chain.txt",
+      "tcache_struct_overwrite.txt"
+    ],
+    "control_flow_hijack": [
+      "environ_stack_leak.txt",
+      "rop_chain.txt",
+      "uaf_leak.txt"
+    ],
+    "dynamic offset": [
+      "environ_stack_leak.txt"
+    ],
+    "heap_leak": [
+      "environ_stack_leak.txt"
+    ],
+    "known offset": [
+      "environ_stack_leak.txt"
+    ],
+    "libc_leak": [
+      "environ_stack_leak.txt",
+      "unsorted_bin_leak.txt"
+    ],
+    "offset": [
+      "environ_stack_leak.txt"
+    ],
+    "shell": [
+      "environ_stack_leak.txt",
+      "fastbin_attack.txt",
+      "rop_chain.txt",
+      "tcache_poisoning.txt"
+    ],
+    "stack_base": [
+      "environ_stack_leak.txt",
+      "fastbin_attack.txt",
+      "rop_chain.txt",
+      "uaf_leak.txt"
+    ],
+    "stack_leak": [
+      "environ_stack_leak.txt",
+      "rop_chain.txt"
+    ],
+    "xor_key": [
+      "environ_stack_leak.txt",
+      "tcache_poisoning.txt",
+      "uaf_leak.txt"
+    ],
+    "\"size\" field": [
+      "fastbin_attack.txt"
+    ],
+    "(size": [
+      "fastbin_attack.txt"
+    ],
+    "0x23": [
+      "fastbin_attack.txt"
+    ],
+    "0x7f": [
+      "fastbin_attack.txt"
+    ],
+    "0x80": [
+      "fastbin_attack.txt"
+    ],
+    "__malloc_hook": [
+      "fastbin_attack.txt",
+      "tcache_poisoning.txt",
+      "unsorted_bin_leak.txt"
+    ],
+    "arbitrary_allocation": [
+      "fastbin_attack.txt",
+      "largebin_and_stashing.txt",
+      "modern_tcache_attacks.txt",
+      "tcache_struct_overwrite.txt",
+      "uaf_leak.txt"
+    ],
+    "bin size": [
+      "fastbin_attack.txt"
+    ],
+    "fake size": [
+      "fastbin_attack.txt"
+    ],
+    "fastbin_attack": [
+      "fastbin_attack.txt"
+    ],
+    "offset (partial byte": [
+      "fastbin_attack.txt"
+    ],
+    "our target address": [
+      "fastbin_attack.txt",
+      "house_of_force.txt",
+      "tcache_poisoning.txt"
+    ],
+    "right offset": [
+      "fastbin_attack.txt"
+    ],
+    "system": [
+      "fastbin_attack.txt",
+      "rop_chain.txt",
+      "tcache_poisoning.txt"
+    ],
+    "0x20": [
+      "house_of_force.txt",
+      "largebin_and_stashing.txt"
+    ],
+    "0xffffffffffffffff": [
+      "house_of_force.txt"
+    ],
+    "got": [
+      "house_of_force.txt",
+      "tcache_poisoning.txt",
+      "tcache_struct_overwrite.txt"
+    ],
+    "house_of_force": [
+      "house_of_force.txt"
+    ],
+    "huge size": [
+      "house_of_force.txt"
+    ],
+    "neighbor metadata": [
+      "house_of_force.txt"
+    ],
+    "neighbor's metadata": [
+      "house_of_force.txt"
+    ],
+    "requested size": [
+      "house_of_force.txt"
+    ],
+    "size check": [
+      "house_of_force.txt"
+    ],
+    "size check on allocation": [
+      "house_of_force.txt"
+    ],
+    "specific size": [
+      "house_of_force.txt"
+    ],
+    "0x10": [
+      "largebin_and_stashing.txt",
+      "tcache_struct_overwrite.txt",
+      "unsorted_bin_leak.txt"
+    ],
+    "address of p2": [
+      "largebin_and_stashing.txt"
+    ],
+    "attacker's target_address": [
+      "largebin_and_stashing.txt"
+    ],
+    "largebin": [
+      "largebin_and_stashing.txt",
+      "modern_tcache_attacks.txt"
+    ],
+    "libc address": [
+      "largebin_and_stashing.txt",
+      "uaf_leak.txt",
+      "unsorted_bin_leak.txt"
+    ],
+    "libc address to target_address": [
+      "largebin_and_stashing.txt"
+    ],
+    "target_address": [
+      "largebin_and_stashing.txt"
+    ],
+    "carefully calculated large size": [
+      "modern_tcache_attacks.txt"
+    ],
+    "chunk_overlap": [
+      "modern_tcache_attacks.txt",
+      "uaf_leak.txt"
+    ],
+    "specific size class": [
+      "modern_tcache_attacks.txt"
+    ],
+    "/bin/sh": [
+      "rop_chain.txt",
+      "tcache_poisoning.txt"
+    ],
+    "/sh string address": [
+      "rop_chain.txt"
+    ],
+    "pop_rdi": [
+      "rop_chain.txt"
+    ],
+    "rip": [
+      "rop_chain.txt"
+    ],
+    "(ptr ^ key": [
+      "safe_linking_bypasses.txt"
+    ],
+    "ptr": [
+      "safe_linking_bypasses.txt",
+      "tcache_poisoning.txt"
+    ],
+    "0x68": [
+      "tcache_poisoning.txt"
+    ],
+    "__free_hook": [
+      "tcache_poisoning.txt",
+      "tcache_struct_overwrite.txt"
+    ],
+    "fixed size": [
+      "tcache_poisoning.txt"
+    ],
+    "ptr xor": [
+      "tcache_poisoning.txt"
+    ],
+    "(uint16_t": [
+      "tcache_struct_overwrite.txt"
+    ],
+    "0x0100": [
+      "tcache_struct_overwrite.txt"
+    ],
+    "0x290": [
+      "tcache_struct_overwrite.txt"
+    ],
+    "p64(target_addr)": [
+      "tcache_struct_overwrite.txt"
+    ],
+    "stack_canary": [
+      "tcache_struct_overwrite.txt"
+    ],
+    "tcache_perthread_struct": [
+      "tcache_struct_overwrite.txt"
+    ],
+    "writable address": [
+      "tcache_struct_overwrite.txt"
+    ],
+    "0x60": [
+      "uaf_leak.txt",
+      "unsorted_bin_leak.txt"
+    ],
+    "heap metadata": [
+      "uaf_leak.txt"
+    ],
+    "next_ptr": [
+      "uaf_leak.txt"
+    ],
+    "overwrite heap metadata": [
+      "uaf_leak.txt"
+    ],
+    "0x70": [
+      "unsorted_bin_leak.txt"
+    ],
+    "base address": [
+      "unsorted_bin_leak.txt"
+    ],
+    "fixed offset": [
+      "unsorted_bin_leak.txt"
+    ],
+    "leaked_addr": [
+      "unsorted_bin_leak.txt"
+    ]
+  },
+  "per_writeup": {
+    "advanced_house_attacks.txt": {
+      "vars": [
+        "_",
+        "arbitrary address",
+        "attacker-controlled address",
+        "bk",
+        "chunk",
+        "chunk_size",
+        "fake_chunk",
+        "fastbin",
+        "free",
+        "malloc",
+        "overflow",
+        "size",
+        "size class",
+        "smallbin",
+        "target address",
+        "tcache",
+        "tcache_poisoning",
+        "top_chunk",
+        "unsorted_bin"
+      ],
+      "states": [
+        {
+          "subject": "they",
+          "relation": "redirect",
+          "object": "tcache"
+        },
+        {
+          "subject": "size",
+          "relation": "of",
+          "object": "top_chunk"
+        },
+        {
+          "subject": "an attacker",
+          "relation": "allocate",
+          "object": "chunk"
+        },
+        {
+          "subject": "the attacker",
+          "relation": "write",
+          "object": "chunk"
+        }
+      ],
+      "taxonomy": {
         "bugs": [
-            "double_free",
-            "overflow",
-            "uaf"
+          "overflow"
         ],
-        "primitives": [
-            "arbitrary_allocation",
-            "arbitrary_free",
-            "arbitrary_write",
-            "heap_leak"
-        ],
-        "hooks": [
-            "__free_hook",
-            "__malloc_hook",
-            "got"
-        ],
+        "primitives": [],
+        "hooks": [],
         "functions": [
-            "free",
-            "malloc",
-            "one_gadget",
-            "shell",
-            "system"
+          "free",
+          "malloc"
         ],
-        "leak_targets": [
-            "__environ",
-            "main_arena",
-            "stack_canary",
-            "xor_key"
-        ],
-        "capabilities": [
-            "control_flow_hijack",
-            "libc_leak",
-            "stack_leak"
-        ],
-        "leaks": [
-            "heap_base",
-            "libc_base",
-            "stack_base"
-        ],
+        "leak_targets": [],
+        "capabilities": [],
+        "leaks": [],
         "structures": [
-            "chunk",
-            "fake_chunk",
-            "fastbin",
-            "largebin",
-            "smallbin",
-            "tcache",
-            "tcache_perthread_struct",
-            "top_chunk",
-            "unsorted_bin"
+          "chunk",
+          "fake_chunk",
+          "fastbin",
+          "smallbin",
+          "tcache",
+          "top_chunk",
+          "unsorted_bin"
         ],
         "metadata_fields": [
-            "bk",
-            "chunk_size",
-            "fd",
-            "prev_inuse",
-            "prev_size",
-            "size"
+          "bk",
+          "chunk_size",
+          "size"
         ],
         "techniques": [
-            "chunk_overlap",
-            "consolidation",
-            "environ_leak",
-            "fake_unsorted_bin",
-            "fastbin_attack",
-            "house_of_force",
-            "rop_chain",
-            "safe_linking",
-            "tcache_poisoning",
-            "unlink_chunk",
-            "unsortedbin_leak"
+          "fake_unsorted_bin",
+          "tcache_poisoning"
         ],
-        "goals": [
-            "control_flow_hijack"
-        ],
-        "gadgets": [
-            "pop_rdi",
-            "return_address"
-        ],
+        "goals": [],
+        "gadgets": [],
         "others": [
-            "(\"corrupted size",
-            "0xffffffffffffffff",
-            "overwrite heap metadata",
-            "attacker-controlled address",
-            "target address",
-            "0x20",
-            "0x60",
-            "0x290",
-            "0x68",
-            "rip",
-            "arbitrary address",
-            "/bin/sh",
-            "0x410",
-            "size class",
-            "attacker's target_address",
-            "neighbor's metadata",
-            "our target address",
-            "carefully calculated large size",
-            "internal_size_t",
-            "base address",
-            "target_address",
-            "requested size",
-            "writable address",
-            "p64(0x21)",
-            "size check",
-            "address",
-            "right offset",
-            "_",
-            "0x30",
-            "/sh string address",
-            "huge size",
-            "p64(0x421)",
-            "heap metadata",
-            "specific size",
-            "size check on allocation",
-            "address of p2",
-            "0x421",
-            "libc address",
-            "(size",
-            "p64(target_addr)",
-            "stack_pointer",
-            "bin size",
-            "0x2d0",
-            "fixed size",
-            "0x6f0",
-            "libc address to target_address",
-            "offset",
-            "leaked_addr",
-            "rop_payload",
-            "specific size class",
-            "\"size\" field",
-            "next_ptr",
-            "thể fake size",
-            "0x80",
-            "0x70",
-            "0x120",
-            "0x158",
-            "0x23",
-            "dynamic offset",
-            "fixed offset",
-            "__glibc_unlikely",
-            "0x0100",
-            "0x180",
-            "0x7f",
-            "known offset",
-            "ptr xor",
-            "neighbor metadata",
-            "ptr",
-            "(ptr ^ key",
-            "(uint16_t",
-            "0x10",
-            "offset (partial byte",
-            "fake size",
-            "0x18",
-            "0x21",
-            "↓ overwrite size"
+          "_",
+          "arbitrary address",
+          "attacker-controlled address",
+          "size class",
+          "target address"
         ]
-    },
-    "composite_exploit_ir": {
+      },
+      "exploit_ir": {
         "bugs": [
-            "double_free",
-            "overflow",
-            "uaf"
+          "overflow"
+        ],
+        "primitives": [],
+        "techniques": [
+          "fake_unsorted_bin",
+          "tcache_poisoning"
+        ],
+        "capabilities": [],
+        "leak_targets": [],
+        "targets": [
+          "bk"
+        ],
+        "goals": [],
+        "transitions": [],
+        "metadata": {
+          "source": "nlp_writeup_extraction",
+          "confidence_score": 0.85,
+          "fusion_ready": true,
+          "engine_version": "3.0-multi-writeup"
+        }
+      }
+    },
+    "babyheap_fake_unsorted.txt": {
+      "vars": [
+        "(\"corrupted size",
+        "0x158",
+        "0x18",
+        "0x21",
+        "0x2d0",
+        "0x30",
+        "0x410",
+        "0x421",
+        "0x6f0",
+        "__environ",
+        "__glibc_unlikely",
+        "bk",
+        "chunk",
+        "chunk_size",
+        "consolidation",
+        "double_free",
+        "environ_leak",
+        "fake_chunk",
+        "fd",
+        "free",
+        "heap_base",
+        "internal_size_t",
+        "libc_base",
+        "main_arena",
+        "malloc",
+        "one_gadget",
+        "p64(0x21)",
+        "p64(0x421)",
+        "prev_inuse",
+        "prev_size",
+        "return_address",
+        "rop_chain",
+        "rop_payload",
+        "safe_linking",
+        "size",
+        "stack_pointer",
+        "tcache",
+        "thể fake size",
+        "top_chunk",
+        "uaf",
+        "unlink_chunk",
+        "unsorted_bin",
+        "↓ overwrite size"
+      ],
+      "states": [],
+      "taxonomy": {
+        "bugs": [
+          "double_free",
+          "uaf"
         ],
         "primitives": [
-            "arbitrary_allocation",
-            "arbitrary_free",
-            "arbitrary_write",
-            "heap_leak"
+          "arbitrary_free"
         ],
-        "techniques": [
-            "chunk_overlap",
-            "consolidation",
-            "environ_leak",
-            "fake_unsorted_bin",
-            "fastbin_attack",
-            "house_of_force",
-            "rop_chain",
-            "safe_linking",
-            "tcache_poisoning",
-            "unlink_chunk",
-            "unsortedbin_leak"
-        ],
-        "capabilities": [
-            "control_flow_hijack",
-            "libc_leak",
-            "stack_leak"
+        "hooks": [],
+        "functions": [
+          "free",
+          "malloc",
+          "one_gadget"
         ],
         "leak_targets": [
-            "__environ",
-            "main_arena",
-            "stack_canary",
-            "xor_key"
+          "__environ",
+          "main_arena"
+        ],
+        "capabilities": [
+          "libc_leak",
+          "stack_leak"
+        ],
+        "leaks": [
+          "heap_base",
+          "libc_base"
+        ],
+        "structures": [
+          "chunk",
+          "fake_chunk",
+          "tcache",
+          "top_chunk",
+          "unsorted_bin"
+        ],
+        "metadata_fields": [
+          "bk",
+          "chunk_size",
+          "fd",
+          "prev_inuse",
+          "prev_size",
+          "size"
+        ],
+        "techniques": [
+          "consolidation",
+          "environ_leak",
+          "fake_unsorted_bin",
+          "rop_chain",
+          "safe_linking",
+          "unlink_chunk"
+        ],
+        "goals": [],
+        "gadgets": [
+          "return_address"
+        ],
+        "others": [
+          "(\"corrupted size",
+          "0x158",
+          "0x18",
+          "0x21",
+          "0x2d0",
+          "0x30",
+          "0x410",
+          "0x421",
+          "0x6f0",
+          "__glibc_unlikely",
+          "internal_size_t",
+          "p64(0x21)",
+          "p64(0x421)",
+          "rop_payload",
+          "stack_pointer",
+          "thể fake size",
+          "↓ overwrite size"
+        ]
+      },
+      "exploit_ir": {
+        "bugs": [
+          "double_free",
+          "uaf"
+        ],
+        "primitives": [
+          "arbitrary_free"
+        ],
+        "techniques": [
+          "consolidation",
+          "environ_leak",
+          "fake_unsorted_bin",
+          "rop_chain",
+          "safe_linking",
+          "unlink_chunk"
+        ],
+        "capabilities": [
+          "libc_leak",
+          "stack_leak"
+        ],
+        "leak_targets": [
+          "__environ",
+          "main_arena"
         ],
         "targets": [
-            "__environ",
-            "__free_hook",
-            "__malloc_hook",
-            "bk",
-            "fd",
-            "got",
-            "heap_base",
-            "libc_base",
-            "main_arena",
-            "return_address",
-            "rip",
-            "stack_base",
-            "stack_canary"
+          "__environ",
+          "bk",
+          "fd",
+          "heap_base",
+          "libc_base",
+          "main_arena",
+          "return_address"
         ],
-        "goals": [
-            "control_flow_hijack"
-        ],
+        "goals": [],
         "transitions": [
-            {
-                "from": "uaf",
-                "to": "arbitrary_free",
-                "action": "trigger_uaf",
-                "confidence": 0.46153846153846156
-            },
-            {
-                "from": "fake_unsorted_bin",
-                "to": "libc_leak",
-                "action": "read_fake_main_arena",
-                "confidence": 0.3076923076923077
-            },
-            {
-                "from": "libc_leak",
-                "to": "stack_leak",
-                "action": "read_environ",
-                "confidence": 0.38461538461538464
-            },
-            {
-                "from": "environ_leak",
-                "to": "stack_leak",
-                "action": "read_environ_ptr",
-                "confidence": 0.3076923076923077
-            },
-            {
-                "from": "arbitrary_free",
-                "to": "tcache_poisoning",
-                "action": "poison_bin",
-                "confidence": 0.3076923076923077
-            },
-            {
-                "from": "tcache_poisoning",
-                "to": "arbitrary_allocation",
-                "action": "malloc_at_target",
-                "confidence": 0.5384615384615384
-            },
-            {
-                "from": "arbitrary_allocation",
-                "to": "arbitrary_write",
-                "action": "write_at_allocated_target",
-                "confidence": 0.38461538461538464
-            },
-            {
-                "from": "arbitrary_write",
-                "to": "control_flow_hijack",
-                "action": "overwrite_hook_or_ret",
-                "confidence": 0.38461538461538464
-            },
-            {
-                "from": "fastbin_attack",
-                "to": "arbitrary_allocation",
-                "action": "malloc_at_fastbin_target",
-                "confidence": 0.07692307692307693
-            },
-            {
-                "from": "rop_chain",
-                "to": "control_flow_hijack",
-                "action": "execute_rop",
-                "confidence": 0.15384615384615385
-            },
-            {
-                "from": "consolidation",
-                "to": "arbitrary_allocation",
-                "action": "consolidate_to_target",
-                "confidence": 0.07692307692307693
-            },
-            {
-                "from": "unsortedbin_leak",
-                "to": "libc_leak",
-                "action": "read_main_arena",
-                "confidence": 0.15384615384615385
-            },
-            {
-                "from": "chunk_overlap",
-                "to": "heap_leak",
-                "action": "read_oob",
-                "confidence": 0.07692307692307693
-            }
+          {
+            "from": "uaf",
+            "to": "arbitrary_free",
+            "action": "trigger_uaf"
+          },
+          {
+            "from": "fake_unsorted_bin",
+            "to": "libc_leak",
+            "action": "read_fake_main_arena"
+          },
+          {
+            "from": "libc_leak",
+            "to": "stack_leak",
+            "action": "read_environ"
+          },
+          {
+            "from": "environ_leak",
+            "to": "stack_leak",
+            "action": "read_environ_ptr"
+          }
         ],
         "metadata": {
-            "source": "multi_writeup_composite",
-            "writeup_count": 13,
-            "confidence_score": 0.9,
-            "fusion_ready": true,
-            "engine_version": "3.0-multi-writeup"
+          "source": "nlp_writeup_extraction",
+          "confidence_score": 0.85,
+          "fusion_ready": true,
+          "engine_version": "3.0-multi-writeup"
         }
+      }
     },
-    "composite_states": [
+    "environ_stack_leak.txt": {
+      "vars": [
+        "0x120",
+        "0x18",
+        "0x180",
+        "__environ",
+        "address",
+        "chunk",
+        "control_flow_hijack",
+        "dynamic offset",
+        "fd",
+        "heap_leak",
+        "known offset",
+        "libc_base",
+        "libc_leak",
+        "malloc",
+        "offset",
+        "return_address",
+        "rop_chain",
+        "safe_linking",
+        "shell",
+        "stack_base",
+        "stack_leak",
+        "stack_pointer",
+        "tcache",
+        "tcache_poisoning",
+        "uaf",
+        "xor_key"
+      ],
+      "states": [
         {
-            "subject": "they",
-            "relation": "redirect",
-            "object": "tcache"
-        },
-        {
-            "subject": "size",
-            "relation": "of",
-            "object": "top_chunk"
-        },
-        {
-            "subject": "an attacker",
-            "relation": "allocate",
-            "object": "chunk"
-        },
-        {
-            "subject": "the attacker",
-            "relation": "write",
-            "object": "chunk"
-        },
-        {
-            "subject": "we",
-            "relation": "leak",
-            "object": "stack_base"
-        },
-        {
-            "subject": "we",
-            "relation": "overwrite",
-            "object": "system"
-        },
-        {
-            "subject": "malloc",
-            "relation": "trigger",
-            "object": "shell"
-        },
-        {
-            "subject": "top_chunk",
-            "relation": "be",
-            "object": "chunk"
-        },
-        {
-            "subject": "we",
-            "relation": "read",
-            "object": "chunk"
-        },
-        {
-            "subject": "we",
-            "relation": "free",
-            "object": "uaf"
-        },
-        {
-            "subject": "we",
-            "relation": "free",
-            "object": "chunk"
-        },
-        {
-            "subject": "an attacker",
-            "relation": "write",
-            "object": "heap_base"
-        },
-        {
-            "subject": "the attacker",
-            "relation": "overwrite",
-            "object": "bk"
-        },
-        {
-            "subject": "a new allocation",
-            "relation": "trigger",
-            "object": "unsorted_bin"
-        },
-        {
-            "subject": "a new allocation",
-            "relation": "trigger",
-            "object": "largebin"
-        },
-        {
-            "subject": "tcache",
-            "relation": "exploit",
-            "object": "tcache"
-        },
-        {
-            "subject": "the attacker",
-            "relation": "free",
-            "object": "chunk"
-        },
-        {
-            "subject": "chunk",
-            "relation": "allocate",
-            "object": "tcache"
-        },
-        {
-            "subject": "chunk",
-            "relation": "be",
-            "object": "tcache"
-        },
-        {
-            "subject": "an attacker",
-            "relation": "overwrite",
-            "object": "tcache"
-        },
-        {
-            "subject": "the attacker",
-            "relation": "trigger",
-            "object": "tcache"
-        },
-        {
-            "subject": "the attacker",
-            "relation": "write",
-            "object": "heap_base"
-        },
-        {
-            "subject": "tcache",
-            "relation": "overwrite",
-            "object": "tcache"
-        },
-        {
-            "subject": "rop_chain",
-            "relation": "hijack",
-            "object": "system"
-        },
-        {
-            "subject": "rop_chain",
-            "relation": "write",
-            "object": "return_address"
-        },
-        {
-            "subject": "we",
-            "relation": "overwrite",
-            "object": "rip"
-        },
-        {
-            "subject": "we",
-            "relation": "allocate",
-            "object": "chunk"
-        },
-        {
-            "subject": "it",
-            "relation": "free",
-            "object": "chunk"
-        },
-        {
-            "subject": "we",
-            "relation": "leak",
-            "object": "heap_base"
-        },
-        {
-            "subject": "we",
-            "relation": "read",
-            "object": "fd"
-        },
-        {
-            "subject": "we",
-            "relation": "overwrite",
-            "object": "fd"
-        },
-        {
-            "subject": "we",
-            "relation": "poison",
-            "object": "tcache"
-        },
-        {
-            "subject": "we",
-            "relation": "allocate",
-            "object": "got"
-        },
-        {
-            "subject": "we",
-            "relation": "leak",
-            "object": "libc_base"
-        },
-        {
-            "subject": "we",
-            "relation": "forge",
-            "object": "tcache"
-        },
-        {
-            "subject": "we",
-            "relation": "overwrite",
-            "object": "chunk"
-        },
-        {
-            "subject": "we",
-            "relation": "trigger",
-            "object": "free"
-        },
-        {
-            "subject": "we",
-            "relation": "trigger",
-            "object": "shell"
-        },
-        {
-            "subject": "we",
-            "relation": "bypass",
-            "object": "tcache"
-        },
-        {
-            "subject": "chunk",
-            "relation": "poison",
-            "object": "fd"
-        },
-        {
-            "subject": "the structure",
-            "relation": "allocate",
-            "object": "chunk"
-        },
-        {
-            "subject": "chunk",
-            "relation": "be",
-            "object": "heap_base"
-        },
-        {
-            "subject": "we",
-            "relation": "bypass",
-            "object": "safe_linking"
-        },
-        {
-            "subject": "this",
-            "relation": "corrupt",
-            "object": "tcache"
-        },
-        {
-            "subject": "we",
-            "relation": "allocate",
-            "object": "tcache"
-        },
-        {
-            "subject": "chunk",
-            "relation": "free",
-            "object": "tcache"
-        },
-        {
-            "subject": "fd",
-            "relation": "contain",
-            "object": "tcache"
-        },
-        {
-            "subject": "libc_base",
-            "relation": "leak",
-            "object": "stack_base"
-        },
-        {
-            "subject": "us",
-            "relation": "free",
-            "object": "chunk"
-        },
-        {
-            "subject": "we",
-            "relation": "write",
-            "object": "chunk"
-        },
-        {
-            "subject": "unsorted_bin",
-            "relation": "contain",
-            "object": "main_arena"
-        },
-        {
-            "subject": "we",
-            "relation": "corrupt",
-            "object": "chunk"
-        },
-        {
-            "subject": "chunk",
-            "relation": "be",
-            "object": "unsorted_bin"
+          "subject": "we",
+          "relation": "leak",
+          "object": "stack_base"
         }
-    ],
-    "writeup_sources": {
-        "_": [
-            "advanced_house_attacks.txt"
-        ],
-        "arbitrary address": [
-            "advanced_house_attacks.txt"
-        ],
-        "attacker-controlled address": [
-            "advanced_house_attacks.txt"
-        ],
-        "bk": [
-            "advanced_house_attacks.txt",
-            "babyheap_fake_unsorted.txt",
-            "fastbin_attack.txt",
-            "largebin_and_stashing.txt",
-            "uaf_leak.txt",
-            "unsorted_bin_leak.txt"
-        ],
-        "chunk": [
-            "advanced_house_attacks.txt",
-            "babyheap_fake_unsorted.txt",
-            "environ_stack_leak.txt",
-            "fastbin_attack.txt",
-            "house_of_force.txt",
-            "largebin_and_stashing.txt",
-            "modern_tcache_attacks.txt",
-            "safe_linking_bypasses.txt",
-            "tcache_poisoning.txt",
-            "tcache_struct_overwrite.txt",
-            "uaf_leak.txt",
-            "unsorted_bin_leak.txt"
-        ],
-        "chunk_size": [
-            "advanced_house_attacks.txt",
-            "babyheap_fake_unsorted.txt",
-            "fastbin_attack.txt",
-            "house_of_force.txt",
-            "tcache_poisoning.txt",
-            "uaf_leak.txt",
-            "unsorted_bin_leak.txt"
-        ],
-        "fake_chunk": [
-            "advanced_house_attacks.txt",
-            "babyheap_fake_unsorted.txt",
-            "fastbin_attack.txt",
-            "largebin_and_stashing.txt",
-            "tcache_poisoning.txt",
-            "uaf_leak.txt",
-            "unsorted_bin_leak.txt"
-        ],
-        "fastbin": [
-            "advanced_house_attacks.txt",
-            "fastbin_attack.txt",
-            "safe_linking_bypasses.txt"
-        ],
-        "free": [
-            "advanced_house_attacks.txt",
-            "babyheap_fake_unsorted.txt",
-            "fastbin_attack.txt",
-            "house_of_force.txt",
-            "modern_tcache_attacks.txt",
-            "tcache_poisoning.txt",
-            "tcache_struct_overwrite.txt",
-            "uaf_leak.txt",
-            "unsorted_bin_leak.txt"
-        ],
-        "malloc": [
-            "advanced_house_attacks.txt",
-            "babyheap_fake_unsorted.txt",
-            "environ_stack_leak.txt",
-            "fastbin_attack.txt",
-            "house_of_force.txt",
-            "largebin_and_stashing.txt",
-            "modern_tcache_attacks.txt",
-            "tcache_struct_overwrite.txt"
-        ],
-        "overflow": [
-            "advanced_house_attacks.txt",
-            "house_of_force.txt",
-            "modern_tcache_attacks.txt",
-            "tcache_struct_overwrite.txt"
-        ],
-        "size": [
-            "advanced_house_attacks.txt",
-            "babyheap_fake_unsorted.txt",
-            "fastbin_attack.txt",
-            "house_of_force.txt",
-            "tcache_struct_overwrite.txt"
-        ],
-        "size class": [
-            "advanced_house_attacks.txt",
-            "largebin_and_stashing.txt",
-            "modern_tcache_attacks.txt"
-        ],
-        "smallbin": [
-            "advanced_house_attacks.txt"
-        ],
-        "target address": [
-            "advanced_house_attacks.txt",
-            "house_of_force.txt",
-            "largebin_and_stashing.txt",
-            "modern_tcache_attacks.txt",
-            "tcache_poisoning.txt",
-            "tcache_struct_overwrite.txt"
-        ],
-        "tcache": [
-            "advanced_house_attacks.txt",
-            "babyheap_fake_unsorted.txt",
-            "environ_stack_leak.txt",
-            "fastbin_attack.txt",
-            "largebin_and_stashing.txt",
-            "modern_tcache_attacks.txt",
-            "rop_chain.txt",
-            "safe_linking_bypasses.txt",
-            "tcache_poisoning.txt",
-            "tcache_struct_overwrite.txt",
-            "uaf_leak.txt",
-            "unsorted_bin_leak.txt"
-        ],
-        "tcache_poisoning": [
-            "advanced_house_attacks.txt",
-            "environ_stack_leak.txt",
-            "tcache_poisoning.txt",
-            "uaf_leak.txt"
-        ],
-        "top_chunk": [
-            "advanced_house_attacks.txt",
-            "babyheap_fake_unsorted.txt",
-            "house_of_force.txt"
-        ],
-        "unsorted_bin": [
-            "advanced_house_attacks.txt",
-            "babyheap_fake_unsorted.txt",
-            "largebin_and_stashing.txt",
-            "modern_tcache_attacks.txt",
-            "rop_chain.txt",
-            "tcache_poisoning.txt",
-            "uaf_leak.txt",
-            "unsorted_bin_leak.txt"
-        ],
-        "(\"corrupted size": [
-            "babyheap_fake_unsorted.txt"
-        ],
-        "0x158": [
-            "babyheap_fake_unsorted.txt"
-        ],
-        "0x18": [
-            "babyheap_fake_unsorted.txt",
-            "environ_stack_leak.txt"
-        ],
-        "0x21": [
-            "babyheap_fake_unsorted.txt"
-        ],
-        "0x2d0": [
-            "babyheap_fake_unsorted.txt"
-        ],
-        "0x30": [
-            "babyheap_fake_unsorted.txt"
-        ],
-        "0x410": [
-            "babyheap_fake_unsorted.txt",
-            "tcache_poisoning.txt",
-            "unsorted_bin_leak.txt"
-        ],
-        "0x421": [
-            "babyheap_fake_unsorted.txt"
-        ],
-        "0x6f0": [
-            "babyheap_fake_unsorted.txt"
-        ],
-        "__environ": [
-            "babyheap_fake_unsorted.txt",
-            "environ_stack_leak.txt",
-            "rop_chain.txt",
-            "uaf_leak.txt"
-        ],
-        "__glibc_unlikely": [
-            "babyheap_fake_unsorted.txt"
-        ],
-        "consolidation": [
-            "babyheap_fake_unsorted.txt"
-        ],
-        "double_free": [
-            "babyheap_fake_unsorted.txt",
-            "tcache_poisoning.txt",
-            "uaf_leak.txt"
-        ],
-        "environ_leak": [
-            "babyheap_fake_unsorted.txt"
-        ],
-        "fd": [
-            "babyheap_fake_unsorted.txt",
-            "environ_stack_leak.txt",
-            "fastbin_attack.txt",
-            "largebin_and_stashing.txt",
-            "rop_chain.txt",
-            "tcache_poisoning.txt",
-            "tcache_struct_overwrite.txt",
-            "uaf_leak.txt",
-            "unsorted_bin_leak.txt"
-        ],
-        "heap_base": [
-            "babyheap_fake_unsorted.txt",
-            "house_of_force.txt",
-            "largebin_and_stashing.txt",
-            "modern_tcache_attacks.txt",
-            "tcache_poisoning.txt",
-            "tcache_struct_overwrite.txt",
-            "uaf_leak.txt",
-            "unsorted_bin_leak.txt"
-        ],
-        "internal_size_t": [
-            "babyheap_fake_unsorted.txt"
-        ],
-        "libc_base": [
-            "babyheap_fake_unsorted.txt",
-            "environ_stack_leak.txt",
-            "rop_chain.txt",
-            "tcache_poisoning.txt",
-            "uaf_leak.txt",
-            "unsorted_bin_leak.txt"
-        ],
-        "main_arena": [
-            "babyheap_fake_unsorted.txt",
-            "uaf_leak.txt",
-            "unsorted_bin_leak.txt"
-        ],
-        "one_gadget": [
-            "babyheap_fake_unsorted.txt",
-            "fastbin_attack.txt"
-        ],
-        "p64(0x21)": [
-            "babyheap_fake_unsorted.txt"
-        ],
-        "p64(0x421)": [
-            "babyheap_fake_unsorted.txt"
-        ],
-        "prev_inuse": [
-            "babyheap_fake_unsorted.txt"
-        ],
-        "prev_size": [
-            "babyheap_fake_unsorted.txt",
-            "unsorted_bin_leak.txt"
-        ],
-        "return_address": [
-            "babyheap_fake_unsorted.txt",
-            "environ_stack_leak.txt",
-            "house_of_force.txt",
-            "rop_chain.txt",
-            "tcache_struct_overwrite.txt",
-            "uaf_leak.txt"
-        ],
-        "rop_chain": [
-            "babyheap_fake_unsorted.txt",
-            "environ_stack_leak.txt",
-            "house_of_force.txt",
-            "rop_chain.txt"
-        ],
-        "rop_payload": [
-            "babyheap_fake_unsorted.txt"
-        ],
-        "safe_linking": [
-            "babyheap_fake_unsorted.txt",
-            "environ_stack_leak.txt",
-            "safe_linking_bypasses.txt",
-            "tcache_poisoning.txt",
-            "tcache_struct_overwrite.txt",
-            "uaf_leak.txt"
-        ],
-        "stack_pointer": [
-            "babyheap_fake_unsorted.txt",
-            "environ_stack_leak.txt",
-            "uaf_leak.txt"
-        ],
-        "thể fake size": [
-            "babyheap_fake_unsorted.txt"
-        ],
-        "uaf": [
-            "babyheap_fake_unsorted.txt",
-            "environ_stack_leak.txt",
-            "house_of_force.txt",
-            "tcache_poisoning.txt",
-            "tcache_struct_overwrite.txt",
-            "uaf_leak.txt"
-        ],
-        "unlink_chunk": [
-            "babyheap_fake_unsorted.txt",
-            "largebin_and_stashing.txt"
-        ],
-        "↓ overwrite size": [
-            "babyheap_fake_unsorted.txt"
-        ],
-        "0x120": [
-            "environ_stack_leak.txt"
-        ],
-        "0x180": [
-            "environ_stack_leak.txt"
-        ],
-        "address": [
-            "environ_stack_leak.txt",
-            "house_of_force.txt",
-            "largebin_and_stashing.txt",
-            "rop_chain.txt",
-            "tcache_struct_overwrite.txt"
-        ],
-        "control_flow_hijack": [
-            "environ_stack_leak.txt",
-            "rop_chain.txt",
-            "uaf_leak.txt"
-        ],
-        "dynamic offset": [
-            "environ_stack_leak.txt"
-        ],
-        "heap_leak": [
-            "environ_stack_leak.txt"
-        ],
-        "known offset": [
-            "environ_stack_leak.txt"
-        ],
-        "libc_leak": [
-            "environ_stack_leak.txt",
-            "unsorted_bin_leak.txt"
-        ],
-        "offset": [
-            "environ_stack_leak.txt"
-        ],
-        "shell": [
-            "environ_stack_leak.txt",
-            "fastbin_attack.txt",
-            "rop_chain.txt",
-            "tcache_poisoning.txt"
-        ],
-        "stack_base": [
-            "environ_stack_leak.txt",
-            "fastbin_attack.txt",
-            "rop_chain.txt",
-            "uaf_leak.txt"
-        ],
-        "stack_leak": [
-            "environ_stack_leak.txt",
-            "rop_chain.txt"
-        ],
-        "xor_key": [
-            "environ_stack_leak.txt",
-            "tcache_poisoning.txt",
-            "uaf_leak.txt"
-        ],
-        "\"size\" field": [
-            "fastbin_attack.txt"
-        ],
-        "(size": [
-            "fastbin_attack.txt"
-        ],
-        "0x23": [
-            "fastbin_attack.txt"
-        ],
-        "0x7f": [
-            "fastbin_attack.txt"
-        ],
-        "0x80": [
-            "fastbin_attack.txt"
-        ],
-        "__malloc_hook": [
-            "fastbin_attack.txt",
-            "tcache_poisoning.txt",
-            "unsorted_bin_leak.txt"
-        ],
-        "arbitrary_allocation": [
-            "fastbin_attack.txt",
-            "largebin_and_stashing.txt",
-            "modern_tcache_attacks.txt",
-            "tcache_struct_overwrite.txt",
-            "uaf_leak.txt"
-        ],
-        "bin size": [
-            "fastbin_attack.txt"
-        ],
-        "fake size": [
-            "fastbin_attack.txt"
-        ],
-        "fastbin_attack": [
-            "fastbin_attack.txt"
-        ],
-        "offset (partial byte": [
-            "fastbin_attack.txt"
-        ],
-        "our target address": [
-            "fastbin_attack.txt",
-            "house_of_force.txt",
-            "tcache_poisoning.txt"
-        ],
-        "right offset": [
-            "fastbin_attack.txt"
-        ],
-        "system": [
-            "fastbin_attack.txt",
-            "rop_chain.txt",
-            "tcache_poisoning.txt"
-        ],
-        "0x20": [
-            "house_of_force.txt",
-            "largebin_and_stashing.txt"
-        ],
-        "0xffffffffffffffff": [
-            "house_of_force.txt"
-        ],
-        "got": [
-            "house_of_force.txt",
-            "tcache_poisoning.txt",
-            "tcache_struct_overwrite.txt"
-        ],
-        "house_of_force": [
-            "house_of_force.txt"
-        ],
-        "huge size": [
-            "house_of_force.txt"
-        ],
-        "neighbor metadata": [
-            "house_of_force.txt"
-        ],
-        "neighbor's metadata": [
-            "house_of_force.txt"
-        ],
-        "requested size": [
-            "house_of_force.txt"
-        ],
-        "size check": [
-            "house_of_force.txt"
-        ],
-        "size check on allocation": [
-            "house_of_force.txt"
-        ],
-        "specific size": [
-            "house_of_force.txt"
-        ],
-        "0x10": [
-            "largebin_and_stashing.txt",
-            "tcache_struct_overwrite.txt",
-            "unsorted_bin_leak.txt"
-        ],
-        "address of p2": [
-            "largebin_and_stashing.txt"
-        ],
-        "attacker's target_address": [
-            "largebin_and_stashing.txt"
-        ],
-        "largebin": [
-            "largebin_and_stashing.txt",
-            "modern_tcache_attacks.txt"
-        ],
-        "libc address": [
-            "largebin_and_stashing.txt",
-            "uaf_leak.txt",
-            "unsorted_bin_leak.txt"
-        ],
-        "libc address to target_address": [
-            "largebin_and_stashing.txt"
-        ],
-        "target_address": [
-            "largebin_and_stashing.txt"
-        ],
-        "carefully calculated large size": [
-            "modern_tcache_attacks.txt"
-        ],
-        "chunk_overlap": [
-            "modern_tcache_attacks.txt",
-            "uaf_leak.txt"
-        ],
-        "specific size class": [
-            "modern_tcache_attacks.txt"
-        ],
-        "/bin/sh": [
-            "rop_chain.txt",
-            "tcache_poisoning.txt"
-        ],
-        "/sh string address": [
-            "rop_chain.txt"
-        ],
-        "pop_rdi": [
-            "rop_chain.txt"
-        ],
-        "rip": [
-            "rop_chain.txt"
-        ],
-        "(ptr ^ key": [
-            "safe_linking_bypasses.txt"
-        ],
-        "ptr": [
-            "safe_linking_bypasses.txt",
-            "tcache_poisoning.txt"
-        ],
-        "0x68": [
-            "tcache_poisoning.txt"
-        ],
-        "__free_hook": [
-            "tcache_poisoning.txt",
-            "tcache_struct_overwrite.txt"
-        ],
-        "fixed size": [
-            "tcache_poisoning.txt"
-        ],
-        "ptr xor": [
-            "tcache_poisoning.txt"
-        ],
-        "(uint16_t": [
-            "tcache_struct_overwrite.txt"
-        ],
-        "0x0100": [
-            "tcache_struct_overwrite.txt"
-        ],
-        "0x290": [
-            "tcache_struct_overwrite.txt"
-        ],
-        "p64(target_addr)": [
-            "tcache_struct_overwrite.txt"
-        ],
-        "stack_canary": [
-            "tcache_struct_overwrite.txt"
-        ],
-        "tcache_perthread_struct": [
-            "tcache_struct_overwrite.txt"
-        ],
-        "writable address": [
-            "tcache_struct_overwrite.txt"
-        ],
-        "0x60": [
-            "uaf_leak.txt",
-            "unsorted_bin_leak.txt"
-        ],
-        "heap metadata": [
-            "uaf_leak.txt"
-        ],
-        "next_ptr": [
-            "uaf_leak.txt"
-        ],
-        "overwrite heap metadata": [
-            "uaf_leak.txt"
-        ],
-        "0x70": [
-            "unsorted_bin_leak.txt"
-        ],
-        "base address": [
-            "unsorted_bin_leak.txt"
-        ],
-        "fixed offset": [
-            "unsorted_bin_leak.txt"
-        ],
-        "leaked_addr": [
-            "unsorted_bin_leak.txt"
+      ],
+      "taxonomy": {
+        "bugs": [
+          "uaf"
+        ],
+        "primitives": [
+          "arbitrary_free",
+          "heap_leak"
+        ],
+        "hooks": [],
+        "functions": [
+          "malloc",
+          "shell"
+        ],
+        "leak_targets": [
+          "__environ",
+          "xor_key"
+        ],
+        "capabilities": [
+          "control_flow_hijack",
+          "libc_leak",
+          "stack_leak"
+        ],
+        "leaks": [
+          "libc_base",
+          "stack_base"
+        ],
+        "structures": [
+          "chunk",
+          "tcache"
+        ],
+        "metadata_fields": [
+          "fd"
+        ],
+        "techniques": [
+          "environ_leak",
+          "rop_chain",
+          "safe_linking",
+          "tcache_poisoning"
+        ],
+        "goals": [],
+        "gadgets": [
+          "return_address"
+        ],
+        "others": [
+          "0x120",
+          "0x18",
+          "0x180",
+          "address",
+          "dynamic offset",
+          "known offset",
+          "offset",
+          "stack_pointer"
         ]
-    },
-    "per_writeup": {
-        "advanced_house_attacks.txt": {
-            "vars": [
-                "_",
-                "arbitrary address",
-                "attacker-controlled address",
-                "bk",
-                "chunk",
-                "chunk_size",
-                "fake_chunk",
-                "fastbin",
-                "free",
-                "malloc",
-                "overflow",
-                "size",
-                "size class",
-                "smallbin",
-                "target address",
-                "tcache",
-                "tcache_poisoning",
-                "top_chunk",
-                "unsorted_bin"
-            ],
-            "states": [
-                {
-                    "subject": "they",
-                    "relation": "redirect",
-                    "object": "tcache"
-                },
-                {
-                    "subject": "size",
-                    "relation": "of",
-                    "object": "top_chunk"
-                },
-                {
-                    "subject": "an attacker",
-                    "relation": "allocate",
-                    "object": "chunk"
-                },
-                {
-                    "subject": "the attacker",
-                    "relation": "write",
-                    "object": "chunk"
-                }
-            ],
-            "taxonomy": {
-                "bugs": [
-                    "overflow"
-                ],
-                "primitives": [],
-                "hooks": [],
-                "functions": [
-                    "free",
-                    "malloc"
-                ],
-                "leak_targets": [],
-                "capabilities": [],
-                "leaks": [],
-                "structures": [
-                    "chunk",
-                    "fake_chunk",
-                    "fastbin",
-                    "smallbin",
-                    "tcache",
-                    "top_chunk",
-                    "unsorted_bin"
-                ],
-                "metadata_fields": [
-                    "bk",
-                    "chunk_size",
-                    "size"
-                ],
-                "techniques": [
-                    "fake_unsorted_bin",
-                    "tcache_poisoning"
-                ],
-                "goals": [],
-                "gadgets": [],
-                "others": [
-                    "_",
-                    "arbitrary address",
-                    "attacker-controlled address",
-                    "size class",
-                    "target address"
-                ]
-            },
-            "exploit_ir": {
-                "bugs": [
-                    "overflow"
-                ],
-                "primitives": [],
-                "techniques": [
-                    "fake_unsorted_bin",
-                    "tcache_poisoning"
-                ],
-                "capabilities": [],
-                "leak_targets": [],
-                "targets": [
-                    "bk"
-                ],
-                "goals": [],
-                "transitions": [],
-                "metadata": {
-                    "source": "nlp_writeup_extraction",
-                    "confidence_score": 0.85,
-                    "fusion_ready": true,
-                    "engine_version": "3.0-multi-writeup"
-                }
-            }
-        },
-        "babyheap_fake_unsorted.txt": {
-            "vars": [
-                "(\"corrupted size",
-                "0x158",
-                "0x18",
-                "0x21",
-                "0x2d0",
-                "0x30",
-                "0x410",
-                "0x421",
-                "0x6f0",
-                "__environ",
-                "__glibc_unlikely",
-                "bk",
-                "chunk",
-                "chunk_size",
-                "consolidation",
-                "double_free",
-                "environ_leak",
-                "fake_chunk",
-                "fd",
-                "free",
-                "heap_base",
-                "internal_size_t",
-                "libc_base",
-                "main_arena",
-                "malloc",
-                "one_gadget",
-                "p64(0x21)",
-                "p64(0x421)",
-                "prev_inuse",
-                "prev_size",
-                "return_address",
-                "rop_chain",
-                "rop_payload",
-                "safe_linking",
-                "size",
-                "stack_pointer",
-                "tcache",
-                "thể fake size",
-                "top_chunk",
-                "uaf",
-                "unlink_chunk",
-                "unsorted_bin",
-                "↓ overwrite size"
-            ],
-            "states": [],
-            "taxonomy": {
-                "bugs": [
-                    "double_free",
-                    "uaf"
-                ],
-                "primitives": [
-                    "arbitrary_free"
-                ],
-                "hooks": [],
-                "functions": [
-                    "free",
-                    "malloc",
-                    "one_gadget"
-                ],
-                "leak_targets": [
-                    "__environ",
-                    "main_arena"
-                ],
-                "capabilities": [
-                    "libc_leak",
-                    "stack_leak"
-                ],
-                "leaks": [
-                    "heap_base",
-                    "libc_base"
-                ],
-                "structures": [
-                    "chunk",
-                    "fake_chunk",
-                    "tcache",
-                    "top_chunk",
-                    "unsorted_bin"
-                ],
-                "metadata_fields": [
-                    "bk",
-                    "chunk_size",
-                    "fd",
-                    "prev_inuse",
-                    "prev_size",
-                    "size"
-                ],
-                "techniques": [
-                    "consolidation",
-                    "environ_leak",
-                    "fake_unsorted_bin",
-                    "rop_chain",
-                    "safe_linking",
-                    "unlink_chunk"
-                ],
-                "goals": [],
-                "gadgets": [
-                    "return_address"
-                ],
-                "others": [
-                    "(\"corrupted size",
-                    "0x158",
-                    "0x18",
-                    "0x21",
-                    "0x2d0",
-                    "0x30",
-                    "0x410",
-                    "0x421",
-                    "0x6f0",
-                    "__glibc_unlikely",
-                    "internal_size_t",
-                    "p64(0x21)",
-                    "p64(0x421)",
-                    "rop_payload",
-                    "stack_pointer",
-                    "thể fake size",
-                    "↓ overwrite size"
-                ]
-            },
-            "exploit_ir": {
-                "bugs": [
-                    "double_free",
-                    "uaf"
-                ],
-                "primitives": [
-                    "arbitrary_free"
-                ],
-                "techniques": [
-                    "consolidation",
-                    "environ_leak",
-                    "fake_unsorted_bin",
-                    "rop_chain",
-                    "safe_linking",
-                    "unlink_chunk"
-                ],
-                "capabilities": [
-                    "libc_leak",
-                    "stack_leak"
-                ],
-                "leak_targets": [
-                    "__environ",
-                    "main_arena"
-                ],
-                "targets": [
-                    "__environ",
-                    "bk",
-                    "fd",
-                    "heap_base",
-                    "libc_base",
-                    "main_arena",
-                    "return_address"
-                ],
-                "goals": [],
-                "transitions": [
-                    {
-                        "from": "uaf",
-                        "to": "arbitrary_free",
-                        "action": "trigger_uaf"
-                    },
-                    {
-                        "from": "fake_unsorted_bin",
-                        "to": "libc_leak",
-                        "action": "read_fake_main_arena"
-                    },
-                    {
-                        "from": "libc_leak",
-                        "to": "stack_leak",
-                        "action": "read_environ"
-                    },
-                    {
-                        "from": "environ_leak",
-                        "to": "stack_leak",
-                        "action": "read_environ_ptr"
-                    }
-                ],
-                "metadata": {
-                    "source": "nlp_writeup_extraction",
-                    "confidence_score": 0.85,
-                    "fusion_ready": true,
-                    "engine_version": "3.0-multi-writeup"
-                }
-            }
-        },
-        "environ_stack_leak.txt": {
-            "vars": [
-                "0x120",
-                "0x18",
-                "0x180",
-                "__environ",
-                "address",
-                "chunk",
-                "control_flow_hijack",
-                "dynamic offset",
-                "fd",
-                "heap_leak",
-                "known offset",
-                "libc_base",
-                "libc_leak",
-                "malloc",
-                "offset",
-                "return_address",
-                "rop_chain",
-                "safe_linking",
-                "shell",
-                "stack_base",
-                "stack_leak",
-                "stack_pointer",
-                "tcache",
-                "tcache_poisoning",
-                "uaf",
-                "xor_key"
-            ],
-            "states": [
-                {
-                    "subject": "we",
-                    "relation": "leak",
-                    "object": "stack_base"
-                }
-            ],
-            "taxonomy": {
-                "bugs": [
-                    "uaf"
-                ],
-                "primitives": [
-                    "arbitrary_free",
-                    "heap_leak"
-                ],
-                "hooks": [],
-                "functions": [
-                    "malloc",
-                    "shell"
-                ],
-                "leak_targets": [
-                    "__environ",
-                    "xor_key"
-                ],
-                "capabilities": [
-                    "control_flow_hijack",
-                    "libc_leak",
-                    "stack_leak"
-                ],
-                "leaks": [
-                    "libc_base",
-                    "stack_base"
-                ],
-                "structures": [
-                    "chunk",
-                    "tcache"
-                ],
-                "metadata_fields": [
-                    "fd"
-                ],
-                "techniques": [
-                    "environ_leak",
-                    "rop_chain",
-                    "safe_linking",
-                    "tcache_poisoning"
-                ],
-                "goals": [],
-                "gadgets": [
-                    "return_address"
-                ],
-                "others": [
-                    "0x120",
-                    "0x18",
-                    "0x180",
-                    "address",
-                    "dynamic offset",
-                    "known offset",
-                    "offset",
-                    "stack_pointer"
-                ]
-            },
-            "exploit_ir": {
-                "bugs": [
-                    "uaf"
-                ],
-                "primitives": [
-                    "arbitrary_free",
-                    "heap_leak"
-                ],
-                "techniques": [
-                    "environ_leak",
-                    "rop_chain",
-                    "safe_linking",
-                    "tcache_poisoning"
-                ],
-                "capabilities": [
-                    "control_flow_hijack",
-                    "libc_leak",
-                    "stack_leak"
-                ],
-                "leak_targets": [
-                    "__environ",
-                    "xor_key"
-                ],
-                "targets": [
-                    "__environ",
-                    "fd",
-                    "libc_base",
-                    "return_address",
-                    "stack_base"
-                ],
-                "goals": [],
-                "transitions": [
-                    {
-                        "from": "uaf",
-                        "to": "arbitrary_free",
-                        "action": "trigger_uaf"
-                    },
-                    {
-                        "from": "arbitrary_free",
-                        "to": "tcache_poisoning",
-                        "action": "poison_bin"
-                    },
-                    {
-                        "from": "libc_leak",
-                        "to": "stack_leak",
-                        "action": "read_environ"
-                    },
-                    {
-                        "from": "environ_leak",
-                        "to": "stack_leak",
-                        "action": "read_environ_ptr"
-                    }
-                ],
-                "metadata": {
-                    "source": "nlp_writeup_extraction",
-                    "confidence_score": 0.85,
-                    "fusion_ready": true,
-                    "engine_version": "3.0-multi-writeup"
-                }
-            }
-        },
-        "fastbin_attack.txt": {
-            "vars": [
-                "\"size\" field",
-                "(size",
-                "0x23",
-                "0x7f",
-                "0x80",
-                "__malloc_hook",
-                "arbitrary_allocation",
-                "bin size",
-                "bk",
-                "chunk",
-                "chunk_size",
-                "fake size",
-                "fake_chunk",
-                "fastbin",
-                "fastbin_attack",
-                "fd",
-                "free",
-                "malloc",
-                "offset (partial byte",
-                "one_gadget",
-                "our target address",
-                "right offset",
-                "shell",
-                "size",
-                "stack_base",
-                "system",
-                "tcache"
-            ],
-            "states": [
-                {
-                    "subject": "we",
-                    "relation": "overwrite",
-                    "object": "system"
-                },
-                {
-                    "subject": "malloc",
-                    "relation": "trigger",
-                    "object": "shell"
-                }
-            ],
-            "taxonomy": {
-                "bugs": [],
-                "primitives": [
-                    "arbitrary_allocation",
-                    "arbitrary_write"
-                ],
-                "hooks": [
-                    "__malloc_hook"
-                ],
-                "functions": [
-                    "free",
-                    "malloc",
-                    "one_gadget",
-                    "shell",
-                    "system"
-                ],
-                "leak_targets": [],
-                "capabilities": [
-                    "libc_leak",
-                    "stack_leak"
-                ],
-                "leaks": [
-                    "stack_base"
-                ],
-                "structures": [
-                    "chunk",
-                    "fake_chunk",
-                    "fastbin",
-                    "tcache"
-                ],
-                "metadata_fields": [
-                    "bk",
-                    "chunk_size",
-                    "fd",
-                    "size"
-                ],
-                "techniques": [
-                    "chunk_overlap",
-                    "fastbin_attack",
-                    "rop_chain",
-                    "tcache_poisoning"
-                ],
-                "goals": [
-                    "control_flow_hijack"
-                ],
-                "gadgets": [],
-                "others": [
-                    "\"size\" field",
-                    "(size",
-                    "0x23",
-                    "0x7f",
-                    "0x80",
-                    "bin size",
-                    "fake size",
-                    "offset (partial byte",
-                    "our target address",
-                    "right offset"
-                ]
-            },
-            "exploit_ir": {
-                "bugs": [],
-                "primitives": [
-                    "arbitrary_allocation",
-                    "arbitrary_write"
-                ],
-                "techniques": [
-                    "chunk_overlap",
-                    "fastbin_attack",
-                    "rop_chain",
-                    "tcache_poisoning"
-                ],
-                "capabilities": [
-                    "libc_leak",
-                    "stack_leak"
-                ],
-                "leak_targets": [],
-                "targets": [
-                    "__malloc_hook",
-                    "bk",
-                    "fd",
-                    "stack_base"
-                ],
-                "goals": [
-                    "control_flow_hijack"
-                ],
-                "transitions": [
-                    {
-                        "from": "tcache_poisoning",
-                        "to": "arbitrary_allocation",
-                        "action": "malloc_at_target"
-                    },
-                    {
-                        "from": "arbitrary_allocation",
-                        "to": "arbitrary_write",
-                        "action": "write_at_allocated_target"
-                    },
-                    {
-                        "from": "arbitrary_write",
-                        "to": "control_flow_hijack",
-                        "action": "overwrite_hook_or_ret"
-                    },
-                    {
-                        "from": "libc_leak",
-                        "to": "stack_leak",
-                        "action": "read_environ"
-                    },
-                    {
-                        "from": "fastbin_attack",
-                        "to": "arbitrary_allocation",
-                        "action": "malloc_at_fastbin_target"
-                    },
-                    {
-                        "from": "rop_chain",
-                        "to": "control_flow_hijack",
-                        "action": "execute_rop"
-                    }
-                ],
-                "metadata": {
-                    "source": "nlp_writeup_extraction",
-                    "confidence_score": 0.85,
-                    "fusion_ready": true,
-                    "engine_version": "3.0-multi-writeup"
-                }
-            }
-        },
-        "house_of_force.txt": {
-            "vars": [
-                "0x20",
-                "0xffffffffffffffff",
-                "address",
-                "chunk",
-                "chunk_size",
-                "free",
-                "got",
-                "heap_base",
-                "house_of_force",
-                "huge size",
-                "malloc",
-                "neighbor metadata",
-                "neighbor's metadata",
-                "our target address",
-                "overflow",
-                "requested size",
-                "return_address",
-                "rop_chain",
-                "size",
-                "size check",
-                "size check on allocation",
-                "specific size",
-                "target address",
-                "top_chunk",
-                "uaf"
-            ],
-            "states": [
-                {
-                    "subject": "top_chunk",
-                    "relation": "be",
-                    "object": "chunk"
-                },
-                {
-                    "subject": "we",
-                    "relation": "read",
-                    "object": "chunk"
-                },
-                {
-                    "subject": "we",
-                    "relation": "free",
-                    "object": "uaf"
-                },
-                {
-                    "subject": "we",
-                    "relation": "free",
-                    "object": "chunk"
-                }
-            ],
-            "taxonomy": {
-                "bugs": [
-                    "overflow",
-                    "uaf"
-                ],
-                "primitives": [
-                    "arbitrary_free"
-                ],
-                "hooks": [
-                    "got"
-                ],
-                "functions": [
-                    "free",
-                    "malloc"
-                ],
-                "leak_targets": [],
-                "capabilities": [],
-                "leaks": [
-                    "heap_base"
-                ],
-                "structures": [
-                    "chunk",
-                    "top_chunk"
-                ],
-                "metadata_fields": [
-                    "chunk_size",
-                    "size"
-                ],
-                "techniques": [
-                    "house_of_force",
-                    "rop_chain"
-                ],
-                "goals": [],
-                "gadgets": [
-                    "return_address"
-                ],
-                "others": [
-                    "0x20",
-                    "0xffffffffffffffff",
-                    "address",
-                    "huge size",
-                    "neighbor metadata",
-                    "neighbor's metadata",
-                    "our target address",
-                    "requested size",
-                    "size check",
-                    "size check on allocation",
-                    "specific size",
-                    "target address"
-                ]
-            },
-            "exploit_ir": {
-                "bugs": [
-                    "overflow",
-                    "uaf"
-                ],
-                "primitives": [
-                    "arbitrary_free"
-                ],
-                "techniques": [
-                    "house_of_force",
-                    "rop_chain"
-                ],
-                "capabilities": [],
-                "leak_targets": [],
-                "targets": [
-                    "got",
-                    "heap_base",
-                    "return_address"
-                ],
-                "goals": [],
-                "transitions": [
-                    {
-                        "from": "uaf",
-                        "to": "arbitrary_free",
-                        "action": "trigger_uaf"
-                    }
-                ],
-                "metadata": {
-                    "source": "nlp_writeup_extraction",
-                    "confidence_score": 0.85,
-                    "fusion_ready": true,
-                    "engine_version": "3.0-multi-writeup"
-                }
-            }
-        },
-        "largebin_and_stashing.txt": {
-            "vars": [
-                "0x10",
-                "0x20",
-                "address",
-                "address of p2",
-                "arbitrary_allocation",
-                "attacker's target_address",
-                "bk",
-                "chunk",
-                "fake_chunk",
-                "fd",
-                "heap_base",
-                "largebin",
-                "libc address",
-                "libc address to target_address",
-                "malloc",
-                "size class",
-                "target address",
-                "target_address",
-                "tcache",
-                "unlink_chunk",
-                "unsorted_bin"
-            ],
-            "states": [
-                {
-                    "subject": "an attacker",
-                    "relation": "write",
-                    "object": "heap_base"
-                },
-                {
-                    "subject": "the attacker",
-                    "relation": "overwrite",
-                    "object": "bk"
-                },
-                {
-                    "subject": "a new allocation",
-                    "relation": "trigger",
-                    "object": "unsorted_bin"
-                },
-                {
-                    "subject": "a new allocation",
-                    "relation": "trigger",
-                    "object": "largebin"
-                },
-                {
-                    "subject": "tcache",
-                    "relation": "exploit",
-                    "object": "tcache"
-                }
-            ],
-            "taxonomy": {
-                "bugs": [],
-                "primitives": [
-                    "arbitrary_allocation"
-                ],
-                "hooks": [],
-                "functions": [
-                    "malloc"
-                ],
-                "leak_targets": [],
-                "capabilities": [],
-                "leaks": [
-                    "heap_base"
-                ],
-                "structures": [
-                    "chunk",
-                    "fake_chunk",
-                    "largebin",
-                    "tcache",
-                    "unsorted_bin"
-                ],
-                "metadata_fields": [
-                    "bk",
-                    "fd"
-                ],
-                "techniques": [
-                    "consolidation",
-                    "fake_unsorted_bin",
-                    "tcache_poisoning",
-                    "unlink_chunk"
-                ],
-                "goals": [],
-                "gadgets": [],
-                "others": [
-                    "0x10",
-                    "0x20",
-                    "address",
-                    "address of p2",
-                    "attacker's target_address",
-                    "libc address",
-                    "libc address to target_address",
-                    "size class",
-                    "target address",
-                    "target_address"
-                ]
-            },
-            "exploit_ir": {
-                "bugs": [],
-                "primitives": [
-                    "arbitrary_allocation"
-                ],
-                "techniques": [
-                    "consolidation",
-                    "fake_unsorted_bin",
-                    "tcache_poisoning",
-                    "unlink_chunk"
-                ],
-                "capabilities": [],
-                "leak_targets": [],
-                "targets": [
-                    "bk",
-                    "fd",
-                    "heap_base"
-                ],
-                "goals": [],
-                "transitions": [
-                    {
-                        "from": "tcache_poisoning",
-                        "to": "arbitrary_allocation",
-                        "action": "malloc_at_target"
-                    },
-                    {
-                        "from": "consolidation",
-                        "to": "arbitrary_allocation",
-                        "action": "consolidate_to_target"
-                    }
-                ],
-                "metadata": {
-                    "source": "nlp_writeup_extraction",
-                    "confidence_score": 0.85,
-                    "fusion_ready": true,
-                    "engine_version": "3.0-multi-writeup"
-                }
-            }
-        },
-        "modern_tcache_attacks.txt": {
-            "vars": [
-                "arbitrary_allocation",
-                "carefully calculated large size",
-                "chunk",
-                "chunk_overlap",
-                "free",
-                "heap_base",
-                "largebin",
-                "malloc",
-                "overflow",
-                "size class",
-                "specific size class",
-                "target address",
-                "tcache",
-                "unsorted_bin"
-            ],
-            "states": [
-                {
-                    "subject": "the attacker",
-                    "relation": "free",
-                    "object": "chunk"
-                },
-                {
-                    "subject": "chunk",
-                    "relation": "allocate",
-                    "object": "tcache"
-                },
-                {
-                    "subject": "chunk",
-                    "relation": "be",
-                    "object": "tcache"
-                },
-                {
-                    "subject": "tcache",
-                    "relation": "exploit",
-                    "object": "tcache"
-                },
-                {
-                    "subject": "an attacker",
-                    "relation": "overwrite",
-                    "object": "tcache"
-                },
-                {
-                    "subject": "the attacker",
-                    "relation": "trigger",
-                    "object": "tcache"
-                },
-                {
-                    "subject": "the attacker",
-                    "relation": "write",
-                    "object": "heap_base"
-                },
-                {
-                    "subject": "tcache",
-                    "relation": "overwrite",
-                    "object": "tcache"
-                }
-            ],
-            "taxonomy": {
-                "bugs": [
-                    "overflow"
-                ],
-                "primitives": [
-                    "arbitrary_allocation"
-                ],
-                "hooks": [],
-                "functions": [
-                    "free",
-                    "malloc"
-                ],
-                "leak_targets": [],
-                "capabilities": [],
-                "leaks": [
-                    "heap_base"
-                ],
-                "structures": [
-                    "chunk",
-                    "largebin",
-                    "tcache",
-                    "unsorted_bin"
-                ],
-                "metadata_fields": [],
-                "techniques": [
-                    "chunk_overlap"
-                ],
-                "goals": [],
-                "gadgets": [],
-                "others": [
-                    "carefully calculated large size",
-                    "size class",
-                    "specific size class",
-                    "target address"
-                ]
-            },
-            "exploit_ir": {
-                "bugs": [
-                    "overflow"
-                ],
-                "primitives": [
-                    "arbitrary_allocation"
-                ],
-                "techniques": [
-                    "chunk_overlap"
-                ],
-                "capabilities": [],
-                "leak_targets": [],
-                "targets": [
-                    "heap_base"
-                ],
-                "goals": [],
-                "transitions": [],
-                "metadata": {
-                    "source": "nlp_writeup_extraction",
-                    "confidence_score": 0.85,
-                    "fusion_ready": true,
-                    "engine_version": "3.0-multi-writeup"
-                }
-            }
-        },
-        "rop_chain.txt": {
-            "vars": [
-                "/bin/sh",
-                "/sh string address",
-                "__environ",
-                "address",
-                "control_flow_hijack",
-                "fd",
-                "libc_base",
-                "pop_rdi",
-                "return_address",
-                "rip",
-                "rop_chain",
-                "shell",
-                "stack_base",
-                "stack_leak",
-                "system",
-                "tcache",
-                "unsorted_bin"
-            ],
-            "states": [
-                {
-                    "subject": "rop_chain",
-                    "relation": "hijack",
-                    "object": "system"
-                },
-                {
-                    "subject": "rop_chain",
-                    "relation": "write",
-                    "object": "return_address"
-                },
-                {
-                    "subject": "we",
-                    "relation": "overwrite",
-                    "object": "rip"
-                }
-            ],
-            "taxonomy": {
-                "bugs": [],
-                "primitives": [
-                    "arbitrary_allocation",
-                    "arbitrary_write"
-                ],
-                "hooks": [],
-                "functions": [
-                    "shell",
-                    "system"
-                ],
-                "leak_targets": [
-                    "__environ"
-                ],
-                "capabilities": [
-                    "control_flow_hijack",
-                    "libc_leak",
-                    "stack_leak"
-                ],
-                "leaks": [
-                    "libc_base",
-                    "stack_base"
-                ],
-                "structures": [
-                    "tcache",
-                    "unsorted_bin"
-                ],
-                "metadata_fields": [
-                    "fd"
-                ],
-                "techniques": [
-                    "environ_leak",
-                    "rop_chain",
-                    "tcache_poisoning"
-                ],
-                "goals": [
-                    "control_flow_hijack"
-                ],
-                "gadgets": [
-                    "pop_rdi",
-                    "return_address"
-                ],
-                "others": [
-                    "/bin/sh",
-                    "/sh string address",
-                    "address",
-                    "rip"
-                ]
-            },
-            "exploit_ir": {
-                "bugs": [],
-                "primitives": [
-                    "arbitrary_allocation",
-                    "arbitrary_write"
-                ],
-                "techniques": [
-                    "environ_leak",
-                    "rop_chain",
-                    "tcache_poisoning"
-                ],
-                "capabilities": [
-                    "control_flow_hijack",
-                    "libc_leak",
-                    "stack_leak"
-                ],
-                "leak_targets": [
-                    "__environ"
-                ],
-                "targets": [
-                    "__environ",
-                    "fd",
-                    "libc_base",
-                    "return_address",
-                    "rip",
-                    "stack_base"
-                ],
-                "goals": [
-                    "control_flow_hijack"
-                ],
-                "transitions": [
-                    {
-                        "from": "tcache_poisoning",
-                        "to": "arbitrary_allocation",
-                        "action": "malloc_at_target"
-                    },
-                    {
-                        "from": "arbitrary_allocation",
-                        "to": "arbitrary_write",
-                        "action": "write_at_allocated_target"
-                    },
-                    {
-                        "from": "arbitrary_write",
-                        "to": "control_flow_hijack",
-                        "action": "overwrite_hook_or_ret"
-                    },
-                    {
-                        "from": "libc_leak",
-                        "to": "stack_leak",
-                        "action": "read_environ"
-                    },
-                    {
-                        "from": "environ_leak",
-                        "to": "stack_leak",
-                        "action": "read_environ_ptr"
-                    },
-                    {
-                        "from": "rop_chain",
-                        "to": "control_flow_hijack",
-                        "action": "execute_rop"
-                    }
-                ],
-                "metadata": {
-                    "source": "nlp_writeup_extraction",
-                    "confidence_score": 0.85,
-                    "fusion_ready": true,
-                    "engine_version": "3.0-multi-writeup"
-                }
-            }
-        },
-        "safe_linking_bypasses.txt": {
-            "vars": [
-                "(ptr ^ key",
-                "chunk",
-                "fastbin",
-                "ptr",
-                "safe_linking",
-                "tcache"
-            ],
-            "states": [],
-            "taxonomy": {
-                "bugs": [],
-                "primitives": [],
-                "hooks": [],
-                "functions": [],
-                "leak_targets": [],
-                "capabilities": [],
-                "leaks": [],
-                "structures": [
-                    "chunk",
-                    "fastbin",
-                    "tcache"
-                ],
-                "metadata_fields": [],
-                "techniques": [
-                    "safe_linking"
-                ],
-                "goals": [],
-                "gadgets": [],
-                "others": [
-                    "(ptr ^ key",
-                    "ptr"
-                ]
-            },
-            "exploit_ir": {
-                "bugs": [],
-                "primitives": [],
-                "techniques": [
-                    "safe_linking"
-                ],
-                "capabilities": [],
-                "leak_targets": [],
-                "targets": [],
-                "goals": [],
-                "transitions": [],
-                "metadata": {
-                    "source": "nlp_writeup_extraction",
-                    "confidence_score": 0.85,
-                    "fusion_ready": true,
-                    "engine_version": "3.0-multi-writeup"
-                }
-            }
-        },
-        "tcache_poisoning.txt": {
-            "vars": [
-                "/bin/sh",
-                "0x410",
-                "0x68",
-                "__free_hook",
-                "__malloc_hook",
-                "chunk",
-                "chunk_size",
-                "double_free",
-                "fake_chunk",
-                "fd",
-                "fixed size",
-                "free",
-                "got",
-                "heap_base",
-                "libc_base",
-                "our target address",
-                "ptr",
-                "ptr xor",
-                "safe_linking",
-                "shell",
-                "system",
-                "target address",
-                "tcache",
-                "tcache_poisoning",
-                "uaf",
-                "unsorted_bin",
-                "xor_key"
-            ],
-            "states": [
-                {
-                    "subject": "we",
-                    "relation": "allocate",
-                    "object": "chunk"
-                },
-                {
-                    "subject": "it",
-                    "relation": "free",
-                    "object": "chunk"
-                },
-                {
-                    "subject": "we",
-                    "relation": "leak",
-                    "object": "heap_base"
-                },
-                {
-                    "subject": "we",
-                    "relation": "read",
-                    "object": "fd"
-                },
-                {
-                    "subject": "we",
-                    "relation": "overwrite",
-                    "object": "fd"
-                },
-                {
-                    "subject": "we",
-                    "relation": "poison",
-                    "object": "tcache"
-                },
-                {
-                    "subject": "we",
-                    "relation": "allocate",
-                    "object": "got"
-                },
-                {
-                    "subject": "we",
-                    "relation": "leak",
-                    "object": "libc_base"
-                },
-                {
-                    "subject": "we",
-                    "relation": "forge",
-                    "object": "tcache"
-                },
-                {
-                    "subject": "we",
-                    "relation": "overwrite",
-                    "object": "chunk"
-                },
-                {
-                    "subject": "we",
-                    "relation": "free",
-                    "object": "chunk"
-                },
-                {
-                    "subject": "we",
-                    "relation": "overwrite",
-                    "object": "system"
-                },
-                {
-                    "subject": "we",
-                    "relation": "trigger",
-                    "object": "free"
-                },
-                {
-                    "subject": "we",
-                    "relation": "trigger",
-                    "object": "shell"
-                },
-                {
-                    "subject": "we",
-                    "relation": "bypass",
-                    "object": "tcache"
-                },
-                {
-                    "subject": "chunk",
-                    "relation": "poison",
-                    "object": "fd"
-                }
-            ],
-            "taxonomy": {
-                "bugs": [
-                    "double_free",
-                    "uaf"
-                ],
-                "primitives": [
-                    "arbitrary_allocation",
-                    "arbitrary_free",
-                    "arbitrary_write",
-                    "heap_leak"
-                ],
-                "hooks": [
-                    "__free_hook",
-                    "__malloc_hook",
-                    "got"
-                ],
-                "functions": [
-                    "free",
-                    "shell",
-                    "system"
-                ],
-                "leak_targets": [
-                    "xor_key"
-                ],
-                "capabilities": [
-                    "libc_leak"
-                ],
-                "leaks": [
-                    "heap_base",
-                    "libc_base"
-                ],
-                "structures": [
-                    "chunk",
-                    "fake_chunk",
-                    "tcache",
-                    "unsorted_bin"
-                ],
-                "metadata_fields": [
-                    "chunk_size",
-                    "fd"
-                ],
-                "techniques": [
-                    "fake_unsorted_bin",
-                    "safe_linking",
-                    "tcache_poisoning",
-                    "unsortedbin_leak"
-                ],
-                "goals": [
-                    "control_flow_hijack"
-                ],
-                "gadgets": [],
-                "others": [
-                    "/bin/sh",
-                    "0x410",
-                    "0x68",
-                    "fixed size",
-                    "our target address",
-                    "ptr",
-                    "ptr xor",
-                    "target address"
-                ]
-            },
-            "exploit_ir": {
-                "bugs": [
-                    "double_free",
-                    "uaf"
-                ],
-                "primitives": [
-                    "arbitrary_allocation",
-                    "arbitrary_free",
-                    "arbitrary_write",
-                    "heap_leak"
-                ],
-                "techniques": [
-                    "fake_unsorted_bin",
-                    "safe_linking",
-                    "tcache_poisoning",
-                    "unsortedbin_leak"
-                ],
-                "capabilities": [
-                    "libc_leak"
-                ],
-                "leak_targets": [
-                    "xor_key"
-                ],
-                "targets": [
-                    "__free_hook",
-                    "__malloc_hook",
-                    "fd",
-                    "got",
-                    "heap_base",
-                    "libc_base"
-                ],
-                "goals": [
-                    "control_flow_hijack"
-                ],
-                "transitions": [
-                    {
-                        "from": "uaf",
-                        "to": "arbitrary_free",
-                        "action": "trigger_uaf"
-                    },
-                    {
-                        "from": "arbitrary_free",
-                        "to": "tcache_poisoning",
-                        "action": "poison_bin"
-                    },
-                    {
-                        "from": "tcache_poisoning",
-                        "to": "arbitrary_allocation",
-                        "action": "malloc_at_target"
-                    },
-                    {
-                        "from": "arbitrary_allocation",
-                        "to": "arbitrary_write",
-                        "action": "write_at_allocated_target"
-                    },
-                    {
-                        "from": "arbitrary_write",
-                        "to": "control_flow_hijack",
-                        "action": "overwrite_hook_or_ret"
-                    },
-                    {
-                        "from": "unsortedbin_leak",
-                        "to": "libc_leak",
-                        "action": "read_main_arena"
-                    },
-                    {
-                        "from": "fake_unsorted_bin",
-                        "to": "libc_leak",
-                        "action": "read_fake_main_arena"
-                    }
-                ],
-                "metadata": {
-                    "source": "nlp_writeup_extraction",
-                    "confidence_score": 0.85,
-                    "fusion_ready": true,
-                    "engine_version": "3.0-multi-writeup"
-                }
-            }
-        },
-        "tcache_struct_overwrite.txt": {
-            "vars": [
-                "(uint16_t",
-                "0x0100",
-                "0x10",
-                "0x290",
-                "__free_hook",
-                "address",
-                "arbitrary_allocation",
-                "chunk",
-                "fd",
-                "free",
-                "got",
-                "heap_base",
-                "malloc",
-                "overflow",
-                "p64(target_addr)",
-                "return_address",
-                "safe_linking",
-                "size",
-                "stack_canary",
-                "target address",
-                "tcache",
-                "tcache_perthread_struct",
-                "uaf",
-                "writable address"
-            ],
-            "states": [
-                {
-                    "subject": "the structure",
-                    "relation": "allocate",
-                    "object": "chunk"
-                },
-                {
-                    "subject": "chunk",
-                    "relation": "be",
-                    "object": "heap_base"
-                },
-                {
-                    "subject": "we",
-                    "relation": "bypass",
-                    "object": "safe_linking"
-                },
-                {
-                    "subject": "this",
-                    "relation": "corrupt",
-                    "object": "tcache"
-                },
-                {
-                    "subject": "we",
-                    "relation": "allocate",
-                    "object": "tcache"
-                }
-            ],
-            "taxonomy": {
-                "bugs": [
-                    "overflow",
-                    "uaf"
-                ],
-                "primitives": [
-                    "arbitrary_allocation",
-                    "arbitrary_free",
-                    "arbitrary_write"
-                ],
-                "hooks": [
-                    "__free_hook",
-                    "got"
-                ],
-                "functions": [
-                    "free",
-                    "malloc"
-                ],
-                "leak_targets": [
-                    "stack_canary"
-                ],
-                "capabilities": [
-                    "libc_leak"
-                ],
-                "leaks": [
-                    "heap_base"
-                ],
-                "structures": [
-                    "chunk",
-                    "tcache",
-                    "tcache_perthread_struct"
-                ],
-                "metadata_fields": [
-                    "fd",
-                    "size"
-                ],
-                "techniques": [
-                    "chunk_overlap",
-                    "safe_linking",
-                    "tcache_poisoning"
-                ],
-                "goals": [
-                    "control_flow_hijack"
-                ],
-                "gadgets": [
-                    "return_address"
-                ],
-                "others": [
-                    "(uint16_t",
-                    "0x0100",
-                    "0x10",
-                    "0x290",
-                    "address",
-                    "p64(target_addr)",
-                    "target address",
-                    "writable address"
-                ]
-            },
-            "exploit_ir": {
-                "bugs": [
-                    "overflow",
-                    "uaf"
-                ],
-                "primitives": [
-                    "arbitrary_allocation",
-                    "arbitrary_free",
-                    "arbitrary_write"
-                ],
-                "techniques": [
-                    "chunk_overlap",
-                    "safe_linking",
-                    "tcache_poisoning"
-                ],
-                "capabilities": [
-                    "libc_leak"
-                ],
-                "leak_targets": [
-                    "stack_canary"
-                ],
-                "targets": [
-                    "__free_hook",
-                    "fd",
-                    "got",
-                    "heap_base",
-                    "return_address",
-                    "stack_canary"
-                ],
-                "goals": [
-                    "control_flow_hijack"
-                ],
-                "transitions": [
-                    {
-                        "from": "uaf",
-                        "to": "arbitrary_free",
-                        "action": "trigger_uaf"
-                    },
-                    {
-                        "from": "arbitrary_free",
-                        "to": "tcache_poisoning",
-                        "action": "poison_bin"
-                    },
-                    {
-                        "from": "tcache_poisoning",
-                        "to": "arbitrary_allocation",
-                        "action": "malloc_at_target"
-                    },
-                    {
-                        "from": "arbitrary_allocation",
-                        "to": "arbitrary_write",
-                        "action": "write_at_allocated_target"
-                    },
-                    {
-                        "from": "arbitrary_write",
-                        "to": "control_flow_hijack",
-                        "action": "overwrite_hook_or_ret"
-                    }
-                ],
-                "metadata": {
-                    "source": "nlp_writeup_extraction",
-                    "confidence_score": 0.85,
-                    "fusion_ready": true,
-                    "engine_version": "3.0-multi-writeup"
-                }
-            }
-        },
-        "uaf_leak.txt": {
-            "vars": [
-                "0x60",
-                "__environ",
-                "arbitrary_allocation",
-                "bk",
-                "chunk",
-                "chunk_overlap",
-                "chunk_size",
-                "control_flow_hijack",
-                "double_free",
-                "fake_chunk",
-                "fd",
-                "free",
-                "heap metadata",
-                "heap_base",
-                "libc address",
-                "libc_base",
-                "main_arena",
-                "next_ptr",
-                "overwrite heap metadata",
-                "return_address",
-                "safe_linking",
-                "stack_base",
-                "stack_pointer",
-                "tcache",
-                "tcache_poisoning",
-                "uaf",
-                "unsorted_bin",
-                "xor_key"
-            ],
-            "states": [
-                {
-                    "subject": "chunk",
-                    "relation": "free",
-                    "object": "tcache"
-                },
-                {
-                    "subject": "fd",
-                    "relation": "contain",
-                    "object": "tcache"
-                },
-                {
-                    "subject": "libc_base",
-                    "relation": "leak",
-                    "object": "stack_base"
-                },
-                {
-                    "subject": "us",
-                    "relation": "free",
-                    "object": "chunk"
-                },
-                {
-                    "subject": "we",
-                    "relation": "read",
-                    "object": "chunk"
-                },
-                {
-                    "subject": "we",
-                    "relation": "write",
-                    "object": "chunk"
-                }
-            ],
-            "taxonomy": {
-                "bugs": [
-                    "double_free",
-                    "uaf"
-                ],
-                "primitives": [
-                    "arbitrary_allocation",
-                    "arbitrary_free",
-                    "heap_leak"
-                ],
-                "hooks": [],
-                "functions": [
-                    "free"
-                ],
-                "leak_targets": [
-                    "__environ",
-                    "main_arena",
-                    "xor_key"
-                ],
-                "capabilities": [
-                    "control_flow_hijack",
-                    "libc_leak",
-                    "stack_leak"
-                ],
-                "leaks": [
-                    "heap_base",
-                    "libc_base",
-                    "stack_base"
-                ],
-                "structures": [
-                    "chunk",
-                    "fake_chunk",
-                    "tcache",
-                    "unsorted_bin"
-                ],
-                "metadata_fields": [
-                    "bk",
-                    "chunk_size",
-                    "fd"
-                ],
-                "techniques": [
-                    "chunk_overlap",
-                    "environ_leak",
-                    "fake_unsorted_bin",
-                    "safe_linking",
-                    "tcache_poisoning",
-                    "unsortedbin_leak"
-                ],
-                "goals": [],
-                "gadgets": [
-                    "return_address"
-                ],
-                "others": [
-                    "0x60",
-                    "heap metadata",
-                    "libc address",
-                    "next_ptr",
-                    "overwrite heap metadata",
-                    "stack_pointer"
-                ]
-            },
-            "exploit_ir": {
-                "bugs": [
-                    "double_free",
-                    "uaf"
-                ],
-                "primitives": [
-                    "arbitrary_allocation",
-                    "arbitrary_free",
-                    "heap_leak"
-                ],
-                "techniques": [
-                    "chunk_overlap",
-                    "environ_leak",
-                    "fake_unsorted_bin",
-                    "safe_linking",
-                    "tcache_poisoning",
-                    "unsortedbin_leak"
-                ],
-                "capabilities": [
-                    "control_flow_hijack",
-                    "libc_leak",
-                    "stack_leak"
-                ],
-                "leak_targets": [
-                    "__environ",
-                    "main_arena",
-                    "xor_key"
-                ],
-                "targets": [
-                    "__environ",
-                    "bk",
-                    "fd",
-                    "heap_base",
-                    "libc_base",
-                    "main_arena",
-                    "return_address",
-                    "stack_base"
-                ],
-                "goals": [],
-                "transitions": [
-                    {
-                        "from": "uaf",
-                        "to": "arbitrary_free",
-                        "action": "trigger_uaf"
-                    },
-                    {
-                        "from": "arbitrary_free",
-                        "to": "tcache_poisoning",
-                        "action": "poison_bin"
-                    },
-                    {
-                        "from": "tcache_poisoning",
-                        "to": "arbitrary_allocation",
-                        "action": "malloc_at_target"
-                    },
-                    {
-                        "from": "chunk_overlap",
-                        "to": "heap_leak",
-                        "action": "read_oob"
-                    },
-                    {
-                        "from": "unsortedbin_leak",
-                        "to": "libc_leak",
-                        "action": "read_main_arena"
-                    },
-                    {
-                        "from": "fake_unsorted_bin",
-                        "to": "libc_leak",
-                        "action": "read_fake_main_arena"
-                    },
-                    {
-                        "from": "libc_leak",
-                        "to": "stack_leak",
-                        "action": "read_environ"
-                    },
-                    {
-                        "from": "environ_leak",
-                        "to": "stack_leak",
-                        "action": "read_environ_ptr"
-                    }
-                ],
-                "metadata": {
-                    "source": "nlp_writeup_extraction",
-                    "confidence_score": 0.85,
-                    "fusion_ready": true,
-                    "engine_version": "3.0-multi-writeup"
-                }
-            }
-        },
-        "unsorted_bin_leak.txt": {
-            "vars": [
-                "0x10",
-                "0x410",
-                "0x60",
-                "0x70",
-                "__malloc_hook",
-                "base address",
-                "bk",
-                "chunk",
-                "chunk_size",
-                "fake_chunk",
-                "fd",
-                "fixed offset",
-                "free",
-                "heap_base",
-                "leaked_addr",
-                "libc address",
-                "libc_base",
-                "libc_leak",
-                "main_arena",
-                "prev_size",
-                "tcache",
-                "unsorted_bin"
-            ],
-            "states": [
-                {
-                    "subject": "unsorted_bin",
-                    "relation": "contain",
-                    "object": "main_arena"
-                },
-                {
-                    "subject": "we",
-                    "relation": "read",
-                    "object": "chunk"
-                },
-                {
-                    "subject": "we",
-                    "relation": "corrupt",
-                    "object": "chunk"
-                },
-                {
-                    "subject": "chunk",
-                    "relation": "be",
-                    "object": "unsorted_bin"
-                }
-            ],
-            "taxonomy": {
-                "bugs": [],
-                "primitives": [
-                    "arbitrary_allocation",
-                    "arbitrary_write"
-                ],
-                "hooks": [
-                    "__malloc_hook"
-                ],
-                "functions": [
-                    "free"
-                ],
-                "leak_targets": [
-                    "main_arena"
-                ],
-                "capabilities": [
-                    "libc_leak"
-                ],
-                "leaks": [
-                    "heap_base",
-                    "libc_base"
-                ],
-                "structures": [
-                    "chunk",
-                    "fake_chunk",
-                    "tcache",
-                    "unsorted_bin"
-                ],
-                "metadata_fields": [
-                    "bk",
-                    "chunk_size",
-                    "fd",
-                    "prev_size"
-                ],
-                "techniques": [
-                    "fake_unsorted_bin",
-                    "tcache_poisoning"
-                ],
-                "goals": [
-                    "control_flow_hijack"
-                ],
-                "gadgets": [],
-                "others": [
-                    "0x10",
-                    "0x410",
-                    "0x60",
-                    "0x70",
-                    "base address",
-                    "fixed offset",
-                    "leaked_addr",
-                    "libc address"
-                ]
-            },
-            "exploit_ir": {
-                "bugs": [],
-                "primitives": [
-                    "arbitrary_allocation",
-                    "arbitrary_write"
-                ],
-                "techniques": [
-                    "fake_unsorted_bin",
-                    "tcache_poisoning"
-                ],
-                "capabilities": [
-                    "libc_leak"
-                ],
-                "leak_targets": [
-                    "main_arena"
-                ],
-                "targets": [
-                    "__malloc_hook",
-                    "bk",
-                    "fd",
-                    "heap_base",
-                    "libc_base",
-                    "main_arena"
-                ],
-                "goals": [
-                    "control_flow_hijack"
-                ],
-                "transitions": [
-                    {
-                        "from": "tcache_poisoning",
-                        "to": "arbitrary_allocation",
-                        "action": "malloc_at_target"
-                    },
-                    {
-                        "from": "arbitrary_allocation",
-                        "to": "arbitrary_write",
-                        "action": "write_at_allocated_target"
-                    },
-                    {
-                        "from": "arbitrary_write",
-                        "to": "control_flow_hijack",
-                        "action": "overwrite_hook_or_ret"
-                    },
-                    {
-                        "from": "fake_unsorted_bin",
-                        "to": "libc_leak",
-                        "action": "read_fake_main_arena"
-                    }
-                ],
-                "metadata": {
-                    "source": "nlp_writeup_extraction",
-                    "confidence_score": 0.85,
-                    "fusion_ready": true,
-                    "engine_version": "3.0-multi-writeup"
-                }
-            }
-        }
-    },
-    "knowledge_base": {
-        "malloc_rules": {
-            "tcache_max_size": 1040,
-            "tcache_max_per_size": 7,
-            "safe_linking_formula": "fd_encoded = target_addr ^ (chunk_addr >> 12)",
-            "unsorted_bin_threshold": "Chunks > tcache_max_size (1040) OR tcache full for that size",
-            "unsorted_bin_leak_offset": 96
-        },
-        "free_checks": {
-            "prev_inuse_check": {
-                "description": "When freeing chunk P, glibc checks prev_inuse bit of NEXT chunk",
-                "code": "if (__glibc_unlikely (!prev_inuse(nextchunk))) malloc_printerr(\"double free or corruption (!prev)\")",
-                "exploitation_implication": "Must set prev_inuse=1 on chunk after fake chunk to avoid crash",
-                "severity": "CRITICAL - will abort if violated"
-            },
-            "consolidation_check": {
-                "description": "If prev_inuse of chunk P is 0, glibc consolidates with previous chunk",
-                "code": "if (!prev_inuse(p)) { prevsize = prev_size(p); size += prevsize; p = chunk_at_offset(p, -prevsize); if (chunksize(p) != prevsize) malloc_printerr(\"corrupted size vs. prev_size\"); unlink_chunk(av, p); }",
-                "exploitation_implication": "If creating fake chunk with prev_inuse=0, must also fake prev_size of next chunk to match",
-                "severity": "CRITICAL - will abort if violated"
-            }
-        },
-        "fake_chunk_rules": {
-            "minimum_requirements": {
-                "size_field": "Must be >= 32 and aligned to 16",
-                "prev_inuse": "Must be 1 (PREV_INUSE bit set) to avoid consolidation",
-                "next_chunk_size": "Must be valid size to pass next_size_check"
-            },
-            "for_unsorted_bin": {
-                "size": "Must be > 1040 (tcache max) to bypass tcache",
-                "common_values": [
-                    1057,
-                    1089,
-                    1281
-                ],
-                "additional_requirements": [
-                    "prev_inuse of next chunk must be 1",
-                    "prev_size of next chunk must match if prev_inuse=0",
-                    "Must not overlap with existing allocated chunks"
-                ]
-            },
-            "for_fastbin_attack": {
-                "size": "Must match fastbin index (32-128)",
-                "target_address": "target - 16 must have valid size matching fastbin index",
-                "additional_requirements": [
-                    "FD pointer must be valid or NULL",
-                    "Must pass fastbin size check on allocation"
-                ]
-            }
-        },
-        "active_mitigations": [
-            {
-                "name": "safe_linking",
-                "description": "XOR-encode FD pointers to prevent pointer forgery",
-                "bypass": {
-                    "method": "Leak heap address, compute XOR key",
-                    "requirements": [
-                        "heap_leak"
-                    ],
-                    "formula": "protected_ptr = target ^ (heap_base >> 12)"
-                }
-            },
-            {
-                "name": "tcache_double_free_detection",
-                "description": "Walk tcache list to detect if chunk already present",
-                "bypass": {
-                    "method_1": "Use different size (goes to different bin)",
-                    "method_2": "Free into unsorted bin (tcache full)",
-                    "method_3": "Overwrite tcache counts to skip check"
-                }
-            },
-            {
-                "name": "hook_removal",
-                "description": "glibc 2.34+ removes __malloc_hook, __free_hook, __realloc_hook",
-                "alternatives": [
-                    "ROP via return address overwrite",
-                    "_IO_FILE vtable attack (house of orange)",
-                    "tcache struct overwrite",
-                    "environ leak + stack pivot"
-                ]
-            }
+      },
+      "exploit_ir": {
+        "bugs": [
+          "uaf"
         ],
-        "exploit_phases": {
-            "phase_1_leak": {
-                "name": "Information Leak",
-                "goals": [
-                    "heap_leak",
-                    "libc_leak",
-                    "stack_leak",
-                    "canary_leak"
-                ],
-                "description": "Obtain base addresses for ASLR bypass",
-                "order": "heap_leak typically first (needed for safe linking bypass), then libc_leak, then stack_leak"
-            },
-            "phase_2_primitive": {
-                "name": "Exploit Primitive",
-                "goals": [
-                    "arbitrary_allocation",
-                    "arbitrary_write",
-                    "arbitrary_free"
-                ],
-                "description": "Gain ability to read/write/allocate at controlled addresses",
-                "requires": [
-                    "bug_exploitation",
-                    "bypass_mitigations"
-                ]
-            },
-            "phase_3_code_execution": {
-                "name": "Code Execution",
-                "goals": [
-                    "control_flow_hijack",
-                    "shell"
-                ],
-                "description": "Redirect execution flow to gain code execution",
-                "requires": [
-                    "arbitrary_write",
-                    "target_address"
-                ]
-            }
-        },
-        "decision_rules": {
-            "when_to_use_fake_unsorted": {
-                "condition": "Cannot fill tcache OR need libc leak with limited allocations",
-                "advantages": [
-                    "Works with few allocations",
-                    "Does not require tcache fill"
-                ],
-                "disadvantages": [
-                    "Complex fake chunk setup",
-                    "Must handle prev_inuse checks"
-                ]
-            },
-            "when_to_use_tcache_fill": {
-                "condition": "Can allocate/free freely, no allocation limit",
-                "advantages": [
-                    "Simple",
-                    "Reliable"
-                ],
-                "disadvantages": [
-                    "Requires 8+ allocations",
-                    "May hit allocation limit"
-                ]
-            },
-            "when_to_use_environ": {
-                "condition": "Have libc leak, need stack address",
-                "advantages": [
-                    "Direct stack pointer",
-                    "No need for stack canary leak"
-                ],
-                "disadvantages": [
-                    "Requires arbitrary allocation to __environ-24"
-                ]
-            },
-            "when_to_use_rop": {
-                "condition": "Have stack write target, CET not enforced",
-                "advantages": [
-                    "Reliable code execution"
-                ],
-                "disadvantages": [
-                    "CET may block",
-                    "Need gadgets"
-                ]
-            },
-            "when_to_use_one_gadget": {
-                "condition": "Have stack write target, constraints satisfied",
-                "advantages": [
-                    "Single gadget, no ROP chain needed"
-                ],
-                "disadvantages": [
-                    "Constraints may not be met",
-                    "CET IBT may block"
-                ]
-            },
-            "when_to_use_malloc_consolidate": {
-                "condition": "Have scanf input, need libc leak without tcache fill",
-                "advantages": [
-                    "Automatic tcache consolidation",
-                    "No manual fill needed"
-                ],
-                "disadvantages": [
-                    "Requires scanf usage",
-                    "Large input needed"
-                ]
-            },
-            "when_to_use_heap_key_leak": {
-                "condition": "Have UAF, need to bypass safe linking",
-                "advantages": [
-                    "Simple",
-                    "Direct key recovery"
-                ],
-                "disadvantages": [
-                    "Requires tcache free"
-                ]
-            }
+        "primitives": [
+          "arbitrary_free",
+          "heap_leak"
+        ],
+        "techniques": [
+          "environ_leak",
+          "rop_chain",
+          "safe_linking",
+          "tcache_poisoning"
+        ],
+        "capabilities": [
+          "control_flow_hijack",
+          "libc_leak",
+          "stack_leak"
+        ],
+        "leak_targets": [
+          "__environ",
+          "xor_key"
+        ],
+        "targets": [
+          "__environ",
+          "fd",
+          "libc_base",
+          "return_address",
+          "stack_base"
+        ],
+        "goals": [],
+        "transitions": [
+          {
+            "from": "uaf",
+            "to": "arbitrary_free",
+            "action": "trigger_uaf"
+          },
+          {
+            "from": "arbitrary_free",
+            "to": "tcache_poisoning",
+            "action": "poison_bin"
+          },
+          {
+            "from": "libc_leak",
+            "to": "stack_leak",
+            "action": "read_environ"
+          },
+          {
+            "from": "environ_leak",
+            "to": "stack_leak",
+            "action": "read_environ_ptr"
+          }
+        ],
+        "metadata": {
+          "source": "nlp_writeup_extraction",
+          "confidence_score": 0.85,
+          "fusion_ready": true,
+          "engine_version": "3.0-multi-writeup"
         }
+      }
+    },
+    "fastbin_attack.txt": {
+      "vars": [
+        "\"size\" field",
+        "(size",
+        "0x23",
+        "0x7f",
+        "0x80",
+        "__malloc_hook",
+        "arbitrary_allocation",
+        "bin size",
+        "bk",
+        "chunk",
+        "chunk_size",
+        "fake size",
+        "fake_chunk",
+        "fastbin",
+        "fastbin_attack",
+        "fd",
+        "free",
+        "malloc",
+        "offset (partial byte",
+        "one_gadget",
+        "our target address",
+        "right offset",
+        "shell",
+        "size",
+        "stack_base",
+        "system",
+        "tcache"
+      ],
+      "states": [
+        {
+          "subject": "we",
+          "relation": "overwrite",
+          "object": "system"
+        },
+        {
+          "subject": "malloc",
+          "relation": "trigger",
+          "object": "shell"
+        }
+      ],
+      "taxonomy": {
+        "bugs": [],
+        "primitives": [
+          "arbitrary_allocation",
+          "arbitrary_write"
+        ],
+        "hooks": [
+          "__malloc_hook"
+        ],
+        "functions": [
+          "free",
+          "malloc",
+          "one_gadget",
+          "shell",
+          "system"
+        ],
+        "leak_targets": [],
+        "capabilities": [
+          "libc_leak",
+          "stack_leak"
+        ],
+        "leaks": [
+          "stack_base"
+        ],
+        "structures": [
+          "chunk",
+          "fake_chunk",
+          "fastbin",
+          "tcache"
+        ],
+        "metadata_fields": [
+          "bk",
+          "chunk_size",
+          "fd",
+          "size"
+        ],
+        "techniques": [
+          "chunk_overlap",
+          "fastbin_attack",
+          "rop_chain",
+          "tcache_poisoning"
+        ],
+        "goals": [
+          "control_flow_hijack"
+        ],
+        "gadgets": [],
+        "others": [
+          "\"size\" field",
+          "(size",
+          "0x23",
+          "0x7f",
+          "0x80",
+          "bin size",
+          "fake size",
+          "offset (partial byte",
+          "our target address",
+          "right offset"
+        ]
+      },
+      "exploit_ir": {
+        "bugs": [],
+        "primitives": [
+          "arbitrary_allocation",
+          "arbitrary_write"
+        ],
+        "techniques": [
+          "chunk_overlap",
+          "fastbin_attack",
+          "rop_chain",
+          "tcache_poisoning"
+        ],
+        "capabilities": [
+          "libc_leak",
+          "stack_leak"
+        ],
+        "leak_targets": [],
+        "targets": [
+          "__malloc_hook",
+          "bk",
+          "fd",
+          "stack_base"
+        ],
+        "goals": [
+          "control_flow_hijack"
+        ],
+        "transitions": [
+          {
+            "from": "tcache_poisoning",
+            "to": "arbitrary_allocation",
+            "action": "malloc_at_target"
+          },
+          {
+            "from": "arbitrary_allocation",
+            "to": "arbitrary_write",
+            "action": "write_at_allocated_target"
+          },
+          {
+            "from": "arbitrary_write",
+            "to": "control_flow_hijack",
+            "action": "overwrite_hook_or_ret"
+          },
+          {
+            "from": "libc_leak",
+            "to": "stack_leak",
+            "action": "read_environ"
+          },
+          {
+            "from": "fastbin_attack",
+            "to": "arbitrary_allocation",
+            "action": "malloc_at_fastbin_target"
+          },
+          {
+            "from": "rop_chain",
+            "to": "control_flow_hijack",
+            "action": "execute_rop"
+          }
+        ],
+        "metadata": {
+          "source": "nlp_writeup_extraction",
+          "confidence_score": 0.85,
+          "fusion_ready": true,
+          "engine_version": "3.0-multi-writeup"
+        }
+      }
+    },
+    "house_of_force.txt": {
+      "vars": [
+        "0x20",
+        "0xffffffffffffffff",
+        "address",
+        "chunk",
+        "chunk_size",
+        "free",
+        "got",
+        "heap_base",
+        "house_of_force",
+        "huge size",
+        "malloc",
+        "neighbor metadata",
+        "neighbor's metadata",
+        "our target address",
+        "overflow",
+        "requested size",
+        "return_address",
+        "rop_chain",
+        "size",
+        "size check",
+        "size check on allocation",
+        "specific size",
+        "target address",
+        "top_chunk",
+        "uaf"
+      ],
+      "states": [
+        {
+          "subject": "top_chunk",
+          "relation": "be",
+          "object": "chunk"
+        },
+        {
+          "subject": "we",
+          "relation": "read",
+          "object": "chunk"
+        },
+        {
+          "subject": "we",
+          "relation": "free",
+          "object": "uaf"
+        },
+        {
+          "subject": "we",
+          "relation": "free",
+          "object": "chunk"
+        }
+      ],
+      "taxonomy": {
+        "bugs": [
+          "overflow",
+          "uaf"
+        ],
+        "primitives": [
+          "arbitrary_free"
+        ],
+        "hooks": [
+          "got"
+        ],
+        "functions": [
+          "free",
+          "malloc"
+        ],
+        "leak_targets": [],
+        "capabilities": [],
+        "leaks": [
+          "heap_base"
+        ],
+        "structures": [
+          "chunk",
+          "top_chunk"
+        ],
+        "metadata_fields": [
+          "chunk_size",
+          "size"
+        ],
+        "techniques": [
+          "house_of_force",
+          "rop_chain"
+        ],
+        "goals": [],
+        "gadgets": [
+          "return_address"
+        ],
+        "others": [
+          "0x20",
+          "0xffffffffffffffff",
+          "address",
+          "huge size",
+          "neighbor metadata",
+          "neighbor's metadata",
+          "our target address",
+          "requested size",
+          "size check",
+          "size check on allocation",
+          "specific size",
+          "target address"
+        ]
+      },
+      "exploit_ir": {
+        "bugs": [
+          "overflow",
+          "uaf"
+        ],
+        "primitives": [
+          "arbitrary_free"
+        ],
+        "techniques": [
+          "house_of_force",
+          "rop_chain"
+        ],
+        "capabilities": [],
+        "leak_targets": [],
+        "targets": [
+          "got",
+          "heap_base",
+          "return_address"
+        ],
+        "goals": [],
+        "transitions": [
+          {
+            "from": "uaf",
+            "to": "arbitrary_free",
+            "action": "trigger_uaf"
+          }
+        ],
+        "metadata": {
+          "source": "nlp_writeup_extraction",
+          "confidence_score": 0.85,
+          "fusion_ready": true,
+          "engine_version": "3.0-multi-writeup"
+        }
+      }
+    },
+    "largebin_and_stashing.txt": {
+      "vars": [
+        "0x10",
+        "0x20",
+        "address",
+        "address of p2",
+        "arbitrary_allocation",
+        "attacker's target_address",
+        "bk",
+        "chunk",
+        "fake_chunk",
+        "fd",
+        "heap_base",
+        "largebin",
+        "libc address",
+        "libc address to target_address",
+        "malloc",
+        "size class",
+        "target address",
+        "target_address",
+        "tcache",
+        "unlink_chunk",
+        "unsorted_bin"
+      ],
+      "states": [
+        {
+          "subject": "an attacker",
+          "relation": "write",
+          "object": "heap_base"
+        },
+        {
+          "subject": "the attacker",
+          "relation": "overwrite",
+          "object": "bk"
+        },
+        {
+          "subject": "a new allocation",
+          "relation": "trigger",
+          "object": "unsorted_bin"
+        },
+        {
+          "subject": "a new allocation",
+          "relation": "trigger",
+          "object": "largebin"
+        },
+        {
+          "subject": "tcache",
+          "relation": "exploit",
+          "object": "tcache"
+        }
+      ],
+      "taxonomy": {
+        "bugs": [],
+        "primitives": [
+          "arbitrary_allocation"
+        ],
+        "hooks": [],
+        "functions": [
+          "malloc"
+        ],
+        "leak_targets": [],
+        "capabilities": [],
+        "leaks": [
+          "heap_base"
+        ],
+        "structures": [
+          "chunk",
+          "fake_chunk",
+          "largebin",
+          "tcache",
+          "unsorted_bin"
+        ],
+        "metadata_fields": [
+          "bk",
+          "fd"
+        ],
+        "techniques": [
+          "consolidation",
+          "fake_unsorted_bin",
+          "tcache_poisoning",
+          "unlink_chunk"
+        ],
+        "goals": [],
+        "gadgets": [],
+        "others": [
+          "0x10",
+          "0x20",
+          "address",
+          "address of p2",
+          "attacker's target_address",
+          "libc address",
+          "libc address to target_address",
+          "size class",
+          "target address",
+          "target_address"
+        ]
+      },
+      "exploit_ir": {
+        "bugs": [],
+        "primitives": [
+          "arbitrary_allocation"
+        ],
+        "techniques": [
+          "consolidation",
+          "fake_unsorted_bin",
+          "tcache_poisoning",
+          "unlink_chunk"
+        ],
+        "capabilities": [],
+        "leak_targets": [],
+        "targets": [
+          "bk",
+          "fd",
+          "heap_base"
+        ],
+        "goals": [],
+        "transitions": [
+          {
+            "from": "tcache_poisoning",
+            "to": "arbitrary_allocation",
+            "action": "malloc_at_target"
+          },
+          {
+            "from": "consolidation",
+            "to": "arbitrary_allocation",
+            "action": "consolidate_to_target"
+          }
+        ],
+        "metadata": {
+          "source": "nlp_writeup_extraction",
+          "confidence_score": 0.85,
+          "fusion_ready": true,
+          "engine_version": "3.0-multi-writeup"
+        }
+      }
+    },
+    "modern_tcache_attacks.txt": {
+      "vars": [
+        "arbitrary_allocation",
+        "carefully calculated large size",
+        "chunk",
+        "chunk_overlap",
+        "free",
+        "heap_base",
+        "largebin",
+        "malloc",
+        "overflow",
+        "size class",
+        "specific size class",
+        "target address",
+        "tcache",
+        "unsorted_bin"
+      ],
+      "states": [
+        {
+          "subject": "the attacker",
+          "relation": "free",
+          "object": "chunk"
+        },
+        {
+          "subject": "chunk",
+          "relation": "allocate",
+          "object": "tcache"
+        },
+        {
+          "subject": "chunk",
+          "relation": "be",
+          "object": "tcache"
+        },
+        {
+          "subject": "tcache",
+          "relation": "exploit",
+          "object": "tcache"
+        },
+        {
+          "subject": "an attacker",
+          "relation": "overwrite",
+          "object": "tcache"
+        },
+        {
+          "subject": "the attacker",
+          "relation": "trigger",
+          "object": "tcache"
+        },
+        {
+          "subject": "the attacker",
+          "relation": "write",
+          "object": "heap_base"
+        },
+        {
+          "subject": "tcache",
+          "relation": "overwrite",
+          "object": "tcache"
+        }
+      ],
+      "taxonomy": {
+        "bugs": [
+          "overflow"
+        ],
+        "primitives": [
+          "arbitrary_allocation"
+        ],
+        "hooks": [],
+        "functions": [
+          "free",
+          "malloc"
+        ],
+        "leak_targets": [],
+        "capabilities": [],
+        "leaks": [
+          "heap_base"
+        ],
+        "structures": [
+          "chunk",
+          "largebin",
+          "tcache",
+          "unsorted_bin"
+        ],
+        "metadata_fields": [],
+        "techniques": [
+          "chunk_overlap"
+        ],
+        "goals": [],
+        "gadgets": [],
+        "others": [
+          "carefully calculated large size",
+          "size class",
+          "specific size class",
+          "target address"
+        ]
+      },
+      "exploit_ir": {
+        "bugs": [
+          "overflow"
+        ],
+        "primitives": [
+          "arbitrary_allocation"
+        ],
+        "techniques": [
+          "chunk_overlap"
+        ],
+        "capabilities": [],
+        "leak_targets": [],
+        "targets": [
+          "heap_base"
+        ],
+        "goals": [],
+        "transitions": [],
+        "metadata": {
+          "source": "nlp_writeup_extraction",
+          "confidence_score": 0.85,
+          "fusion_ready": true,
+          "engine_version": "3.0-multi-writeup"
+        }
+      }
+    },
+    "rop_chain.txt": {
+      "vars": [
+        "/bin/sh",
+        "/sh string address",
+        "__environ",
+        "address",
+        "control_flow_hijack",
+        "fd",
+        "libc_base",
+        "pop_rdi",
+        "return_address",
+        "rip",
+        "rop_chain",
+        "shell",
+        "stack_base",
+        "stack_leak",
+        "system",
+        "tcache",
+        "unsorted_bin"
+      ],
+      "states": [
+        {
+          "subject": "rop_chain",
+          "relation": "hijack",
+          "object": "system"
+        },
+        {
+          "subject": "rop_chain",
+          "relation": "write",
+          "object": "return_address"
+        },
+        {
+          "subject": "we",
+          "relation": "overwrite",
+          "object": "rip"
+        }
+      ],
+      "taxonomy": {
+        "bugs": [],
+        "primitives": [
+          "arbitrary_allocation",
+          "arbitrary_write"
+        ],
+        "hooks": [],
+        "functions": [
+          "shell",
+          "system"
+        ],
+        "leak_targets": [
+          "__environ"
+        ],
+        "capabilities": [
+          "control_flow_hijack",
+          "libc_leak",
+          "stack_leak"
+        ],
+        "leaks": [
+          "libc_base",
+          "stack_base"
+        ],
+        "structures": [
+          "tcache",
+          "unsorted_bin"
+        ],
+        "metadata_fields": [
+          "fd"
+        ],
+        "techniques": [
+          "environ_leak",
+          "rop_chain",
+          "tcache_poisoning"
+        ],
+        "goals": [
+          "control_flow_hijack"
+        ],
+        "gadgets": [
+          "pop_rdi",
+          "return_address"
+        ],
+        "others": [
+          "/bin/sh",
+          "/sh string address",
+          "address",
+          "rip"
+        ]
+      },
+      "exploit_ir": {
+        "bugs": [],
+        "primitives": [
+          "arbitrary_allocation",
+          "arbitrary_write"
+        ],
+        "techniques": [
+          "environ_leak",
+          "rop_chain",
+          "tcache_poisoning"
+        ],
+        "capabilities": [
+          "control_flow_hijack",
+          "libc_leak",
+          "stack_leak"
+        ],
+        "leak_targets": [
+          "__environ"
+        ],
+        "targets": [
+          "__environ",
+          "fd",
+          "libc_base",
+          "return_address",
+          "rip",
+          "stack_base"
+        ],
+        "goals": [
+          "control_flow_hijack"
+        ],
+        "transitions": [
+          {
+            "from": "tcache_poisoning",
+            "to": "arbitrary_allocation",
+            "action": "malloc_at_target"
+          },
+          {
+            "from": "arbitrary_allocation",
+            "to": "arbitrary_write",
+            "action": "write_at_allocated_target"
+          },
+          {
+            "from": "arbitrary_write",
+            "to": "control_flow_hijack",
+            "action": "overwrite_hook_or_ret"
+          },
+          {
+            "from": "libc_leak",
+            "to": "stack_leak",
+            "action": "read_environ"
+          },
+          {
+            "from": "environ_leak",
+            "to": "stack_leak",
+            "action": "read_environ_ptr"
+          },
+          {
+            "from": "rop_chain",
+            "to": "control_flow_hijack",
+            "action": "execute_rop"
+          }
+        ],
+        "metadata": {
+          "source": "nlp_writeup_extraction",
+          "confidence_score": 0.85,
+          "fusion_ready": true,
+          "engine_version": "3.0-multi-writeup"
+        }
+      }
+    },
+    "safe_linking_bypasses.txt": {
+      "vars": [
+        "(ptr ^ key",
+        "chunk",
+        "fastbin",
+        "ptr",
+        "safe_linking",
+        "tcache"
+      ],
+      "states": [],
+      "taxonomy": {
+        "bugs": [],
+        "primitives": [],
+        "hooks": [],
+        "functions": [],
+        "leak_targets": [],
+        "capabilities": [],
+        "leaks": [],
+        "structures": [
+          "chunk",
+          "fastbin",
+          "tcache"
+        ],
+        "metadata_fields": [],
+        "techniques": [
+          "safe_linking"
+        ],
+        "goals": [],
+        "gadgets": [],
+        "others": [
+          "(ptr ^ key",
+          "ptr"
+        ]
+      },
+      "exploit_ir": {
+        "bugs": [],
+        "primitives": [],
+        "techniques": [
+          "safe_linking"
+        ],
+        "capabilities": [],
+        "leak_targets": [],
+        "targets": [],
+        "goals": [],
+        "transitions": [],
+        "metadata": {
+          "source": "nlp_writeup_extraction",
+          "confidence_score": 0.85,
+          "fusion_ready": true,
+          "engine_version": "3.0-multi-writeup"
+        }
+      }
+    },
+    "tcache_poisoning.txt": {
+      "vars": [
+        "/bin/sh",
+        "0x410",
+        "0x68",
+        "__free_hook",
+        "__malloc_hook",
+        "chunk",
+        "chunk_size",
+        "double_free",
+        "fake_chunk",
+        "fd",
+        "fixed size",
+        "free",
+        "got",
+        "heap_base",
+        "libc_base",
+        "our target address",
+        "ptr",
+        "ptr xor",
+        "safe_linking",
+        "shell",
+        "system",
+        "target address",
+        "tcache",
+        "tcache_poisoning",
+        "uaf",
+        "unsorted_bin",
+        "xor_key"
+      ],
+      "states": [
+        {
+          "subject": "we",
+          "relation": "allocate",
+          "object": "chunk"
+        },
+        {
+          "subject": "it",
+          "relation": "free",
+          "object": "chunk"
+        },
+        {
+          "subject": "we",
+          "relation": "leak",
+          "object": "heap_base"
+        },
+        {
+          "subject": "we",
+          "relation": "read",
+          "object": "fd"
+        },
+        {
+          "subject": "we",
+          "relation": "overwrite",
+          "object": "fd"
+        },
+        {
+          "subject": "we",
+          "relation": "poison",
+          "object": "tcache"
+        },
+        {
+          "subject": "we",
+          "relation": "allocate",
+          "object": "got"
+        },
+        {
+          "subject": "we",
+          "relation": "leak",
+          "object": "libc_base"
+        },
+        {
+          "subject": "we",
+          "relation": "forge",
+          "object": "tcache"
+        },
+        {
+          "subject": "we",
+          "relation": "overwrite",
+          "object": "chunk"
+        },
+        {
+          "subject": "we",
+          "relation": "free",
+          "object": "chunk"
+        },
+        {
+          "subject": "we",
+          "relation": "overwrite",
+          "object": "system"
+        },
+        {
+          "subject": "we",
+          "relation": "trigger",
+          "object": "free"
+        },
+        {
+          "subject": "we",
+          "relation": "trigger",
+          "object": "shell"
+        },
+        {
+          "subject": "we",
+          "relation": "bypass",
+          "object": "tcache"
+        },
+        {
+          "subject": "chunk",
+          "relation": "poison",
+          "object": "fd"
+        }
+      ],
+      "taxonomy": {
+        "bugs": [
+          "double_free",
+          "uaf"
+        ],
+        "primitives": [
+          "arbitrary_allocation",
+          "arbitrary_free",
+          "arbitrary_write",
+          "heap_leak"
+        ],
+        "hooks": [
+          "__free_hook",
+          "__malloc_hook",
+          "got"
+        ],
+        "functions": [
+          "free",
+          "shell",
+          "system"
+        ],
+        "leak_targets": [
+          "xor_key"
+        ],
+        "capabilities": [
+          "libc_leak"
+        ],
+        "leaks": [
+          "heap_base",
+          "libc_base"
+        ],
+        "structures": [
+          "chunk",
+          "fake_chunk",
+          "tcache",
+          "unsorted_bin"
+        ],
+        "metadata_fields": [
+          "chunk_size",
+          "fd"
+        ],
+        "techniques": [
+          "fake_unsorted_bin",
+          "safe_linking",
+          "tcache_poisoning",
+          "unsortedbin_leak"
+        ],
+        "goals": [
+          "control_flow_hijack"
+        ],
+        "gadgets": [],
+        "others": [
+          "/bin/sh",
+          "0x410",
+          "0x68",
+          "fixed size",
+          "our target address",
+          "ptr",
+          "ptr xor",
+          "target address"
+        ]
+      },
+      "exploit_ir": {
+        "bugs": [
+          "double_free",
+          "uaf"
+        ],
+        "primitives": [
+          "arbitrary_allocation",
+          "arbitrary_free",
+          "arbitrary_write",
+          "heap_leak"
+        ],
+        "techniques": [
+          "fake_unsorted_bin",
+          "safe_linking",
+          "tcache_poisoning",
+          "unsortedbin_leak"
+        ],
+        "capabilities": [
+          "libc_leak"
+        ],
+        "leak_targets": [
+          "xor_key"
+        ],
+        "targets": [
+          "__free_hook",
+          "__malloc_hook",
+          "fd",
+          "got",
+          "heap_base",
+          "libc_base"
+        ],
+        "goals": [
+          "control_flow_hijack"
+        ],
+        "transitions": [
+          {
+            "from": "uaf",
+            "to": "arbitrary_free",
+            "action": "trigger_uaf"
+          },
+          {
+            "from": "arbitrary_free",
+            "to": "tcache_poisoning",
+            "action": "poison_bin"
+          },
+          {
+            "from": "tcache_poisoning",
+            "to": "arbitrary_allocation",
+            "action": "malloc_at_target"
+          },
+          {
+            "from": "arbitrary_allocation",
+            "to": "arbitrary_write",
+            "action": "write_at_allocated_target"
+          },
+          {
+            "from": "arbitrary_write",
+            "to": "control_flow_hijack",
+            "action": "overwrite_hook_or_ret"
+          },
+          {
+            "from": "unsortedbin_leak",
+            "to": "libc_leak",
+            "action": "read_main_arena"
+          },
+          {
+            "from": "fake_unsorted_bin",
+            "to": "libc_leak",
+            "action": "read_fake_main_arena"
+          }
+        ],
+        "metadata": {
+          "source": "nlp_writeup_extraction",
+          "confidence_score": 0.85,
+          "fusion_ready": true,
+          "engine_version": "3.0-multi-writeup"
+        }
+      }
+    },
+    "tcache_struct_overwrite.txt": {
+      "vars": [
+        "(uint16_t",
+        "0x0100",
+        "0x10",
+        "0x290",
+        "__free_hook",
+        "address",
+        "arbitrary_allocation",
+        "chunk",
+        "fd",
+        "free",
+        "got",
+        "heap_base",
+        "malloc",
+        "overflow",
+        "p64(target_addr)",
+        "return_address",
+        "safe_linking",
+        "size",
+        "stack_canary",
+        "target address",
+        "tcache",
+        "tcache_perthread_struct",
+        "uaf",
+        "writable address"
+      ],
+      "states": [
+        {
+          "subject": "the structure",
+          "relation": "allocate",
+          "object": "chunk"
+        },
+        {
+          "subject": "chunk",
+          "relation": "be",
+          "object": "heap_base"
+        },
+        {
+          "subject": "we",
+          "relation": "bypass",
+          "object": "safe_linking"
+        },
+        {
+          "subject": "this",
+          "relation": "corrupt",
+          "object": "tcache"
+        },
+        {
+          "subject": "we",
+          "relation": "allocate",
+          "object": "tcache"
+        }
+      ],
+      "taxonomy": {
+        "bugs": [
+          "overflow",
+          "uaf"
+        ],
+        "primitives": [
+          "arbitrary_allocation",
+          "arbitrary_free",
+          "arbitrary_write"
+        ],
+        "hooks": [
+          "__free_hook",
+          "got"
+        ],
+        "functions": [
+          "free",
+          "malloc"
+        ],
+        "leak_targets": [
+          "stack_canary"
+        ],
+        "capabilities": [
+          "libc_leak"
+        ],
+        "leaks": [
+          "heap_base"
+        ],
+        "structures": [
+          "chunk",
+          "tcache",
+          "tcache_perthread_struct"
+        ],
+        "metadata_fields": [
+          "fd",
+          "size"
+        ],
+        "techniques": [
+          "chunk_overlap",
+          "safe_linking",
+          "tcache_poisoning"
+        ],
+        "goals": [
+          "control_flow_hijack"
+        ],
+        "gadgets": [
+          "return_address"
+        ],
+        "others": [
+          "(uint16_t",
+          "0x0100",
+          "0x10",
+          "0x290",
+          "address",
+          "p64(target_addr)",
+          "target address",
+          "writable address"
+        ]
+      },
+      "exploit_ir": {
+        "bugs": [
+          "overflow",
+          "uaf"
+        ],
+        "primitives": [
+          "arbitrary_allocation",
+          "arbitrary_free",
+          "arbitrary_write"
+        ],
+        "techniques": [
+          "chunk_overlap",
+          "safe_linking",
+          "tcache_poisoning"
+        ],
+        "capabilities": [
+          "libc_leak"
+        ],
+        "leak_targets": [
+          "stack_canary"
+        ],
+        "targets": [
+          "__free_hook",
+          "fd",
+          "got",
+          "heap_base",
+          "return_address",
+          "stack_canary"
+        ],
+        "goals": [
+          "control_flow_hijack"
+        ],
+        "transitions": [
+          {
+            "from": "uaf",
+            "to": "arbitrary_free",
+            "action": "trigger_uaf"
+          },
+          {
+            "from": "arbitrary_free",
+            "to": "tcache_poisoning",
+            "action": "poison_bin"
+          },
+          {
+            "from": "tcache_poisoning",
+            "to": "arbitrary_allocation",
+            "action": "malloc_at_target"
+          },
+          {
+            "from": "arbitrary_allocation",
+            "to": "arbitrary_write",
+            "action": "write_at_allocated_target"
+          },
+          {
+            "from": "arbitrary_write",
+            "to": "control_flow_hijack",
+            "action": "overwrite_hook_or_ret"
+          }
+        ],
+        "metadata": {
+          "source": "nlp_writeup_extraction",
+          "confidence_score": 0.85,
+          "fusion_ready": true,
+          "engine_version": "3.0-multi-writeup"
+        }
+      }
+    },
+    "uaf_leak.txt": {
+      "vars": [
+        "0x60",
+        "__environ",
+        "arbitrary_allocation",
+        "bk",
+        "chunk",
+        "chunk_overlap",
+        "chunk_size",
+        "control_flow_hijack",
+        "double_free",
+        "fake_chunk",
+        "fd",
+        "free",
+        "heap metadata",
+        "heap_base",
+        "libc address",
+        "libc_base",
+        "main_arena",
+        "next_ptr",
+        "overwrite heap metadata",
+        "return_address",
+        "safe_linking",
+        "stack_base",
+        "stack_pointer",
+        "tcache",
+        "tcache_poisoning",
+        "uaf",
+        "unsorted_bin",
+        "xor_key"
+      ],
+      "states": [
+        {
+          "subject": "chunk",
+          "relation": "free",
+          "object": "tcache"
+        },
+        {
+          "subject": "fd",
+          "relation": "contain",
+          "object": "tcache"
+        },
+        {
+          "subject": "libc_base",
+          "relation": "leak",
+          "object": "stack_base"
+        },
+        {
+          "subject": "us",
+          "relation": "free",
+          "object": "chunk"
+        },
+        {
+          "subject": "we",
+          "relation": "read",
+          "object": "chunk"
+        },
+        {
+          "subject": "we",
+          "relation": "write",
+          "object": "chunk"
+        }
+      ],
+      "taxonomy": {
+        "bugs": [
+          "double_free",
+          "uaf"
+        ],
+        "primitives": [
+          "arbitrary_allocation",
+          "arbitrary_free",
+          "heap_leak"
+        ],
+        "hooks": [],
+        "functions": [
+          "free"
+        ],
+        "leak_targets": [
+          "__environ",
+          "main_arena",
+          "xor_key"
+        ],
+        "capabilities": [
+          "control_flow_hijack",
+          "libc_leak",
+          "stack_leak"
+        ],
+        "leaks": [
+          "heap_base",
+          "libc_base",
+          "stack_base"
+        ],
+        "structures": [
+          "chunk",
+          "fake_chunk",
+          "tcache",
+          "unsorted_bin"
+        ],
+        "metadata_fields": [
+          "bk",
+          "chunk_size",
+          "fd"
+        ],
+        "techniques": [
+          "chunk_overlap",
+          "environ_leak",
+          "fake_unsorted_bin",
+          "safe_linking",
+          "tcache_poisoning",
+          "unsortedbin_leak"
+        ],
+        "goals": [],
+        "gadgets": [
+          "return_address"
+        ],
+        "others": [
+          "0x60",
+          "heap metadata",
+          "libc address",
+          "next_ptr",
+          "overwrite heap metadata",
+          "stack_pointer"
+        ]
+      },
+      "exploit_ir": {
+        "bugs": [
+          "double_free",
+          "uaf"
+        ],
+        "primitives": [
+          "arbitrary_allocation",
+          "arbitrary_free",
+          "heap_leak"
+        ],
+        "techniques": [
+          "chunk_overlap",
+          "environ_leak",
+          "fake_unsorted_bin",
+          "safe_linking",
+          "tcache_poisoning",
+          "unsortedbin_leak"
+        ],
+        "capabilities": [
+          "control_flow_hijack",
+          "libc_leak",
+          "stack_leak"
+        ],
+        "leak_targets": [
+          "__environ",
+          "main_arena",
+          "xor_key"
+        ],
+        "targets": [
+          "__environ",
+          "bk",
+          "fd",
+          "heap_base",
+          "libc_base",
+          "main_arena",
+          "return_address",
+          "stack_base"
+        ],
+        "goals": [],
+        "transitions": [
+          {
+            "from": "uaf",
+            "to": "arbitrary_free",
+            "action": "trigger_uaf"
+          },
+          {
+            "from": "arbitrary_free",
+            "to": "tcache_poisoning",
+            "action": "poison_bin"
+          },
+          {
+            "from": "tcache_poisoning",
+            "to": "arbitrary_allocation",
+            "action": "malloc_at_target"
+          },
+          {
+            "from": "chunk_overlap",
+            "to": "heap_leak",
+            "action": "read_oob"
+          },
+          {
+            "from": "unsortedbin_leak",
+            "to": "libc_leak",
+            "action": "read_main_arena"
+          },
+          {
+            "from": "fake_unsorted_bin",
+            "to": "libc_leak",
+            "action": "read_fake_main_arena"
+          },
+          {
+            "from": "libc_leak",
+            "to": "stack_leak",
+            "action": "read_environ"
+          },
+          {
+            "from": "environ_leak",
+            "to": "stack_leak",
+            "action": "read_environ_ptr"
+          }
+        ],
+        "metadata": {
+          "source": "nlp_writeup_extraction",
+          "confidence_score": 0.85,
+          "fusion_ready": true,
+          "engine_version": "3.0-multi-writeup"
+        }
+      }
+    },
+    "unsorted_bin_leak.txt": {
+      "vars": [
+        "0x10",
+        "0x410",
+        "0x60",
+        "0x70",
+        "__malloc_hook",
+        "base address",
+        "bk",
+        "chunk",
+        "chunk_size",
+        "fake_chunk",
+        "fd",
+        "fixed offset",
+        "free",
+        "heap_base",
+        "leaked_addr",
+        "libc address",
+        "libc_base",
+        "libc_leak",
+        "main_arena",
+        "prev_size",
+        "tcache",
+        "unsorted_bin"
+      ],
+      "states": [
+        {
+          "subject": "unsorted_bin",
+          "relation": "contain",
+          "object": "main_arena"
+        },
+        {
+          "subject": "we",
+          "relation": "read",
+          "object": "chunk"
+        },
+        {
+          "subject": "we",
+          "relation": "corrupt",
+          "object": "chunk"
+        },
+        {
+          "subject": "chunk",
+          "relation": "be",
+          "object": "unsorted_bin"
+        }
+      ],
+      "taxonomy": {
+        "bugs": [],
+        "primitives": [
+          "arbitrary_allocation",
+          "arbitrary_write"
+        ],
+        "hooks": [
+          "__malloc_hook"
+        ],
+        "functions": [
+          "free"
+        ],
+        "leak_targets": [
+          "main_arena"
+        ],
+        "capabilities": [
+          "libc_leak"
+        ],
+        "leaks": [
+          "heap_base",
+          "libc_base"
+        ],
+        "structures": [
+          "chunk",
+          "fake_chunk",
+          "tcache",
+          "unsorted_bin"
+        ],
+        "metadata_fields": [
+          "bk",
+          "chunk_size",
+          "fd",
+          "prev_size"
+        ],
+        "techniques": [
+          "fake_unsorted_bin",
+          "tcache_poisoning"
+        ],
+        "goals": [
+          "control_flow_hijack"
+        ],
+        "gadgets": [],
+        "others": [
+          "0x10",
+          "0x410",
+          "0x60",
+          "0x70",
+          "base address",
+          "fixed offset",
+          "leaked_addr",
+          "libc address"
+        ]
+      },
+      "exploit_ir": {
+        "bugs": [],
+        "primitives": [
+          "arbitrary_allocation",
+          "arbitrary_write"
+        ],
+        "techniques": [
+          "fake_unsorted_bin",
+          "tcache_poisoning"
+        ],
+        "capabilities": [
+          "libc_leak"
+        ],
+        "leak_targets": [
+          "main_arena"
+        ],
+        "targets": [
+          "__malloc_hook",
+          "bk",
+          "fd",
+          "heap_base",
+          "libc_base",
+          "main_arena"
+        ],
+        "goals": [
+          "control_flow_hijack"
+        ],
+        "transitions": [
+          {
+            "from": "tcache_poisoning",
+            "to": "arbitrary_allocation",
+            "action": "malloc_at_target"
+          },
+          {
+            "from": "arbitrary_allocation",
+            "to": "arbitrary_write",
+            "action": "write_at_allocated_target"
+          },
+          {
+            "from": "arbitrary_write",
+            "to": "control_flow_hijack",
+            "action": "overwrite_hook_or_ret"
+          },
+          {
+            "from": "fake_unsorted_bin",
+            "to": "libc_leak",
+            "action": "read_fake_main_arena"
+          }
+        ],
+        "metadata": {
+          "source": "nlp_writeup_extraction",
+          "confidence_score": 0.85,
+          "fusion_ready": true,
+          "engine_version": "3.0-multi-writeup"
+        }
+      }
     }
+  },
+  "knowledge_base": {
+    "malloc_rules": {
+      "tcache_max_size": 1040,
+      "tcache_max_per_size": 7
+    },
+    "active_mitigations": [
+      {
+        "name": "safe_linking",
+        "description": "XOR-encode FD pointers to prevent pointer forgery",
+        "bypass": {
+          "method": "Leak heap address, compute XOR key",
+          "requirements": [
+            "heap_leak"
+          ],
+          "formula": "protected_ptr = target ^ (heap_base >> 12)"
+        }
+      },
+      {
+        "name": "tcache_double_free_detection",
+        "description": "Walk tcache list to detect if chunk already present",
+        "bypass": {
+          "method_1": "Use different size (goes to different bin)",
+          "method_2": "Free into unsorted bin (tcache full)",
+          "method_3": "Overwrite tcache counts to skip check"
+        }
+      },
+      {
+        "name": "hook_removal",
+        "description": "glibc 2.34+ removes __malloc_hook, __free_hook, __realloc_hook",
+        "alternatives": [
+          "ROP via return address overwrite",
+          "_IO_FILE vtable attack (house of orange)",
+          "tcache struct overwrite",
+          "environ leak + stack pivot"
+        ]
+      }
+    ],
+    "exploit_phases": {
+      "phase_1_leak": {
+        "name": "Information Leak",
+        "goals": [
+          "heap_leak",
+          "libc_leak",
+          "stack_leak",
+          "canary_leak"
+        ],
+        "description": "Obtain base addresses for ASLR bypass",
+        "order": "heap_leak typically first (needed for safe linking bypass), then libc_leak, then stack_leak"
+      },
+      "phase_2_primitive": {
+        "name": "Exploit Primitive",
+        "goals": [
+          "arbitrary_allocation",
+          "arbitrary_write",
+          "arbitrary_free"
+        ],
+        "description": "Gain ability to read/write/allocate at controlled addresses",
+        "requires": [
+          "bug_exploitation",
+          "bypass_mitigations"
+        ]
+      },
+      "phase_3_code_execution": {
+        "name": "Code Execution",
+        "goals": [
+          "control_flow_hijack",
+          "shell"
+        ],
+        "description": "Redirect execution flow to gain code execution",
+        "requires": [
+          "arbitrary_write",
+          "target_address"
+        ]
+      }
+    },
+    "decision_rules": {
+      "when_to_use_fake_unsorted": {
+        "condition": "Cannot fill tcache OR need libc leak with limited allocations",
+        "advantages": [
+          "Works with few allocations",
+          "Does not require tcache fill"
+        ],
+        "disadvantages": [
+          "Complex fake chunk setup",
+          "Must handle prev_inuse checks"
+        ]
+      },
+      "when_to_use_tcache_fill": {
+        "condition": "Can allocate/free freely, no allocation limit",
+        "advantages": [
+          "Simple",
+          "Reliable"
+        ],
+        "disadvantages": [
+          "Requires 8+ allocations",
+          "May hit allocation limit"
+        ]
+      },
+      "when_to_use_environ": {
+        "condition": "Have libc leak, need stack address",
+        "advantages": [
+          "Direct stack pointer",
+          "No need for stack canary leak"
+        ],
+        "disadvantages": [
+          "Requires arbitrary allocation to __environ-24"
+        ]
+      },
+      "when_to_use_rop": {
+        "condition": "Have stack write target, CET not enforced",
+        "advantages": [
+          "Reliable code execution"
+        ],
+        "disadvantages": [
+          "CET may block",
+          "Need gadgets"
+        ]
+      },
+      "when_to_use_one_gadget": {
+        "condition": "Have stack write target, constraints satisfied",
+        "advantages": [
+          "Single gadget, no ROP chain needed"
+        ],
+        "disadvantages": [
+          "Constraints may not be met",
+          "CET IBT may block"
+        ]
+      },
+      "when_to_use_malloc_consolidate": {
+        "condition": "Have scanf input, need libc leak without tcache fill",
+        "advantages": [
+          "Automatic tcache consolidation",
+          "No manual fill needed"
+        ],
+        "disadvantages": [
+          "Requires scanf usage",
+          "Large input needed"
+        ]
+      },
+      "when_to_use_heap_key_leak": {
+        "condition": "Have UAF, need to bypass safe linking",
+        "advantages": [
+          "Simple",
+          "Direct key recovery"
+        ],
+        "disadvantages": [
+          "Requires tcache free"
+        ]
+      }
+    }
+  }
 }

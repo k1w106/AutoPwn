@@ -502,6 +502,66 @@
       }
     },
     {
+      "id": "proc_mem_libc_leak",
+      "name": "Proc Mem Libc Leak",
+      "description": "Parse /proc/pid/maps to find libc base address. Requires /proc filesystem access with same UID. Bypasses need for heap-based libc leaks.",
+      "glibc_versions": {"min": "2.26", "max": "2.39"},
+      "bug_type": "uaf",
+      "prerequisites": {
+        "bugs": ["uaf"],
+        "capabilities": [],
+        "operations": [],
+        "conditions": ["proc_fs_accessible"]
+      },
+      "mitigations_bypassed": ["aslr"],
+      "produces": ["libc_leak"],
+      "phase": "phase_1_leak",
+      "pattern_hints": {
+        "observable_trace": "Process reads its own /proc/pid/maps file to find libc mapping",
+        "required_operations": "Must have proc filesystem access"
+      }
+    },
+    {
+      "id": "proc_mem_stack_leak",
+      "name": "Proc Mem Stack Leak",
+      "description": "Read libc.symbols['environ'] value via /proc/pid/mem, then scan the stack region for the main return address to locate the ROP target.",
+      "glibc_versions": {"min": "2.26", "max": "2.39"},
+      "bug_type": "uaf",
+      "prerequisites": {
+        "bugs": ["uaf"],
+        "capabilities": ["libc_leak"],
+        "operations": [],
+        "conditions": ["proc_fs_accessible"]
+      },
+      "mitigations_bypassed": ["aslr", "stack_canary"],
+      "produces": ["stack_leak"],
+      "phase": "phase_1_leak",
+      "pattern_hints": {
+        "observable_trace": "Process reads /proc/pid/mem at environ address, then scans stack for ret addr pattern",
+        "required_operations": "Must have proc filesystem access and libc leak"
+      }
+    },
+    {
+      "id": "proc_mem_stack_write",
+      "name": "Proc Mem Stack Write",
+      "description": "Write a ROP chain directly to the stack via /proc/pid/mem using os.pwrite (unbuffered I/O). Achieves arbitrary code execution without heap manipulation.",
+      "glibc_versions": {"min": "2.26", "max": "2.39"},
+      "bug_type": "uaf",
+      "prerequisites": {
+        "bugs": ["uaf"],
+        "capabilities": ["libc_leak", "stack_leak"],
+        "operations": [],
+        "conditions": ["proc_fs_accessible"]
+      },
+      "mitigations_bypassed": ["aslr", "stack_canary", "nx", "relro", "pie"],
+      "produces": ["arbitrary_write"],
+      "phase": "phase_3_exploit",
+      "pattern_hints": {
+        "observable_trace": "Process writes ROP chain to stack via /proc/pid/mem using pwrite syscall",
+        "required_operations": "Must have proc filesystem access with write permission"
+      }
+    },
+    {
       "id": "malloc_consolidate_trigger",
       "name": "Malloc Consolidate Trigger",
       "description": "Trigger malloc_consolidate by sending large input to scanf or by allocating a large chunk (>= FASTBIN_CONSOLIDATION_THRESHOLD). Merges fastbin chunks into unsorted bin.",
