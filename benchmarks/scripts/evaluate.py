@@ -255,12 +255,15 @@ class ExploitEvaluator:
         content_lower = self.exploit_content.lower()
 
         vulnerability_patterns = {
-            'uaf': ['use.after.free', 'uaf', 'dangling', 'freed.chunk', 'after.free'],
-            'double_free': ['double.free', 'double_free', 'free.twice'],
-            'heap_overflow': ['heap.overflow', 'overflow', 'chunk.overlap'],
-            'off_by_one': ['off.by.one', 'null.byte.overflow', 'single.byte'],
-            'tcache_poisoning': ['tcache.poison', 'tcache.dup', 'tcache.attack'],
-            'index_confusion': ['index.confusion', 'index.mismatch'],
+            'uaf': ['use after free', 'uaf', 'dangling', 'freed chunk', 'after free',
+                    'use.after.free', 'freed.chunk', 'after.free'],
+            'double_free': ['double free', 'double_free', 'free twice', 'double.free', 'free.twice'],
+            'heap_overflow': ['heap overflow', 'overflow', 'chunk overlap', 'heap.overflow', 'chunk.overlap'],
+            'off_by_one': ['off by one', 'null byte', 'single byte', 'off.by.one', 'null.byte', 'single.byte'],
+            'tcache_poisoning': ['tcache poison', 'tcache dup', 'tcache attack',
+                                 'tcache.poison', 'tcache.dup', 'tcache.attack',
+                                 'tcache_poisoning', 'tcache_poison'],
+            'index_confusion': ['index confusion', 'index mismatch', 'index.confusion', 'index.mismatch'],
         }
 
         for vuln, patterns in vulnerability_patterns.items():
@@ -314,12 +317,15 @@ class ExploitEvaluator:
         content_lower = self.exploit_content.lower()
 
         primitive_patterns = {
-            'heap_leak': ['heap.base', 'heap.leak', 'heap_addr', 'heap_base'],
-            'libc_leak': ['libc.base', 'libc.leak', 'libc.address', 'main_arena'],
-            'stack_leak': ['stack.leak', 'stack_base', 'environ', 'stack_addr'],
-            'arbitrary_write': ['arbitrary.write', 'write.what.where', 'tcache.poison'],
-            'arbitrary_allocation': ['arbitrary.alloc', 'controlled.malloc'],
-            'arbitrary_free': ['arbitrary.free', 'controlled.free'],
+            'heap_leak': ['heap_base', 'heap leak', 'heap.base', 'heap.leak', 'heap_addr'],
+            'libc_leak': ['libc.address', 'libc leak', 'libc_leak', 'libc.base', 'libc.leak', 'main_arena'],
+            'stack_leak': ['stack_leak', 'stack leak', 'stack_base', 'environ', 'stack_addr', 'stack.leak', 'stack.base'],
+            'arbitrary_write': ['arbitrary write', 'arbitrary_write', 'write what where',
+                                'tcache_poison', 'tcache.poison', 'write.what.where'],
+            'arbitrary_allocation': ['arbitrary allocation', 'arbitrary_allocation',
+                                     'arbitrary alloc', 'arbitrary.alloc', 'controlled.malloc',
+                                     'controlled malloc'],
+            'arbitrary_free': ['arbitrary free', 'arbitrary_free', 'arbitrary.free', 'controlled.free'],
         }
 
         for prim, patterns in primitive_patterns.items():
@@ -411,11 +417,18 @@ class ExploitEvaluator:
         if not ir_stages:
             return False
 
-        stage_names = ' '.join([stage.get('name', '').lower() for stage in ir_stages])
+        # Check both stage name and technique_id field
+        stage_names = ' '.join(
+            stage.get('name', '').lower() for stage in ir_stages
+        )
+        stage_techniques = ' '.join(
+            stage.get('technique', '').lower() for stage in ir_stages
+        )
+        combined = stage_names + ' ' + stage_techniques
 
         matches = 0
         for technique in expected_techniques:
-            if technique.lower() in stage_names:
+            if technique.lower() in combined:
                 matches += 1
 
         return matches > 0

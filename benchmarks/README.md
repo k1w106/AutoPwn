@@ -34,17 +34,6 @@ benchmarks/
     └── solve.py                 # Reference solution (nếu có)
 ```
 
-## Challenges
-
-| ID | CTF | Difficulty | Vulnerability Types |
-|----|-----|------------|---------------------|
-| justCTF-2025-babyheap | justCTF 2025 | Medium | UAF, Tcache Poisoning |
-| amateurs-ctf-2024-heaps-of-fun | Amateurs CTF 2024 | Medium | UAF |
-| 0ctf-2017-babyheap | 0CTF 2017 | Hard | Heap Overflow, Double Free |
-| defcon-quals-2019-babyheap | DEF CON Quals 2019 | Hard | Off-by-one, Tcache Poisoning |
-| backdoor-ctf-2021-babyheap | BackdoorCTF 2021 | Medium | Index Confusion, UAF |
-| picoctf-2024-heap3 | picoCTF 2024 | Easy | UAF |
-
 ## Cách sử dụng
 
 ### 1. Thêm challenge mới
@@ -106,17 +95,18 @@ python evaluate.py ../../challenges.json ../results/justCTF-2025-babyheap
 - **clear_documentation** (30%): Comments giải thích rõ mỗi address làm gì?
 - **modular_design** (30%): Address calculations modular và dễ sửa?
 
-## Bảng điểm
 
-| Score | Grade |
-|-------|-------|
-| 0.90+ | A+ |
-| 0.80+ | A |
-| 0.70+ | B+ |
-| 0.60+ | B |
-| 0.50+ | C |
-| 0.40+ | D |
-| <0.40 | F |
+## Ghi chú kỹ thuật cho justCTF-2025-babyheap
+
+Binary sử dụng custom `ld-linux-x86-64.so.2` patch hàm `_int_free` để:
+- **Obfuscate tcache key**: So sánh `e->key` với tcache struct bị sai lệch, khiến `tcache_put` không bao giờ được gọi (count giữ nguyên 1). Double-free truyền thống không hoạt động.
+- **Không kiểm tra double-free**: Binary không emit lỗi "double free detected in tcache 2" — chunk silently bị drop.
+
+Do đó, các kỹ thuật heap như `unsortedbin_leak`, `tcache_poisoning` (dùng double-free), `house_of_botcake` đều không khả thi. Hệ thống tự động chọn kỹ thuật `/proc/mem` làm giải pháp thay thế:
+1. **Heap leak**: UAF + decrypt safe-linking (fd = 0 → heap_base = xor_key << 12)
+2. **Libc leak**: `/proc/pid/maps` → parse mapping `r--p` chứa "libc"
+3. **Stack leak**: `/proc/pid/mem` → read `environ` → scan stack cho return address (`libc + 0x2a1ca`)
+4. **Shell**: `/proc/pid/mem` → `os.pwrite` ROP chain (`ret*3 + pop_rdi + /bin/sh + system`)
 
 ## Lưu ý quan trọng
 

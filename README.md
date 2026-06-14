@@ -1,5 +1,21 @@
 # AutoPwn: Artifact-Assisted Heap Exploit Generation
 
+## Thông tin nhóm
+
+| Mã nhóm | Mã đề tài |
+|---------|-----------|
+| G14     | CK11      |
+
+### Thành viên
+
+| STT | Họ và tên       | MSSV     |
+|-----|-----------------|----------|
+| 1   | Huỳnh Nhật Duy  | 24520375 |
+| 2   | Nguyễn Hoàng Quý | 24521494 |
+| 3   | Lê Quốc Khôi    | 23520769 |
+
+---
+
 Framework tự động sinh mã khai thác lỗi Heap cho CTF PWN, lấy cảm hứng từ paper **AutoPwn (IEEE TIFS 2024)**.
 
 ## Tính năng nổi bật
@@ -10,21 +26,8 @@ Framework tự động sinh mã khai thác lỗi Heap cho CTF PWN, lấy cảm h
 - **Deep Technique Verification**: Sử dụng **angr** để xác thực tính khả thi của các kỹ thuật khai thác (như Tcache Poisoning, House of Force) trước khi sinh mã.
 - **Evolutionary Planner**: Thuật toán DFSExplore tìm kiếm chuỗi khai thác tối ưu, ưu tiên các kỹ thuật đã được xác thực bởi phân tích tượng trưng.
 - **Modern glibc aware**: Tự động nhận diện và bypass các cơ chế bảo mật hiện đại như **Safe Linking** (glibc 2.34+).
+- **/proc/mem technique**: Khi heap techniques bị ảnh hưởng bởi custom ld-linux, tự động chuyển sang kỹ thuật OS-level: đọc `/proc/pid/maps` để leak libc, đọc `environ` qua `/proc/pid/mem` để leak stack, và ghi ROP chain trực tiếp qua `os.pwrite`.
 - **Interface Transplantation**: Tự động dò tìm giao diện menu và tham số của binary mục tiêu bằng thực thi tượng trưng.
-
-## Kiến trúc hệ thống
-
-```
-autopwn.py                          # Orchestrator điều phối chính
-core/
-├── nlp_engine/extract_vars.py      # Module 1: Multi-Writeup NLP
-├── tracer/                         # Module 2: Hybrid Tracer (DynamoRIO)
-├── generalizer/                    # Module 3: Operation Generalizer (Algorithm 1)
-├── knowledge_fusion/esm.py         # Module 4: Composite ESM
-├── symbolic_executor/              # Module 5: angr Deep Verifier (NEW)
-├── planner/planner.py              # Module 6: Evolutionary Planner (Algorithm 2)
-└── codegen/synthesizer.py          # Module 7: Synthesizer (Exploit Generator)
-```
 
 ## Cài đặt nhanh
 
@@ -34,7 +37,7 @@ pip install pwntools angr spacy
 python3 -m spacy download en_core_web_sm
 
 # Chạy thử nghiệm với một thử thách
-python3 autopwn.py ./benchmarks/justCTF-2025-babyheap/binary
+python3 autopwn.py ./benchmarks/<path_to_binary>
 ```
 
 ## Tài liệu chi tiết

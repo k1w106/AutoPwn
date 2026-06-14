@@ -1,0 +1,606 @@
+{
+  "version": "1.0",
+  "description": "Structured knowledge of heap exploitation techniques extracted from C source analysis, covering glibc 2.34-2.39",
+  "techniques": [
+    {
+      "id": "tcache_poisoning",
+      "name": "Tcache Poisoning",
+      "description": "Overwrite tcache chunk's fd pointer to achieve arbitrary allocation. Most fundamental tcache technique.",
+      "glibc_versions": {"min": "2.26", "max": "2.39"},
+      "bug_type": "uaf OR double_free OR overflow",
+      "prerequisites": {
+        "bugs": ["uaf", "double_free", "overflow"],
+        "capabilities": ["heap_leak"],
+        "operations": ["alloc", "free", "edit"],
+        "glibc_mitigations": ["safe_linking"]
+      },
+      "mitigations_bypassed": ["safe_linking", "tcache_double_free_detection"],
+      "produces": ["arbitrary_allocation"],
+      "phase": "phase_2_primitive",
+      "pattern_hints": {
+        "observable_trace": "Write to freed chunk fd pointer, then two consecutive allocs of same size",
+        "required_operations": "Must have edit/write after free"
+      },
+      "example_targets": ["free_hook (glibc <2.34)", "__malloc_hook (glibc <2.34)", "stack ret addr", "GOT entry", "libc environ"]
+    },
+    {
+      "id": "unsortedbin_leak",
+      "name": "Unsorted Bin Leak",
+      "description": "Free a large chunk (> tcache max) into unsorted bin, read its fd/bk to leak main_arena address.",
+      "glibc_versions": {"min": "2.26", "max": "2.39"},
+      "bug_type": "uaf",
+      "prerequisites": {
+        "bugs": ["uaf"],
+        "capabilities": [],
+        "operations": ["alloc", "free", "view"],
+        "conditions": ["chunk_size > tcache_max"]
+      },
+      "mitigations_bypassed": [],
+      "produces": ["libc_leak"],
+      "phase": "phase_1_leak",
+      "pattern_hints": {
+        "observable_trace": "Alloc large chunk, alloc guard, free large, view/read on freed large chunk yields libc address",
+        "required_operations": "Must have view/read after free"
+      }
+    },
+    {
+      "id": "fastbin_dup",
+      "name": "Fastbin Double-Free",
+      "description": "Fill tcache (7 frees), then double-free into fastbin to get overlapping chunk pointers.",
+      "glibc_versions": {"min": "2.26", "max": "2.39"},
+      "bug_type": "double_free",
+      "prerequisites": {
+        "bugs": ["double_free"],
+        "capabilities": [],
+        "operations": ["alloc", "free"],
+        "conditions": ["tcache_fill_capability (7 frees of same size)"]
+      },
+      "mitigations_bypassed": ["tcache_double_free_detection"],
+      "produces": ["overlapping_chunks", "arbitrary_allocation"],
+      "phase": "phase_2_primitive",
+      "pattern_hints": {
+        "observable_trace": "Many allocs+frees of same size, then free(a)-free(b)-free(a) pattern",
+        "required_operations": "Must be able to free same index multiple times"
+      }
+    },
+    {
+      "id": "fastbin_dup_consolidate",
+      "name": "Fastbin Dup via Consolidate",
+      "description": "Fill tcache, free to fastbin, trigger malloc_consolidate (large alloc) to merge fastbin chunk, then free again to get overlapping pointers.",
+      "glibc_versions": {"min": "2.26", "max": "2.39"},
+      "bug_type": "double_free",
+      "prerequisites": {
+        "bugs": ["double_free"],
+        "capabilities": ["heap_leak"],
+        "operations": ["alloc", "free"],
+        "conditions": ["tcache_fill_capability", "malloc_consolidate_trigger"]
+      },
+      "mitigations_bypassed": ["tcache_double_free_detection", "prev_inuse_check"],
+      "produces": ["overlapping_chunks", "libc_leak"],
+      "phase": "phase_2_primitive",
+      "pattern_hints": {
+        "observable_trace": "Fill tcache (7 frees), free to fastbin, then trigger large alloc causing consolidation. The solve uses large scanf input for this.",
+        "trigger": "Large malloc (>=0x400) or large scanf input triggers malloc_consolidate"
+      }
+    },
+    {
+      "id": "fastbin_dup_into_stack",
+      "name": "Fastbin Double-Free into Stack",
+      "description": "Extends fastbin_dup: after dup, overwrite fd to point to fake stack chunk. Subsequent callocs return stack address.",
+      "glibc_versions": {"min": "2.26", "max": "2.39"},
+      "bug_type": "double_free",
+      "prerequisites": {
+        "bugs": ["double_free"],
+        "capabilities": ["heap_leak"],
+        "operations": ["alloc", "free", "edit"],
+        "conditions": ["fastbin_size_range", "stack_fake_chunk_layout"]
+      },
+      "mitigations_bypassed": ["safe_linking", "fastbin_size_check"],
+      "produces": ["arbitrary_allocation", "stack_write"],
+      "phase": "phase_2_primitive",
+      "pattern_hints": {
+        "observable_trace": "Fastbin dup followed by writing controlled value to chunk fd"
+      }
+    },
+    {
+      "id": "fastbin_reverse_into_tcache",
+      "name": "Fastbin Reverse into Tcache",
+      "description": "Fill tcache, put chunks in fastbin, poison one fd, then empty tcache to trigger fastbin-to-tcache refill, placing poisoned entry at tcache head.",
+      "glibc_versions": {"min": "2.26", "max": "2.39"},
+      "bug_type": "overflow OR uaf",
+      "prerequisites": {
+        "bugs": ["overflow", "uaf"],
+        "capabilities": ["heap_leak"],
+        "operations": ["alloc", "free", "edit"],
+        "conditions": ["tcache_fill_capability", "fastbin_usage"]
+      },
+      "mitigations_bypassed": ["safe_linking"],
+      "produces": ["arbitrary_allocation"],
+      "phase": "phase_2_primitive",
+      "pattern_hints": {
+        "observable_trace": "Fill tcache (7), alloc many fastbin-sized chunks, free to fastbin, write to one's fd"
+      }
+    },
+    {
+      "id": "house_of_botcake",
+      "name": "House of Botcake",
+      "description": "Create tcache+unsorted bin double-free by filling tcache, freeing victim to unsorted bin, freeing prev (backward consolidation merges), then freeing victim again to tcache.",
+      "glibc_versions": {"min": "2.26", "max": "2.39"},
+      "bug_type": "double_free OR uaf",
+      "prerequisites": {
+        "bugs": ["uaf", "double_free"],
+        "capabilities": ["heap_leak"],
+        "operations": ["alloc", "free", "edit", "view"],
+        "conditions": ["tcache_fill_capability"]
+      },
+      "mitigations_bypassed": ["tcache_double_free_detection"],
+      "produces": ["chunk_overlap", "arbitrary_allocation", "libc_leak"],
+      "phase": "phase_2_primitive",
+      "pattern_hints": {
+        "observable_trace": "7 filler allocs + prev+ victim + guard layout, fill tcache, free victim, free prev (consolidation), take from tcache, free victim again"
+      }
+    },
+    {
+      "id": "house_of_einherjar",
+      "name": "House of Einherjar",
+      "description": "Off-by-one null byte overflow to corrupt prev_inuse and prev_size, creating fake chunk that passes unlink during backward consolidation.",
+      "glibc_versions": {"min": "2.26", "max": "2.39"},
+      "bug_type": "off_by_one",
+      "prerequisites": {
+        "bugs": ["off_by_one"],
+        "capabilities": ["heap_leak"],
+        "operations": ["alloc", "free", "edit", "view"],
+        "conditions": ["contiguous_chunks", "fake_chunk_setup"]
+      },
+      "mitigations_bypassed": ["consolidation_checks", "prev_inuse_check"],
+      "produces": ["chunk_overlap", "arbitrary_allocation"],
+      "phase": "phase_2_primitive",
+      "pattern_hints": {
+        "observable_trace": "Off-by-one null byte overflow into next chunk's size/prev_size fields"
+      }
+    },
+    {
+      "id": "house_of_lore",
+      "name": "House of Lore",
+      "description": "Corrupt smallbin bk pointer to point to stack fake chunk. Draining tcache + allocating from smallbin returns fake chunk from stack.",
+      "glibc_versions": {"min": "2.26", "max": "2.39"},
+      "bug_type": "uaf OR overflow",
+      "prerequisites": {
+        "bugs": ["uaf", "overflow"],
+        "capabilities": ["heap_leak"],
+        "operations": ["alloc", "free", "edit", "view"],
+        "conditions": ["tcache_fill_capability", "smallbin_usage", "stack_fake_chunk"]
+      },
+      "mitigations_bypassed": ["smallbin_double_linked_list_check"],
+      "produces": ["arbitrary_allocation"],
+      "phase": "phase_2_primitive",
+      "pattern_hints": {
+        "observable_trace": "Free large chunk into smallbin via sorting, corrupt bk pointer"
+      }
+    },
+    {
+      "id": "house_of_mind_fastbin",
+      "name": "House of Mind (Fastbin)",
+      "description": "Use many large allocs to reach next heap region boundary, place fake heap_info there, set NON_MAIN_ARENA bit, then free to write to controlled offset via fake arena fastbin array.",
+      "glibc_versions": {"min": "2.26", "max": "2.39"},
+      "bug_type": "overflow",
+      "prerequisites": {
+        "bugs": ["overflow"],
+        "capabilities": ["heap_leak"],
+        "operations": ["alloc", "free"],
+        "conditions": ["infinite_alloc_capability", "single_bit_overwrite"]
+      },
+      "mitigations_bypassed": [],
+      "produces": ["arbitrary_write_heap_address"],
+      "phase": "phase_2_primitive",
+      "pattern_hints": {
+        "observable_trace": "Many large allocations to layout heap regions"
+      }
+    },
+    {
+      "id": "house_of_spirit",
+      "name": "House of Spirit",
+      "description": "Create fake chunk on stack with valid size header, free the fake pointer to add it to free list. Next alloc returns stack address.",
+      "glibc_versions": {"min": "2.26", "max": "2.39"},
+      "bug_type": "arbitrary_free",
+      "prerequisites": {
+        "bugs": ["arbitrary_free"],
+        "capabilities": [],
+        "operations": ["free"],
+        "conditions": ["fake_header_control", "stack_data_control"]
+      },
+      "mitigations_bypassed": [],
+      "produces": ["arbitrary_allocation"],
+      "phase": "phase_2_primitive",
+      "pattern_hints": {
+        "observable_trace": "Free a pointer pointing to controlled stack area"
+      }
+    },
+    {
+      "id": "tcache_house_of_spirit",
+      "name": "Tcache House of Spirit",
+      "description": "Simplified House of Spirit for tcache: create fake chunk on stack, free it. Tcache accepts it without checking next chunk's size.",
+      "glibc_versions": {"min": "2.26", "max": "2.39"},
+      "bug_type": "arbitrary_free",
+      "prerequisites": {
+        "bugs": ["arbitrary_free"],
+        "capabilities": [],
+        "operations": ["free"],
+        "conditions": ["fake_header_control"]
+      },
+      "mitigations_bypassed": [],
+      "produces": ["arbitrary_allocation"],
+      "phase": "phase_2_primitive",
+      "pattern_hints": {
+        "observable_trace": "Free a pointer to stack/controlled memory with fake size header"
+      }
+    },
+    {
+      "id": "house_of_tangerine",
+      "name": "House of Tangerine",
+      "description": "Corrupt top chunk size (via OOB write), then large alloc triggers sysmalloc which frees old top chunk into attacker-chosen size bin. Repeated to get tcache poisoning.",
+      "glibc_versions": {"min": "2.34", "max": "2.39"},
+      "bug_type": "overflow",
+      "prerequisites": {
+        "bugs": ["overflow"],
+        "capabilities": ["heap_leak"],
+        "operations": ["alloc", "edit", "view"],
+        "conditions": ["top_chunk_reachable", "large_alloc_capability"]
+      },
+      "mitigations_bypassed": [],
+      "produces": ["arbitrary_free"],
+      "phase": "phase_2_primitive",
+      "pattern_hints": {
+        "observable_trace": "Overwrite top chunk size, then large alloc triggers free of old top"
+      }
+    },
+    {
+      "id": "house_of_water",
+      "name": "House of Water",
+      "description": "Use UAF on smallbin chunks to corrupt fd/bk LSB. Smallbin stashing moves corrupted entries to tcache, giving tcache_perthread_struct control.",
+      "glibc_versions": {"min": "2.34", "max": "2.39"},
+      "bug_type": "uaf",
+      "prerequisites": {
+        "bugs": ["uaf"],
+        "capabilities": ["heap_leak"],
+        "operations": ["alloc", "free", "edit", "view"],
+        "conditions": ["smallbin_usage", "tcache_fill_capability", "calloc_usage"]
+      },
+      "mitigations_bypassed": ["safe_linking"],
+      "produces": ["tcache_metadata_control"],
+      "phase": "phase_2_primitive",
+      "pattern_hints": {
+        "observable_trace": "UAF write to LSB of smallbin chunk fd/bk, then calloc to trigger stashing"
+      }
+    },
+    {
+      "id": "large_bin_attack",
+      "name": "Large Bin Attack",
+      "description": "Overwrite a large chunk's bk_nextsize to point to target-0x20. When a smaller chunk is sorted into largebin, a heap pointer is written to target.",
+      "glibc_versions": {"min": "2.26", "max": "2.39"},
+      "bug_type": "overflow OR uaf",
+      "prerequisites": {
+        "bugs": ["overflow", "uaf"],
+        "capabilities": ["heap_leak"],
+        "operations": ["alloc", "free", "edit"],
+        "conditions": ["two_large_chunks", "different_sizes"]
+      },
+      "mitigations_bypassed": ["largebin_linked_list_check"],
+      "produces": ["arbitrary_write_heap_address"],
+      "phase": "phase_2_primitive",
+      "pattern_hints": {
+        "observable_trace": "Two large allocs of different sizes, free both, write to bk_nextsize of the larger one"
+      }
+    },
+    {
+      "id": "overlapping_chunks",
+      "name": "Overlapping Chunks (Unsorted Bin)",
+      "description": "Corrupt freed chunk's size to a larger value. When re-allocated with the larger size, the new chunk overlaps adjacent chunks.",
+      "glibc_versions": {"min": "2.26", "max": "2.39"},
+      "bug_type": "overflow",
+      "prerequisites": {
+        "bugs": ["overflow"],
+        "capabilities": [],
+        "operations": ["alloc", "free", "edit"],
+        "conditions": ["adjacent_chunks", "size_overflow"]
+      },
+      "mitigations_bypassed": ["prev_inuse_check"],
+      "produces": ["chunk_overlap"],
+      "phase": "phase_2_primitive",
+      "pattern_hints": {
+        "observable_trace": "Write to freed chunk's size field to enlarge it"
+      }
+    },
+    {
+      "id": "mmap_overlapping_chunks",
+      "name": "Mmap Overlapping Chunks",
+      "description": "Corrupt mmap'd chunk size to include adjacent mmap chunks. Munmap releases both, next large mmap overlaps the old region.",
+      "glibc_versions": {"min": "2.26", "max": "2.39"},
+      "bug_type": "overflow",
+      "prerequisites": {
+        "bugs": ["overflow"],
+        "capabilities": [],
+        "operations": ["alloc", "free", "edit"],
+        "conditions": ["mmap_size_allocs", "IS_MMAPPED_bit_control"]
+      },
+      "mitigations_bypassed": [],
+      "produces": ["chunk_overlap"],
+      "phase": "phase_2_primitive",
+      "pattern_hints": {
+        "observable_trace": "Very large allocs (>= 0x200000), corrupt size of one to include another"
+      }
+    },
+    {
+      "id": "poison_null_byte",
+      "name": "Poison Null Byte",
+      "description": "Off-by-one null byte overflow to clear prev_inuse of next chunk. Backward consolidation with carefully crafted fake chunk overlaps memory.",
+      "glibc_versions": {"min": "2.26", "max": "2.39"},
+      "bug_type": "off_by_one",
+      "prerequisites": {
+        "bugs": ["off_by_one"],
+        "capabilities": ["heap_leak"],
+        "operations": ["alloc", "free", "edit"],
+        "conditions": ["contiguous_chunks", "fake_chunk_setup", "prev_size_control"]
+      },
+      "mitigations_bypassed": ["consolidation_checks", "unlink_checks"],
+      "produces": ["chunk_overlap"],
+      "phase": "phase_2_primitive",
+      "pattern_hints": {
+        "observable_trace": "Off-by-one null byte overflow into next chunk's size field LSB"
+      }
+    },
+    {
+      "id": "unsafe_unlink",
+      "name": "Unsafe Unlink",
+      "description": "Create fake free chunk inside an allocated chunk with crafted fd/bk that satisfy unlink checks (P->fd->bk == P && P->bk->fd == P). Freeing adjacent chunk triggers unlink, overwriting a pointer.",
+      "glibc_versions": {"min": "2.26", "max": "2.39"},
+      "bug_type": "overflow",
+      "prerequisites": {
+        "bugs": ["overflow"],
+        "capabilities": [],
+        "operations": ["alloc", "free", "edit"],
+        "conditions": ["known_pointer_location", "chunk_content_control", "global_or_stack_ptr"]
+      },
+      "mitigations_bypassed": ["unlink_checks"],
+      "produces": ["arbitrary_write"],
+      "phase": "phase_2_primitive",
+      "pattern_hints": {
+        "observable_trace": "Fake chunk setup inside allocated memory, then free adjacent chunk to trigger consolidation"
+      }
+    },
+    {
+      "id": "tcache_metadata_poisoning",
+      "name": "Tcache Metadata Poisoning",
+      "description": "Directly overwrite tcache_perthread_struct (counts and entries) by calculating offset from controlled heap chunk to the struct at heap start.",
+      "glibc_versions": {"min": "2.26", "max": "2.39"},
+      "bug_type": "overflow",
+      "prerequisites": {
+        "bugs": ["overflow"],
+        "capabilities": ["heap_leak"],
+        "operations": ["alloc", "edit"],
+        "conditions": ["reach_heap_start", "overflow_to_tcache_struct"]
+      },
+      "mitigations_bypassed": [],
+      "produces": ["arbitrary_allocation"],
+      "phase": "phase_2_primitive",
+      "pattern_hints": {
+        "observable_trace": "Overflow from heap chunk backwards to overwrite tcache_perthread_struct at heap base"
+      }
+    },
+    {
+      "id": "tcache_relative_write",
+      "name": "Tcache Relative Write",
+      "description": "Use large_bin_attack to overwrite mp_.tcache_bins, then arbitrary size alloc causes tcache_idx to overflow, writing freed pointer to arbitrary heap location via tcache_put.",
+      "glibc_versions": {"min": "2.30", "max": "2.39"},
+      "bug_type": "overflow OR uaf",
+      "prerequisites": {
+        "bugs": ["overflow", "uaf"],
+        "capabilities": ["heap_leak", "libc_leak"],
+        "operations": ["alloc", "free", "edit"],
+        "conditions": ["large_bin_attack_first", "arbitrary_size_alloc"]
+      },
+      "mitigations_bypassed": [],
+      "produces": ["arbitrary_write_heap_address"],
+      "phase": "phase_2_primitive",
+      "pattern_hints": {
+        "observable_trace": "Requires large_bin_attack + subsequent alloc with very specific size"
+      }
+    },
+    {
+      "id": "tcache_stashing_unlink_attack",
+      "name": "Tcache Stashing Unlink Attack",
+      "description": "Corrupt smallbin bk pointer. When calloc triggers tcache stashing from smallbin, fake chunk is linked into tcache and a libc address is written to fake_chunk->bk+0x10.",
+      "glibc_versions": {"min": "2.26", "max": "2.39"},
+      "bug_type": "uaf OR overflow",
+      "prerequisites": {
+        "bugs": ["uaf", "overflow"],
+        "capabilities": ["heap_leak"],
+        "operations": ["alloc", "free", "edit"],
+        "conditions": ["smallbin_corruption", "calloc_usage", "tcache_partial_fill"]
+      },
+      "mitigations_bypassed": [],
+      "produces": ["arbitrary_write_libc_address", "arbitrary_allocation"],
+      "phase": "phase_2_primitive",
+      "pattern_hints": {
+        "observable_trace": "Corrupt smallbin chunk bk pointer, then calloc (not malloc) triggers stashing"
+      }
+    },
+    {
+      "id": "safe_link_double_protect",
+      "name": "Safe-Link Double Protect",
+      "description": "Point one tcache bin's entry to another bin's safe-linked pointer. When allocated, the value is XOR'd again, recovering the original plaintext pointer.",
+      "glibc_versions": {"min": "2.32", "max": "2.39"},
+      "bug_type": "tcache_metadata_control",
+      "prerequisites": {
+        "bugs": [],
+        "capabilities": ["tcache_metadata_control"],
+        "operations": ["alloc", "edit"],
+        "conditions": ["tcache_struct_control"]
+      },
+      "mitigations_bypassed": ["safe_linking"],
+      "produces": ["masked_pointer_recovery"],
+      "phase": "phase_2_primitive",
+      "pattern_hints": {
+        "observable_trace": "Write tcache entries to point to each other's safe-linked pointers"
+      }
+    },
+    {
+      "id": "decrypt_safe_linking",
+      "name": "Decrypt Safe-Linking",
+      "description": "Recover plaintext pointer from XOR-encrypted (safe-linked) tcache/fastbin fd pointer. Uses iterative algorithm exploiting known lower 12 bits.",
+      "glibc_versions": {"min": "2.32", "max": "2.39"},
+      "bug_type": "uaf",
+      "prerequisites": {
+        "bugs": ["uaf"],
+        "capabilities": [],
+        "operations": ["view"],
+        "conditions": ["heap_fd_read"]
+      },
+      "mitigations_bypassed": ["safe_linking"],
+      "produces": ["heap_leak"],
+      "phase": "phase_1_leak",
+      "pattern_hints": {
+        "observable_trace": "Read first 8 bytes of freed tcache chunk, contains mangled heap pointer"
+      }
+    },
+    {
+      "id": "sysmalloc_int_free",
+      "name": "sysmalloc_int_free (Top Chunk Free)",
+      "description": "Corrupt top chunk size to be page-aligned, then large alloc triggers sysmalloc which calls _int_free on the old top chunk into an attacker-chosen bin.",
+      "glibc_versions": {"min": "2.26", "max": "2.39"},
+      "bug_type": "overflow",
+      "prerequisites": {
+        "bugs": ["overflow"],
+        "capabilities": [],
+        "operations": ["alloc", "edit"],
+        "conditions": ["top_chunk_reachable", "large_alloc_capability"]
+      },
+      "mitigations_bypassed": [],
+      "produces": ["arbitrary_free"],
+      "phase": "phase_2_primitive",
+      "pattern_hints": {
+        "observable_trace": "Corrupt top chunk size, then large alloc; foundation for House of Orange/Tangerine"
+      }
+    },
+    {
+      "id": "environ_leak",
+      "name": "Environ Stack Leak",
+      "description": "Use arbitrary read to read __environ from libc BSS. __environ points to the stack envp array, giving a stack address for ROP targeting.",
+      "glibc_versions": {"min": "2.26", "max": "2.39"},
+      "bug_type": "arbitrary_read",
+      "prerequisites": {
+        "bugs": [],
+        "capabilities": ["libc_leak", "arbitrary_allocation"],
+        "operations": ["alloc", "edit", "view"],
+        "conditions": ["arbitrary_alloc_at_libc_addr"]
+      },
+      "mitigations_bypassed": [],
+      "produces": ["stack_leak"],
+      "phase": "phase_1_leak",
+      "pattern_hints": {
+        "observable_trace": "Tcache poison to libc environ address, then read the target chunk"
+      }
+    },
+    {
+      "id": "proc_mem_libc_leak",
+      "name": "Proc Mem Libc Leak",
+      "description": "Parse /proc/pid/maps to find libc base address. Requires /proc filesystem access with same UID. Bypasses need for heap-based libc leaks.",
+      "glibc_versions": {"min": "2.26", "max": "2.39"},
+      "bug_type": "uaf",
+      "prerequisites": {
+        "bugs": ["uaf"],
+        "capabilities": [],
+        "operations": [],
+        "conditions": ["proc_fs_accessible"]
+      },
+      "mitigations_bypassed": ["aslr"],
+      "produces": ["libc_leak"],
+      "phase": "phase_1_leak",
+      "pattern_hints": {
+        "observable_trace": "Process reads its own /proc/pid/maps file to find libc mapping",
+        "required_operations": "Must have proc filesystem access"
+      }
+    },
+    {
+      "id": "proc_mem_stack_leak",
+      "name": "Proc Mem Stack Leak",
+      "description": "Read libc.symbols['environ'] value via /proc/pid/mem, then scan the stack region for the main return address to locate the ROP target.",
+      "glibc_versions": {"min": "2.26", "max": "2.39"},
+      "bug_type": "uaf",
+      "prerequisites": {
+        "bugs": ["uaf"],
+        "capabilities": ["libc_leak"],
+        "operations": [],
+        "conditions": ["proc_fs_accessible"]
+      },
+      "mitigations_bypassed": ["aslr", "stack_canary"],
+      "produces": ["stack_leak"],
+      "phase": "phase_1_leak",
+      "pattern_hints": {
+        "observable_trace": "Process reads /proc/pid/mem at environ address, then scans stack for ret addr pattern",
+        "required_operations": "Must have proc filesystem access and libc leak"
+      }
+    },
+    {
+      "id": "proc_mem_stack_write",
+      "name": "Proc Mem Stack Write",
+      "description": "Write a ROP chain directly to the stack via /proc/pid/mem using os.pwrite (unbuffered I/O). Achieves arbitrary code execution without heap manipulation.",
+      "glibc_versions": {"min": "2.26", "max": "2.39"},
+      "bug_type": "uaf",
+      "prerequisites": {
+        "bugs": ["uaf"],
+        "capabilities": ["libc_leak", "stack_leak"],
+        "operations": [],
+        "conditions": ["proc_fs_accessible"]
+      },
+      "mitigations_bypassed": ["aslr", "stack_canary", "nx", "relro", "pie"],
+      "produces": ["arbitrary_write"],
+      "phase": "phase_3_exploit",
+      "pattern_hints": {
+        "observable_trace": "Process writes ROP chain to stack via /proc/pid/mem using pwrite syscall",
+        "required_operations": "Must have proc filesystem access with write permission"
+      }
+    },
+    {
+      "id": "malloc_consolidate_trigger",
+      "name": "Malloc Consolidate Trigger",
+      "description": "Trigger malloc_consolidate by sending large input to scanf or by allocating a large chunk (>= FASTBIN_CONSOLIDATION_THRESHOLD). Merges fastbin chunks into unsorted bin.",
+      "glibc_versions": {"min": "2.26", "max": "2.39"},
+      "bug_type": "side_channel",
+      "prerequisites": {
+        "bugs": [],
+        "capabilities": [],
+        "operations": ["alloc", "free", "view"],
+        "conditions": ["scanf_input_capability", "or_large_alloc"]
+      },
+      "mitigations_bypassed": [],
+      "produces": ["libc_leak (via consolidation of previously freed chunks)"],
+      "phase": "phase_1_leak",
+      "pattern_hints": {
+        "observable_trace": "Sending large input to a scanf-based menu option triggers internal malloc; or allocating large chunk",
+        "note": "When fastbin chunks are consolidated to unsorted bin, their fd/bk contain libc addresses"
+      }
+    }
+  ],
+  "mitigation_map": {
+    "safe_linking": {
+      "description": "XOR encoding of tcache/fastbin fd pointers (chunk_addr >> 12). Introduced in glibc 2.32.",
+      "bypass_techniques": ["decrypt_safe_linking", "heap_leak + tcache_poisoning", "safe_link_double_protect"],
+      "requires": ["heap_leak"]
+    },
+    "tcache_double_free_detection": {
+      "description": "Tcache stores a key (chunk address) in freed chunk's second qword. Free checks if key matches, detects double-free.",
+      "bypass_techniques": ["house_of_botcake", "fastbin_dup_consolidate", "fastbin_dup", "key_corruption"],
+      "requires": ["write_before_second_free"]
+    },
+    "hook_removal": {
+      "description": "__free_hook and __malloc_hook removed in glibc 2.34. Alternative targets required.",
+      "alternatives": ["GOT_overwrite", "stack_ROP", "IO_file_vtable", "ld_audit", "mod_proc"]
+    },
+    "consolidation_checks": {
+      "description": "Glibc validates prev_inuse, prev_size, and unlink integrity during backward consolidation.",
+      "bypass_techniques": ["house_of_einherjar", "poison_null_byte", "unsafe_unlink"],
+      "requires": ["fake_chunk_setup"]
+    }
+  }
+}

@@ -1,0 +1,5076 @@
+{
+  "version": "1.0",
+  "description": "Parsed techniques from how2heap C sources",
+  "techniques": [
+    {
+      "id": "decrypt_safe_linking",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.34/decrypt_safe_linking.c",
+      "glibc_dir_version": "2.34",
+      "description": "demonstrates how to recover the original content from a poisoned\n\t * value because of the safe-linking mechanism.",
+      "glibc_versions": {
+        "min": "2.34",
+        "max": "2.34"
+      },
+      "bug_types": [
+        "uaf"
+      ],
+      "heap_operations": [
+        {
+          "op": "FREE",
+          "var": "a",
+          "line": "free(a);"
+        },
+        {
+          "op": "FREE",
+          "var": "b",
+          "line": "free(b);"
+        }
+      ]
+    },
+    {
+      "id": "fastbin_dup",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.34/fastbin_dup.c",
+      "glibc_dir_version": "2.34",
+      "description": "This file demonstrates a simple double-free attack with fastbins.",
+      "glibc_versions": {
+        "min": "2.34",
+        "max": "2.34"
+      },
+      "bug_types": [
+        "double_free"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "ptrs",
+          "source_var": "malloc(8)",
+          "value": "malloc(8)",
+          "line": "ptrs[i] = malloc(8);"
+        },
+        {
+          "op": "FREE",
+          "var": "a",
+          "line": "free(a);"
+        },
+        {
+          "op": "FREE",
+          "var": "b",
+          "line": "free(b);"
+        }
+      ]
+    },
+    {
+      "id": "fastbin_dup_consolidate",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.34/fastbin_dup_consolidate.c",
+      "glibc_dir_version": "2.34",
+      "description": "the following five places:\n1.",
+      "glibc_versions": {
+        "min": "2.34",
+        "max": "2.34"
+      },
+      "bug_types": [
+        "uaf",
+        "double_free"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "ptr",
+          "source_var": "malloc(0x40)",
+          "value": "malloc(0x40)",
+          "line": "ptr[i] = malloc(0x40);"
+        },
+        {
+          "op": "FREE",
+          "var": "p1",
+          "line": "free(p1);"
+        }
+      ]
+    },
+    {
+      "id": "fastbin_dup_into_stack",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.34/fastbin_dup_into_stack.c",
+      "glibc_dir_version": "2.34",
+      "description": "VULNERABILITY",
+      "glibc_versions": {
+        "min": "2.34",
+        "max": "2.34"
+      },
+      "bug_types": [
+        "uaf",
+        "double_free"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "ptrs",
+          "source_var": "malloc(8)",
+          "value": "malloc(8)",
+          "line": "ptrs[i] = malloc(8);"
+        },
+        {
+          "op": "FREE",
+          "var": "a",
+          "line": "free(a);"
+        },
+        {
+          "op": "FREE",
+          "var": "b",
+          "line": "free(b);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "stack_var",
+          "source_var": "0x20",
+          "value": "0x20",
+          "line": "stack_var[1] = 0x20;"
+        }
+      ]
+    },
+    {
+      "id": "fastbin_reverse_into_tcache",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.34/fastbin_reverse_into_tcache.c",
+      "glibc_dir_version": "2.34",
+      "description": "The following operation assumes the address of victim is known, thus requiring\n\t// a heap leak.",
+      "glibc_versions": {
+        "min": "2.34",
+        "max": "2.34"
+      },
+      "bug_types": [
+        "uaf",
+        "overflow"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "ptrs",
+          "source_var": "malloc(allocsize)",
+          "value": "malloc(allocsize)",
+          "line": "ptrs[i] = malloc(allocsize);"
+        },
+        {
+          "op": "FREE",
+          "var": "allocsize",
+          "line": "printf(\"First we need to free(allocsize) at least 7 times to fill the tcache.\\n\""
+        },
+        {
+          "op": "FREE",
+          "var": "victim",
+          "line": "free(victim);"
+        }
+      ]
+    },
+    {
+      "id": "house_of_botcake",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.34/house_of_botcake.c",
+      "glibc_dir_version": "2.34",
+      "description": "This file demonstrates a powerful tcache poisoning attack by tricking malloc into\");\n    puts(\"returning a pointer to an arbitrary location (in this demo, the stack).",
+      "glibc_versions": {
+        "min": "2.32",
+        "max": "2.34"
+      },
+      "bug_types": [
+        "uaf",
+        "double_free"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "x",
+          "source_var": "malloc(0x100)",
+          "value": "malloc(0x100)",
+          "line": "x[i] = malloc(0x100);"
+        },
+        {
+          "op": "FREE",
+          "var": "a",
+          "line": "free(a);"
+        },
+        {
+          "op": "FREE",
+          "var": "prev",
+          "line": "free(prev);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "target",
+          "source_var": "0xcafebabe",
+          "value": "0xcafebabe",
+          "line": "target[0] = 0xcafebabe;"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "stack_var",
+          "source_var": "0xcafebabe)",
+          "value": "= 0xcafebabe)",
+          "line": "assert(stack_var[0] == 0xcafebabe);"
+        }
+      ]
+    },
+    {
+      "id": "house_of_einherjar",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.34/house_of_einherjar.c",
+      "glibc_dir_version": "2.34",
+      "description": "The following restriction for normal bins won't allow us to create chunks bigger than the memory\n\t * allocated from the system in this arena:\n\t *\n\t * https://sourceware.",
+      "glibc_versions": {
+        "min": "2.34",
+        "max": "2.34"
+      },
+      "bug_types": [
+        "uaf",
+        "overflow",
+        "off_by_one",
+        "null_byte"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "a",
+          "source_var": "0",
+          "value": "0",
+          "line": "a[0] = 0;\t// prev_size (Not Used)"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "b",
+          "source_var": "0",
+          "value": "0",
+          "line": "b[real_b_size] = 0;"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "x",
+          "source_var": "malloc(0xf8)",
+          "value": "malloc(0xf8)",
+          "line": "x[i] = malloc(0xf8);"
+        },
+        {
+          "op": "FREE",
+          "var": "c",
+          "line": "free(c);"
+        },
+        {
+          "op": "FREE",
+          "var": "pad",
+          "line": "free(pad);"
+        },
+        {
+          "op": "FREE",
+          "var": "b",
+          "line": "free(b);"
+        }
+      ]
+    },
+    {
+      "id": "house_of_lore",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.34/house_of_lore.c",
+      "glibc_dir_version": "2.34",
+      "description": "This is a revisited version that bypass also the hardening check introduced by glibc malloc\\n\");\n  fprintf(stderr, \"This is tested against Ubuntu 20.",
+      "glibc_versions": {
+        "min": "2.34",
+        "max": "2.34"
+      },
+      "bug_types": [
+        "uaf"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "stack_buffer_1",
+          "source_var": "{0}",
+          "value": "{0}",
+          "line": "intptr_t* stack_buffer_1[4] = {0};"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "stack_buffer_2",
+          "source_var": "{0}",
+          "value": "{0}",
+          "line": "intptr_t* stack_buffer_2[4] = {0};"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "dummies",
+          "source_var": "malloc(0x100)",
+          "value": "malloc(0x100)",
+          "line": "for(int i=0; i<7; i++) dummies[i] = malloc(0x100);"
+        },
+        {
+          "op": "ALLOC",
+          "var": "p5",
+          "size": 1000,
+          "line": "void *p5 = malloc(1000);"
+        },
+        {
+          "op": "ALLOC",
+          "var": "p2",
+          "size": 1200,
+          "line": "void *p2 = malloc(1200);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "victim",
+          "source_var": "(intptr_t)stack_buffer_1",
+          "value": "(intptr_t)stack_buffer_1",
+          "line": "victim[1] = (intptr_t)stack_buffer_1; // victim->bk is pointing to stack"
+        }
+      ]
+    },
+    {
+      "id": "house_of_mind_fastbin",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.34/house_of_mind_fastbin.c",
+      "glibc_dir_version": "2.34",
+      "description": "the following things: \n- Finds a valid arena location for a non-main arena.",
+      "glibc_versions": {
+        "min": "2.34",
+        "max": "2.34"
+      },
+      "bug_types": [
+        "uaf",
+        "overflow"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "fake_arena",
+          "source_var": "0xFF",
+          "value": "0xFF",
+          "line": "fake_arena[0x888] = 0xFF;"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "tcache_chunks",
+          "source_var": "malloc(0x50)",
+          "value": "malloc(0x50)",
+          "line": "tcache_chunks[i] = malloc(0x50);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "fake_heap_info",
+          "source_var": "fake_arena",
+          "value": "(uint64_t) fake_arena",
+          "line": "fake_heap_info[0] = (uint64_t) fake_arena; // Setting the fake ar_ptr (arena)"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "chunk_ptr",
+          "source_var": "0x4",
+          "value": "0x60 | 0x4",
+          "line": "chunk_ptr[1] = 0x60 | 0x4; // Setting the non-main arena bit"
+        },
+        {
+          "op": "FREE",
+          "var": "fastbin_chunk",
+          "line": "free(fastbin_chunk); // Trigger the madness"
+        }
+      ]
+    },
+    {
+      "id": "house_of_spirit",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.34/house_of_spirit.c",
+      "glibc_dir_version": "2.34",
+      "description": "This file demonstrates the house of spirit attack.",
+      "glibc_versions": {
+        "min": "2.34",
+        "max": "2.34"
+      },
+      "bug_types": [
+        "uaf"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "chunks",
+          "source_var": "malloc(0x30)",
+          "value": "malloc(0x30)",
+          "line": "chunks[i] = malloc(0x30);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "fake_chunks",
+          "source_var": "0x40",
+          "value": "0x40",
+          "line": "fake_chunks[1] = 0x40; // this is the size"
+        },
+        {
+          "op": "FREE",
+          "var": "victim",
+          "line": "free(victim);"
+        }
+      ]
+    },
+    {
+      "id": "house_of_tangerine",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.34/house_of_tangerine.c",
+      "glibc_dir_version": "2.34",
+      "description": "house_of_tangerine technique",
+      "glibc_versions": {
+        "min": "2.34",
+        "max": "2.34"
+      },
+      "bug_types": [
+        "uaf"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "win",
+          "source_var": "\"WIN\\0WIN\\0WIN\\0\\x06\\xfe\\x1b\\xe2\"",
+          "value": "\"WIN\\0WIN\\0WIN\\0\\x06\\xfe\\x1b\\x",
+          "line": "char win[0x10] = \"WIN\\0WIN\\0WIN\\0\\x06\\xfe\\x1b\\xe2\";"
+        }
+      ]
+    },
+    {
+      "id": "house_of_water",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.34/house_of_water.c",
+      "glibc_dir_version": "2.34",
+      "description": "the following:\");\n\tputs(\"\");\n\t\n\tputs(\"small_start:\");\n\tprintf(\"0x%016lx\\t\\t0x%016lx  0x%016lx  <-- tcachebins[0x330][0/1], unsortedbin[all][0]\\n\", (unsigned long)(small_start-0x10), *(long *)(small_start-0x10), *(long *)(small_start-0x8));\n\tdump_memory(small_start, 2);\n\tputs(\"\");\n\n\tputs(\"small_end:\");\n\tprintf(\"0x%016lx\\t\\t0x%016lx  0x%016lx  <-- tcachebins[0x320][0/1], unsortedbin[all][2]\\n\", (unsigned long)(small_end-0x10), *(long *)(small_end-0x10), *(long *)(small_end-0x8));\n\tdump_memory(small_end, 2);\n\n\tputs(\"\\n\");\n\tputs(\"If you want to see a blind example using only double free, see the following chal: \");\n\tputs(\"https://github.",
+      "glibc_versions": {
+        "min": "2.34",
+        "max": "2.34"
+      },
+      "bug_types": [
+        "uaf",
+        "double_free",
+        "arbitrary_free",
+        "null_byte"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "x",
+          "source_var": "malloc(0x88)",
+          "value": "malloc(0x88)",
+          "line": "x[i] = malloc(0x88);"
+        },
+        {
+          "op": "FREE",
+          "var": "small_end",
+          "line": "puts(\"\\t> free(small_end);\");"
+        },
+        {
+          "op": "FREE",
+          "var": "relative_chunk",
+          "line": "puts(\"\\t> free(relative_chunk);\");"
+        },
+        {
+          "op": "FREE",
+          "var": "small_start",
+          "line": "puts(\"\\t> free(small_start);\");"
+        }
+      ]
+    },
+    {
+      "id": "large_bin_attack",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.34/large_bin_attack.c",
+      "glibc_dir_version": "2.34",
+      "description": "Since glibc2.30, two new checks have been enforced on large bin chunk insertion\\n\\n",
+      "glibc_versions": {
+        "min": "2.34",
+        "max": "2.34"
+      },
+      "bug_types": [
+        "uaf"
+      ],
+      "heap_operations": [
+        {
+          "op": "FREE",
+          "var": "p1",
+          "line": "free(p1);"
+        },
+        {
+          "op": "FREE",
+          "var": "p2",
+          "line": "free(p2);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "p1",
+          "source_var": "(size_t)((&target)-4)",
+          "value": "(size_t)((&target)-4)",
+          "line": "p1[3] = (size_t)((&target)-4);"
+        }
+      ]
+    },
+    {
+      "id": "mmap_overlapping_chunks",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.34/mmap_overlapping_chunks.c",
+      "glibc_dir_version": "2.34",
+      "description": "the following:\n\tmmap_chunk_2[0] = 0xdeadbeef;\n\tThis is because the memory would not be allocated to the current program.",
+      "glibc_versions": {
+        "min": "2.34",
+        "max": "2.34"
+      },
+      "bug_types": [
+        "uaf",
+        "overflow"
+      ],
+      "heap_operations": [
+        {
+          "op": "FREE",
+          "var": "mmap_chunk_3",
+          "line": "free(mmap_chunk_3);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "mmap_chunk_2",
+          "source_var": "0xdeadbeef",
+          "value": "0xdeadbeef",
+          "line": "mmap_chunk_2[0] = 0xdeadbeef;"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "overlapping_chunk",
+          "source_var": "0x1122334455667788",
+          "value": "0x1122334455667788",
+          "line": "overlapping_chunk[distance] = 0x1122334455667788;"
+        }
+      ]
+    },
+    {
+      "id": "overlapping_chunks",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.34/overlapping_chunks.c",
+      "glibc_dir_version": "2.34",
+      "description": "This is another simple chunks overlapping problem\\n\");\n\tprintf(\"The previous technique is killed by patch: https://sourceware.",
+      "glibc_versions": {
+        "min": "2.34",
+        "max": "2.34"
+      },
+      "bug_types": [
+        "uaf",
+        "overflow"
+      ],
+      "heap_operations": [
+        {
+          "op": "FREE",
+          "var": "p2",
+          "line": "free(p2);"
+        }
+      ]
+    },
+    {
+      "id": "poison_null_byte",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.34/poison_null_byte.c",
+      "glibc_dir_version": "2.34",
+      "description": "VULNERABILITY",
+      "glibc_versions": {
+        "min": "2.34",
+        "max": "2.34"
+      },
+      "bug_types": [
+        "uaf",
+        "off_by_one",
+        "null_byte"
+      ],
+      "heap_operations": [
+        {
+          "op": "FREE",
+          "var": "a",
+          "line": "free(a);"
+        },
+        {
+          "op": "FREE",
+          "var": "b",
+          "line": "free(b);"
+        },
+        {
+          "op": "FREE",
+          "var": "prev",
+          "line": "free(prev);"
+        },
+        {
+          "op": "FREE",
+          "var": "a2",
+          "line": "free(a2);"
+        },
+        {
+          "op": "FREE",
+          "var": "victim",
+          "line": "free(victim);"
+        }
+      ]
+    },
+    {
+      "id": "safe_link_double_protect",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.34/safe_link_double_protect.c",
+      "glibc_dir_version": "2.34",
+      "description": "the following:\n *\t\n *                                  (ptr^key)^key = ptr\n *\n * The technique requires control over the t-cache metadata, so pairing it with a technique such as\n * house of water might be favourable.",
+      "glibc_versions": {
+        "min": "2.32",
+        "max": "2.34"
+      },
+      "bug_types": [
+        "uaf"
+      ],
+      "heap_operations": [
+        {
+          "op": "FREE",
+          "var": "a",
+          "line": "free(a);"
+        },
+        {
+          "op": "FREE",
+          "var": "b",
+          "line": "free(b);"
+        },
+        {
+          "op": "FREE",
+          "var": "c",
+          "line": "free(c);"
+        },
+        {
+          "op": "FREE",
+          "var": "d",
+          "line": "free(d);"
+        }
+      ]
+    },
+    {
+      "id": "sysmalloc_int_free",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.34/sysmalloc_int_free.c",
+      "glibc_dir_version": "2.34",
+      "description": "This is achieved through sysmalloc calling _int_free to the top_chunk (wilderness),\n * if the top_chunk can't be merged during heap growth\n * https://elixir.",
+      "glibc_versions": {
+        "min": "2.34",
+        "max": "2.34"
+      },
+      "bug_types": [
+        "uaf"
+      ],
+      "heap_operations": []
+    },
+    {
+      "id": "tcache_house_of_spirit",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.34/tcache_house_of_spirit.c",
+      "glibc_dir_version": "2.34",
+      "description": "This file demonstrates the house of spirit attack on tcache.",
+      "glibc_versions": {
+        "min": "2.34",
+        "max": "2.34"
+      },
+      "bug_types": [
+        "double_free"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "fake_chunks",
+          "source_var": "0x40",
+          "value": "0x40",
+          "line": "fake_chunks[1] = 0x40; // this is the size"
+        },
+        {
+          "op": "FREE",
+          "var": "a",
+          "line": "free(a);"
+        }
+      ]
+    },
+    {
+      "id": "tcache_metadata_poisoning",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.34/tcache_metadata_poisoning.c",
+      "glibc_dir_version": "2.34",
+      "description": "demonstrates what an attacker can achieve by controlling\\n\"\n       \"the metadata chunk of the tcache.",
+      "glibc_versions": {
+        "min": "2.34",
+        "max": "2.34"
+      },
+      "bug_types": [
+        "uaf"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "counts",
+          "source_var": "1",
+          "value": "1",
+          "line": "metadata->counts[1] = 1;"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "entries",
+          "source_var": "&stack_target",
+          "value": "&stack_target",
+          "line": "metadata->entries[1] = &stack_target;"
+        }
+      ]
+    },
+    {
+      "id": "tcache_poisoning",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.34/tcache_poisoning.c",
+      "glibc_dir_version": "2.34",
+      "description": "This file demonstrates a simple tcache poisoning attack by tricking malloc into\\n\"\n\t\t   \"returning a pointer to an arbitrary location (in this case, the stack).",
+      "glibc_versions": {
+        "min": "2.34",
+        "max": "2.34"
+      },
+      "bug_types": [
+        "uaf"
+      ],
+      "heap_operations": [
+        {
+          "op": "ALLOC",
+          "var": "a",
+          "size": 128,
+          "line": "intptr_t *a = malloc(128);"
+        },
+        {
+          "op": "ALLOC",
+          "var": "b",
+          "size": 128,
+          "line": "intptr_t *b = malloc(128);"
+        },
+        {
+          "op": "FREE",
+          "var": "a",
+          "line": "free(a);"
+        },
+        {
+          "op": "FREE",
+          "var": "b",
+          "line": "free(b);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "b",
+          "source_var": "12)",
+          "value": "(intptr_t)((long)target ^ (lon",
+          "line": "b[0] = (intptr_t)((long)target ^ (long)b >> 12);"
+        },
+        {
+          "op": "ALLOC",
+          "var": "c",
+          "size": 128,
+          "line": "intptr_t *c = malloc(128);"
+        }
+      ]
+    },
+    {
+      "id": "tcache_relative_write",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.34/tcache_relative_write.c",
+      "glibc_dir_version": "2.34",
+      "description": "This file demonstrates TCache relative write, a technique used to achieve arbitrary decimal writing and chunk pointer arbitrary write on heap.",
+      "glibc_versions": {
+        "min": "2.34",
+        "max": "2.34"
+      },
+      "bug_types": [
+        "uaf",
+        "overflow"
+      ],
+      "heap_operations": [
+        {
+          "op": "FREE",
+          "var": "p1",
+          "line": "free(p1);\t// In this PoC, we use p1 simply for a libc leak"
+        },
+        {
+          "op": "FREE",
+          "var": "p",
+          "line": "free(p);"
+        },
+        {
+          "op": "FREE",
+          "var": "p2",
+          "line": "free(p2);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "p1",
+          "source_var": "long)p)",
+          "value": "= (unsigned long)p)",
+          "line": "assert(p1[0] == (unsigned long)p);"
+        }
+      ]
+    },
+    {
+      "id": "tcache_stashing_unlink_attack",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.34/tcache_stashing_unlink_attack.c",
+      "glibc_dir_version": "2.34",
+      "description": "This file demonstrates the stashing unlink attack on tcache.",
+      "glibc_versions": {
+        "min": "2.34",
+        "max": "2.34"
+      },
+      "bug_types": [
+        "uaf"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "stack_var",
+          "source_var": "{0}",
+          "value": "{0}",
+          "line": "unsigned long stack_var[0x10] = {0};"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "chunk_lis",
+          "source_var": "{0}",
+          "value": "{0}",
+          "line": "unsigned long *chunk_lis[0x10] = {0};"
+        }
+      ]
+    },
+    {
+      "id": "unsafe_unlink",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.34/unsafe_unlink.c",
+      "glibc_dir_version": "2.34",
+      "description": "Welcome to unsafe unlink 2.0!\\n",
+      "glibc_versions": {
+        "min": "2.34",
+        "max": "2.34"
+      },
+      "bug_types": [
+        "overflow"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "chunk0_ptr",
+          "source_var": "0x10",
+          "value": "chunk0_ptr[-1] - 0x10",
+          "line": "chunk0_ptr[1] = chunk0_ptr[-1] - 0x10;"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "chunk1_hdr",
+          "source_var": "malloc_size",
+          "value": "malloc_size",
+          "line": "chunk1_hdr[0] = malloc_size;"
+        },
+        {
+          "op": "FREE",
+          "var": "chunk1_ptr",
+          "line": "free(chunk1_ptr);"
+        }
+      ]
+    },
+    {
+      "id": "decrypt_safe_linking",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.35/decrypt_safe_linking.c",
+      "glibc_dir_version": "2.35",
+      "description": "demonstrates how to recover the original content from a poisoned\n\t * value because of the safe-linking mechanism.",
+      "glibc_versions": {
+        "min": "2.35",
+        "max": "2.35"
+      },
+      "bug_types": [
+        "uaf"
+      ],
+      "heap_operations": [
+        {
+          "op": "FREE",
+          "var": "a",
+          "line": "free(a);"
+        },
+        {
+          "op": "FREE",
+          "var": "b",
+          "line": "free(b);"
+        }
+      ]
+    },
+    {
+      "id": "fastbin_dup",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.35/fastbin_dup.c",
+      "glibc_dir_version": "2.35",
+      "description": "This file demonstrates a simple double-free attack with fastbins.",
+      "glibc_versions": {
+        "min": "2.35",
+        "max": "2.35"
+      },
+      "bug_types": [
+        "double_free"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "ptrs",
+          "source_var": "malloc(8)",
+          "value": "malloc(8)",
+          "line": "ptrs[i] = malloc(8);"
+        },
+        {
+          "op": "FREE",
+          "var": "a",
+          "line": "free(a);"
+        },
+        {
+          "op": "FREE",
+          "var": "b",
+          "line": "free(b);"
+        }
+      ]
+    },
+    {
+      "id": "fastbin_dup_consolidate",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.35/fastbin_dup_consolidate.c",
+      "glibc_dir_version": "2.35",
+      "description": "the following five places:\n1.",
+      "glibc_versions": {
+        "min": "2.35",
+        "max": "2.35"
+      },
+      "bug_types": [
+        "uaf",
+        "double_free"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "ptr",
+          "source_var": "malloc(0x40)",
+          "value": "malloc(0x40)",
+          "line": "ptr[i] = malloc(0x40);"
+        },
+        {
+          "op": "FREE",
+          "var": "p1",
+          "line": "free(p1);"
+        }
+      ]
+    },
+    {
+      "id": "fastbin_dup_into_stack",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.35/fastbin_dup_into_stack.c",
+      "glibc_dir_version": "2.35",
+      "description": "VULNERABILITY",
+      "glibc_versions": {
+        "min": "2.35",
+        "max": "2.35"
+      },
+      "bug_types": [
+        "uaf",
+        "double_free"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "ptrs",
+          "source_var": "malloc(8)",
+          "value": "malloc(8)",
+          "line": "ptrs[i] = malloc(8);"
+        },
+        {
+          "op": "FREE",
+          "var": "a",
+          "line": "free(a);"
+        },
+        {
+          "op": "FREE",
+          "var": "b",
+          "line": "free(b);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "stack_var",
+          "source_var": "0x20",
+          "value": "0x20",
+          "line": "stack_var[1] = 0x20;"
+        }
+      ]
+    },
+    {
+      "id": "fastbin_reverse_into_tcache",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.35/fastbin_reverse_into_tcache.c",
+      "glibc_dir_version": "2.35",
+      "description": "The following operation assumes the address of victim is known, thus requiring\n\t// a heap leak.",
+      "glibc_versions": {
+        "min": "2.35",
+        "max": "2.35"
+      },
+      "bug_types": [
+        "uaf",
+        "overflow"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "ptrs",
+          "source_var": "malloc(allocsize)",
+          "value": "malloc(allocsize)",
+          "line": "ptrs[i] = malloc(allocsize);"
+        },
+        {
+          "op": "FREE",
+          "var": "allocsize",
+          "line": "printf(\"First we need to free(allocsize) at least 7 times to fill the tcache.\\n\""
+        },
+        {
+          "op": "FREE",
+          "var": "victim",
+          "line": "free(victim);"
+        }
+      ]
+    },
+    {
+      "id": "house_of_botcake",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.35/house_of_botcake.c",
+      "glibc_dir_version": "2.35",
+      "description": "This file demonstrates a powerful tcache poisoning attack by tricking malloc into\");\n    puts(\"returning a pointer to an arbitrary location (in this demo, the stack).",
+      "glibc_versions": {
+        "min": "2.32",
+        "max": "2.35"
+      },
+      "bug_types": [
+        "uaf",
+        "double_free"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "x",
+          "source_var": "malloc(0x100)",
+          "value": "malloc(0x100)",
+          "line": "x[i] = malloc(0x100);"
+        },
+        {
+          "op": "FREE",
+          "var": "a",
+          "line": "free(a);"
+        },
+        {
+          "op": "FREE",
+          "var": "prev",
+          "line": "free(prev);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "target",
+          "source_var": "0xcafebabe",
+          "value": "0xcafebabe",
+          "line": "target[0] = 0xcafebabe;"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "stack_var",
+          "source_var": "0xcafebabe)",
+          "value": "= 0xcafebabe)",
+          "line": "assert(stack_var[0] == 0xcafebabe);"
+        }
+      ]
+    },
+    {
+      "id": "house_of_einherjar",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.35/house_of_einherjar.c",
+      "glibc_dir_version": "2.35",
+      "description": "The following restriction for normal bins won't allow us to create chunks bigger than the memory\n\t * allocated from the system in this arena:\n\t *\n\t * https://sourceware.",
+      "glibc_versions": {
+        "min": "2.35",
+        "max": "2.35"
+      },
+      "bug_types": [
+        "uaf",
+        "overflow",
+        "off_by_one",
+        "null_byte"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "a",
+          "source_var": "0",
+          "value": "0",
+          "line": "a[0] = 0;\t// prev_size (Not Used)"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "b",
+          "source_var": "0",
+          "value": "0",
+          "line": "b[real_b_size] = 0;"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "x",
+          "source_var": "malloc(0xf8)",
+          "value": "malloc(0xf8)",
+          "line": "x[i] = malloc(0xf8);"
+        },
+        {
+          "op": "FREE",
+          "var": "c",
+          "line": "free(c);"
+        },
+        {
+          "op": "FREE",
+          "var": "pad",
+          "line": "free(pad);"
+        },
+        {
+          "op": "FREE",
+          "var": "b",
+          "line": "free(b);"
+        }
+      ]
+    },
+    {
+      "id": "house_of_lore",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.35/house_of_lore.c",
+      "glibc_dir_version": "2.35",
+      "description": "This is a revisited version that bypass also the hardening check introduced by glibc malloc\\n\");\n  fprintf(stderr, \"This is tested against Ubuntu 22.",
+      "glibc_versions": {
+        "min": "2.35",
+        "max": "2.35"
+      },
+      "bug_types": [
+        "uaf"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "stack_buffer_1",
+          "source_var": "{0}",
+          "value": "{0}",
+          "line": "intptr_t* stack_buffer_1[4] = {0};"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "stack_buffer_2",
+          "source_var": "{0}",
+          "value": "{0}",
+          "line": "intptr_t* stack_buffer_2[4] = {0};"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "dummies",
+          "source_var": "malloc(0x100)",
+          "value": "malloc(0x100)",
+          "line": "for(int i=0; i<7; i++) dummies[i] = malloc(0x100);"
+        },
+        {
+          "op": "ALLOC",
+          "var": "p5",
+          "size": 1000,
+          "line": "void *p5 = malloc(1000);"
+        },
+        {
+          "op": "ALLOC",
+          "var": "p2",
+          "size": 1200,
+          "line": "void *p2 = malloc(1200);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "victim",
+          "source_var": "(intptr_t)stack_buffer_1",
+          "value": "(intptr_t)stack_buffer_1",
+          "line": "victim[1] = (intptr_t)stack_buffer_1; // victim->bk is pointing to stack"
+        }
+      ]
+    },
+    {
+      "id": "house_of_mind_fastbin",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.35/house_of_mind_fastbin.c",
+      "glibc_dir_version": "2.35",
+      "description": "the following things: \n- Finds a valid arena location for a non-main arena.",
+      "glibc_versions": {
+        "min": "2.35",
+        "max": "2.35"
+      },
+      "bug_types": [
+        "uaf",
+        "overflow"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "fake_arena",
+          "source_var": "0xFF",
+          "value": "0xFF",
+          "line": "fake_arena[0x888] = 0xFF;"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "tcache_chunks",
+          "source_var": "malloc(0x50)",
+          "value": "malloc(0x50)",
+          "line": "tcache_chunks[i] = malloc(0x50);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "fake_heap_info",
+          "source_var": "fake_arena",
+          "value": "(uint64_t) fake_arena",
+          "line": "fake_heap_info[0] = (uint64_t) fake_arena; // Setting the fake ar_ptr (arena)"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "chunk_ptr",
+          "source_var": "0x4",
+          "value": "0x60 | 0x4",
+          "line": "chunk_ptr[1] = 0x60 | 0x4; // Setting the non-main arena bit"
+        },
+        {
+          "op": "FREE",
+          "var": "fastbin_chunk",
+          "line": "free(fastbin_chunk); // Trigger the madness"
+        }
+      ]
+    },
+    {
+      "id": "house_of_spirit",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.35/house_of_spirit.c",
+      "glibc_dir_version": "2.35",
+      "description": "This file demonstrates the house of spirit attack.",
+      "glibc_versions": {
+        "min": "2.35",
+        "max": "2.35"
+      },
+      "bug_types": [
+        "uaf"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "chunks",
+          "source_var": "malloc(0x30)",
+          "value": "malloc(0x30)",
+          "line": "chunks[i] = malloc(0x30);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "fake_chunks",
+          "source_var": "0x40",
+          "value": "0x40",
+          "line": "fake_chunks[1] = 0x40; // this is the size"
+        },
+        {
+          "op": "FREE",
+          "var": "victim",
+          "line": "free(victim);"
+        }
+      ]
+    },
+    {
+      "id": "house_of_tangerine",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.35/house_of_tangerine.c",
+      "glibc_dir_version": "2.35",
+      "description": "house_of_tangerine technique",
+      "glibc_versions": {
+        "min": "2.34",
+        "max": "2.35"
+      },
+      "bug_types": [
+        "uaf"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "win",
+          "source_var": "\"WIN\\0WIN\\0WIN\\0\\x06\\xfe\\x1b\\xe2\"",
+          "value": "\"WIN\\0WIN\\0WIN\\0\\x06\\xfe\\x1b\\x",
+          "line": "char win[0x10] = \"WIN\\0WIN\\0WIN\\0\\x06\\xfe\\x1b\\xe2\";"
+        }
+      ]
+    },
+    {
+      "id": "house_of_water",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.35/house_of_water.c",
+      "glibc_dir_version": "2.35",
+      "description": "the following:\");\n\tputs(\"\");\n\t\n\tputs(\"small_start:\");\n\tprintf(\"0x%016lx\\t\\t0x%016lx  0x%016lx  <-- tcachebins[0x330][0/1], unsortedbin[all][0]\\n\", (unsigned long)(small_start-0x10), *(long *)(small_start-0x10), *(long *)(small_start-0x8));\n\tdump_memory(small_start, 2);\n\tputs(\"\");\n\n\tputs(\"small_end:\");\n\tprintf(\"0x%016lx\\t\\t0x%016lx  0x%016lx  <-- tcachebins[0x320][0/1], unsortedbin[all][2]\\n\", (unsigned long)(small_end-0x10), *(long *)(small_end-0x10), *(long *)(small_end-0x8));\n\tdump_memory(small_end, 2);\n\n\tputs(\"\\n\");\n\tputs(\"If you want to see a blind example using only double free, see the following chal: \");\n\tputs(\"https://github.",
+      "glibc_versions": {
+        "min": "2.35",
+        "max": "2.35"
+      },
+      "bug_types": [
+        "uaf",
+        "double_free",
+        "arbitrary_free",
+        "null_byte"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "x",
+          "source_var": "malloc(0x88)",
+          "value": "malloc(0x88)",
+          "line": "x[i] = malloc(0x88);"
+        },
+        {
+          "op": "FREE",
+          "var": "small_end",
+          "line": "puts(\"\\t> free(small_end);\");"
+        },
+        {
+          "op": "FREE",
+          "var": "relative_chunk",
+          "line": "puts(\"\\t> free(relative_chunk);\");"
+        },
+        {
+          "op": "FREE",
+          "var": "small_start",
+          "line": "puts(\"\\t> free(small_start);\");"
+        }
+      ]
+    },
+    {
+      "id": "large_bin_attack",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.35/large_bin_attack.c",
+      "glibc_dir_version": "2.35",
+      "description": "Since glibc2.30, two new checks have been enforced on large bin chunk insertion\\n\\n",
+      "glibc_versions": {
+        "min": "2.35",
+        "max": "2.35"
+      },
+      "bug_types": [
+        "uaf"
+      ],
+      "heap_operations": [
+        {
+          "op": "FREE",
+          "var": "p1",
+          "line": "free(p1);"
+        },
+        {
+          "op": "FREE",
+          "var": "p2",
+          "line": "free(p2);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "p1",
+          "source_var": "(size_t)((&target)-4)",
+          "value": "(size_t)((&target)-4)",
+          "line": "p1[3] = (size_t)((&target)-4);"
+        }
+      ]
+    },
+    {
+      "id": "mmap_overlapping_chunks",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.35/mmap_overlapping_chunks.c",
+      "glibc_dir_version": "2.35",
+      "description": "the following:\n\tmmap_chunk_2[0] = 0xdeadbeef;\n\tThis is because the memory would not be allocated to the current program.",
+      "glibc_versions": {
+        "min": "2.35",
+        "max": "2.35"
+      },
+      "bug_types": [
+        "uaf",
+        "overflow"
+      ],
+      "heap_operations": [
+        {
+          "op": "FREE",
+          "var": "mmap_chunk_3",
+          "line": "free(mmap_chunk_3);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "mmap_chunk_2",
+          "source_var": "0xdeadbeef",
+          "value": "0xdeadbeef",
+          "line": "mmap_chunk_2[0] = 0xdeadbeef;"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "overlapping_chunk",
+          "source_var": "0x1122334455667788",
+          "value": "0x1122334455667788",
+          "line": "overlapping_chunk[distance] = 0x1122334455667788;"
+        }
+      ]
+    },
+    {
+      "id": "overlapping_chunks",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.35/overlapping_chunks.c",
+      "glibc_dir_version": "2.35",
+      "description": "This is another simple chunks overlapping problem\\n\");\n\tprintf(\"The previous technique is killed by patch: https://sourceware.",
+      "glibc_versions": {
+        "min": "2.35",
+        "max": "2.35"
+      },
+      "bug_types": [
+        "uaf",
+        "overflow"
+      ],
+      "heap_operations": [
+        {
+          "op": "FREE",
+          "var": "p2",
+          "line": "free(p2);"
+        }
+      ]
+    },
+    {
+      "id": "poison_null_byte",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.35/poison_null_byte.c",
+      "glibc_dir_version": "2.35",
+      "description": "VULNERABILITY",
+      "glibc_versions": {
+        "min": "2.35",
+        "max": "2.35"
+      },
+      "bug_types": [
+        "uaf",
+        "off_by_one",
+        "null_byte"
+      ],
+      "heap_operations": [
+        {
+          "op": "FREE",
+          "var": "a",
+          "line": "free(a);"
+        },
+        {
+          "op": "FREE",
+          "var": "b",
+          "line": "free(b);"
+        },
+        {
+          "op": "FREE",
+          "var": "prev",
+          "line": "free(prev);"
+        },
+        {
+          "op": "FREE",
+          "var": "a2",
+          "line": "free(a2);"
+        },
+        {
+          "op": "FREE",
+          "var": "victim",
+          "line": "free(victim);"
+        }
+      ]
+    },
+    {
+      "id": "safe_link_double_protect",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.35/safe_link_double_protect.c",
+      "glibc_dir_version": "2.35",
+      "description": "the following:\n *\t\n *                                  (ptr^key)^key = ptr\n *\n * The technique requires control over the t-cache metadata, so pairing it with a technique such as\n * house of water might be favourable.",
+      "glibc_versions": {
+        "min": "2.32",
+        "max": "2.35"
+      },
+      "bug_types": [
+        "uaf"
+      ],
+      "heap_operations": [
+        {
+          "op": "FREE",
+          "var": "a",
+          "line": "free(a);"
+        },
+        {
+          "op": "FREE",
+          "var": "b",
+          "line": "free(b);"
+        },
+        {
+          "op": "FREE",
+          "var": "c",
+          "line": "free(c);"
+        },
+        {
+          "op": "FREE",
+          "var": "d",
+          "line": "free(d);"
+        }
+      ]
+    },
+    {
+      "id": "sysmalloc_int_free",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.35/sysmalloc_int_free.c",
+      "glibc_dir_version": "2.35",
+      "description": "This is achieved through sysmalloc calling _int_free to the top_chunk (wilderness),\n * if the top_chunk can't be merged during heap growth\n * https://elixir.",
+      "glibc_versions": {
+        "min": "2.35",
+        "max": "2.35"
+      },
+      "bug_types": [
+        "uaf"
+      ],
+      "heap_operations": []
+    },
+    {
+      "id": "tcache_house_of_spirit",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.35/tcache_house_of_spirit.c",
+      "glibc_dir_version": "2.35",
+      "description": "This file demonstrates the house of spirit attack on tcache.",
+      "glibc_versions": {
+        "min": "2.35",
+        "max": "2.35"
+      },
+      "bug_types": [
+        "double_free"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "fake_chunks",
+          "source_var": "0x40",
+          "value": "0x40",
+          "line": "fake_chunks[1] = 0x40; // this is the size"
+        },
+        {
+          "op": "FREE",
+          "var": "a",
+          "line": "free(a);"
+        }
+      ]
+    },
+    {
+      "id": "tcache_metadata_poisoning",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.35/tcache_metadata_poisoning.c",
+      "glibc_dir_version": "2.35",
+      "description": "demonstrates what an attacker can achieve by controlling\\n\"\n       \"the metadata chunk of the tcache.",
+      "glibc_versions": {
+        "min": "2.35",
+        "max": "2.35"
+      },
+      "bug_types": [
+        "uaf"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "counts",
+          "source_var": "1",
+          "value": "1",
+          "line": "metadata->counts[1] = 1;"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "entries",
+          "source_var": "&stack_target",
+          "value": "&stack_target",
+          "line": "metadata->entries[1] = &stack_target;"
+        }
+      ]
+    },
+    {
+      "id": "tcache_poisoning",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.35/tcache_poisoning.c",
+      "glibc_dir_version": "2.35",
+      "description": "This file demonstrates a simple tcache poisoning attack by tricking malloc into\\n\"\n\t\t   \"returning a pointer to an arbitrary location (in this case, the stack).",
+      "glibc_versions": {
+        "min": "2.35",
+        "max": "2.35"
+      },
+      "bug_types": [
+        "uaf"
+      ],
+      "heap_operations": [
+        {
+          "op": "ALLOC",
+          "var": "a",
+          "size": 128,
+          "line": "intptr_t *a = malloc(128);"
+        },
+        {
+          "op": "ALLOC",
+          "var": "b",
+          "size": 128,
+          "line": "intptr_t *b = malloc(128);"
+        },
+        {
+          "op": "FREE",
+          "var": "a",
+          "line": "free(a);"
+        },
+        {
+          "op": "FREE",
+          "var": "b",
+          "line": "free(b);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "b",
+          "source_var": "12)",
+          "value": "(intptr_t)((long)target ^ (lon",
+          "line": "b[0] = (intptr_t)((long)target ^ (long)b >> 12);"
+        },
+        {
+          "op": "ALLOC",
+          "var": "c",
+          "size": 128,
+          "line": "intptr_t *c = malloc(128);"
+        }
+      ]
+    },
+    {
+      "id": "tcache_relative_write",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.35/tcache_relative_write.c",
+      "glibc_dir_version": "2.35",
+      "description": "This file demonstrates TCache relative write, a technique used to achieve arbitrary decimal writing and chunk pointer arbitrary write on heap.",
+      "glibc_versions": {
+        "min": "2.35",
+        "max": "2.35"
+      },
+      "bug_types": [
+        "uaf",
+        "overflow"
+      ],
+      "heap_operations": [
+        {
+          "op": "FREE",
+          "var": "p1",
+          "line": "free(p1);\t// In this PoC, we use p1 simply for a libc leak"
+        },
+        {
+          "op": "FREE",
+          "var": "p",
+          "line": "free(p);"
+        },
+        {
+          "op": "FREE",
+          "var": "p2",
+          "line": "free(p2);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "p1",
+          "source_var": "long)p)",
+          "value": "= (unsigned long)p)",
+          "line": "assert(p1[0] == (unsigned long)p);"
+        }
+      ]
+    },
+    {
+      "id": "tcache_stashing_unlink_attack",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.35/tcache_stashing_unlink_attack.c",
+      "glibc_dir_version": "2.35",
+      "description": "This file demonstrates the stashing unlink attack on tcache.",
+      "glibc_versions": {
+        "min": "2.35",
+        "max": "2.35"
+      },
+      "bug_types": [
+        "uaf"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "stack_var",
+          "source_var": "{0}",
+          "value": "{0}",
+          "line": "unsigned long stack_var[0x10] = {0};"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "chunk_lis",
+          "source_var": "{0}",
+          "value": "{0}",
+          "line": "unsigned long *chunk_lis[0x10] = {0};"
+        }
+      ]
+    },
+    {
+      "id": "unsafe_unlink",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.35/unsafe_unlink.c",
+      "glibc_dir_version": "2.35",
+      "description": "Welcome to unsafe unlink 2.0!\\n",
+      "glibc_versions": {
+        "min": "2.35",
+        "max": "2.35"
+      },
+      "bug_types": [
+        "overflow"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "chunk0_ptr",
+          "source_var": "0x10",
+          "value": "chunk0_ptr[-1] - 0x10",
+          "line": "chunk0_ptr[1] = chunk0_ptr[-1] - 0x10;"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "chunk1_hdr",
+          "source_var": "malloc_size",
+          "value": "malloc_size",
+          "line": "chunk1_hdr[0] = malloc_size;"
+        },
+        {
+          "op": "FREE",
+          "var": "chunk1_ptr",
+          "line": "free(chunk1_ptr);"
+        }
+      ]
+    },
+    {
+      "id": "decrypt_safe_linking",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.36/decrypt_safe_linking.c",
+      "glibc_dir_version": "2.36",
+      "description": "demonstrates how to recover the original content from a poisoned\n\t * value because of the safe-linking mechanism.",
+      "glibc_versions": {
+        "min": "2.36",
+        "max": "2.36"
+      },
+      "bug_types": [
+        "uaf"
+      ],
+      "heap_operations": [
+        {
+          "op": "FREE",
+          "var": "a",
+          "line": "free(a);"
+        },
+        {
+          "op": "FREE",
+          "var": "b",
+          "line": "free(b);"
+        }
+      ]
+    },
+    {
+      "id": "fastbin_dup",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.36/fastbin_dup.c",
+      "glibc_dir_version": "2.36",
+      "description": "This file demonstrates a simple double-free attack with fastbins.",
+      "glibc_versions": {
+        "min": "2.36",
+        "max": "2.36"
+      },
+      "bug_types": [
+        "double_free"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "ptrs",
+          "source_var": "malloc(8)",
+          "value": "malloc(8)",
+          "line": "ptrs[i] = malloc(8);"
+        },
+        {
+          "op": "FREE",
+          "var": "a",
+          "line": "free(a);"
+        },
+        {
+          "op": "FREE",
+          "var": "b",
+          "line": "free(b);"
+        }
+      ]
+    },
+    {
+      "id": "fastbin_dup_consolidate",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.36/fastbin_dup_consolidate.c",
+      "glibc_dir_version": "2.36",
+      "description": "the following five places:\n1.",
+      "glibc_versions": {
+        "min": "2.36",
+        "max": "2.36"
+      },
+      "bug_types": [
+        "uaf",
+        "double_free"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "ptr",
+          "source_var": "malloc(0x40)",
+          "value": "malloc(0x40)",
+          "line": "ptr[i] = malloc(0x40);"
+        },
+        {
+          "op": "FREE",
+          "var": "p1",
+          "line": "free(p1);"
+        }
+      ]
+    },
+    {
+      "id": "fastbin_dup_into_stack",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.36/fastbin_dup_into_stack.c",
+      "glibc_dir_version": "2.36",
+      "description": "VULNERABILITY",
+      "glibc_versions": {
+        "min": "2.36",
+        "max": "2.36"
+      },
+      "bug_types": [
+        "uaf",
+        "double_free"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "ptrs",
+          "source_var": "malloc(8)",
+          "value": "malloc(8)",
+          "line": "ptrs[i] = malloc(8);"
+        },
+        {
+          "op": "FREE",
+          "var": "a",
+          "line": "free(a);"
+        },
+        {
+          "op": "FREE",
+          "var": "b",
+          "line": "free(b);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "stack_var",
+          "source_var": "0x20",
+          "value": "0x20",
+          "line": "stack_var[1] = 0x20;"
+        }
+      ]
+    },
+    {
+      "id": "fastbin_reverse_into_tcache",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.36/fastbin_reverse_into_tcache.c",
+      "glibc_dir_version": "2.36",
+      "description": "The following operation assumes the address of victim is known, thus requiring\n\t// a heap leak.",
+      "glibc_versions": {
+        "min": "2.36",
+        "max": "2.36"
+      },
+      "bug_types": [
+        "uaf",
+        "overflow"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "ptrs",
+          "source_var": "malloc(allocsize)",
+          "value": "malloc(allocsize)",
+          "line": "ptrs[i] = malloc(allocsize);"
+        },
+        {
+          "op": "FREE",
+          "var": "allocsize",
+          "line": "printf(\"First we need to free(allocsize) at least 7 times to fill the tcache.\\n\""
+        },
+        {
+          "op": "FREE",
+          "var": "victim",
+          "line": "free(victim);"
+        }
+      ]
+    },
+    {
+      "id": "house_of_botcake",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.36/house_of_botcake.c",
+      "glibc_dir_version": "2.36",
+      "description": "This file demonstrates a powerful tcache poisoning attack by tricking malloc into\");\n    puts(\"returning a pointer to an arbitrary location (in this demo, the stack).",
+      "glibc_versions": {
+        "min": "2.32",
+        "max": "2.36"
+      },
+      "bug_types": [
+        "uaf",
+        "double_free"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "x",
+          "source_var": "malloc(0x100)",
+          "value": "malloc(0x100)",
+          "line": "x[i] = malloc(0x100);"
+        },
+        {
+          "op": "FREE",
+          "var": "a",
+          "line": "free(a);"
+        },
+        {
+          "op": "FREE",
+          "var": "prev",
+          "line": "free(prev);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "target",
+          "source_var": "0xcafebabe",
+          "value": "0xcafebabe",
+          "line": "target[0] = 0xcafebabe;"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "stack_var",
+          "source_var": "0xcafebabe)",
+          "value": "= 0xcafebabe)",
+          "line": "assert(stack_var[0] == 0xcafebabe);"
+        }
+      ]
+    },
+    {
+      "id": "house_of_einherjar",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.36/house_of_einherjar.c",
+      "glibc_dir_version": "2.36",
+      "description": "The following restriction for normal bins won't allow us to create chunks bigger than the memory\n\t * allocated from the system in this arena:\n\t *\n\t * https://sourceware.",
+      "glibc_versions": {
+        "min": "2.36",
+        "max": "2.36"
+      },
+      "bug_types": [
+        "uaf",
+        "overflow",
+        "off_by_one",
+        "null_byte"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "a",
+          "source_var": "0",
+          "value": "0",
+          "line": "a[0] = 0;\t// prev_size (Not Used)"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "b",
+          "source_var": "0",
+          "value": "0",
+          "line": "b[real_b_size] = 0;"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "x",
+          "source_var": "malloc(0xf8)",
+          "value": "malloc(0xf8)",
+          "line": "x[i] = malloc(0xf8);"
+        },
+        {
+          "op": "FREE",
+          "var": "c",
+          "line": "free(c);"
+        },
+        {
+          "op": "FREE",
+          "var": "pad",
+          "line": "free(pad);"
+        },
+        {
+          "op": "FREE",
+          "var": "b",
+          "line": "free(b);"
+        }
+      ]
+    },
+    {
+      "id": "house_of_lore",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.36/house_of_lore.c",
+      "glibc_dir_version": "2.36",
+      "description": "This is a revisited version that bypass also the hardening check introduced by glibc malloc\\n\");\n  fprintf(stderr, \"This is tested against Ubuntu 22.",
+      "glibc_versions": {
+        "min": "2.36",
+        "max": "2.36"
+      },
+      "bug_types": [
+        "uaf"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "stack_buffer_1",
+          "source_var": "{0}",
+          "value": "{0}",
+          "line": "intptr_t* stack_buffer_1[4] = {0};"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "stack_buffer_2",
+          "source_var": "{0}",
+          "value": "{0}",
+          "line": "intptr_t* stack_buffer_2[4] = {0};"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "dummies",
+          "source_var": "malloc(0x100)",
+          "value": "malloc(0x100)",
+          "line": "for(int i=0; i<7; i++) dummies[i] = malloc(0x100);"
+        },
+        {
+          "op": "ALLOC",
+          "var": "p5",
+          "size": 1000,
+          "line": "void *p5 = malloc(1000);"
+        },
+        {
+          "op": "ALLOC",
+          "var": "p2",
+          "size": 1200,
+          "line": "void *p2 = malloc(1200);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "victim",
+          "source_var": "(intptr_t)stack_buffer_1",
+          "value": "(intptr_t)stack_buffer_1",
+          "line": "victim[1] = (intptr_t)stack_buffer_1; // victim->bk is pointing to stack"
+        }
+      ]
+    },
+    {
+      "id": "house_of_mind_fastbin",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.36/house_of_mind_fastbin.c",
+      "glibc_dir_version": "2.36",
+      "description": "the following things: \n- Finds a valid arena location for a non-main arena.",
+      "glibc_versions": {
+        "min": "2.36",
+        "max": "2.36"
+      },
+      "bug_types": [
+        "uaf",
+        "overflow"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "fake_arena",
+          "source_var": "0xFF",
+          "value": "0xFF",
+          "line": "fake_arena[0x888] = 0xFF;"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "tcache_chunks",
+          "source_var": "malloc(0x50)",
+          "value": "malloc(0x50)",
+          "line": "tcache_chunks[i] = malloc(0x50);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "fake_heap_info",
+          "source_var": "fake_arena",
+          "value": "(uint64_t) fake_arena",
+          "line": "fake_heap_info[0] = (uint64_t) fake_arena; // Setting the fake ar_ptr (arena)"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "chunk_ptr",
+          "source_var": "0x4",
+          "value": "0x60 | 0x4",
+          "line": "chunk_ptr[1] = 0x60 | 0x4; // Setting the non-main arena bit"
+        },
+        {
+          "op": "FREE",
+          "var": "fastbin_chunk",
+          "line": "free(fastbin_chunk); // Trigger the madness"
+        }
+      ]
+    },
+    {
+      "id": "house_of_spirit",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.36/house_of_spirit.c",
+      "glibc_dir_version": "2.36",
+      "description": "This file demonstrates the house of spirit attack.",
+      "glibc_versions": {
+        "min": "2.36",
+        "max": "2.36"
+      },
+      "bug_types": [
+        "uaf"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "chunks",
+          "source_var": "malloc(0x30)",
+          "value": "malloc(0x30)",
+          "line": "chunks[i] = malloc(0x30);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "fake_chunks",
+          "source_var": "0x40",
+          "value": "0x40",
+          "line": "fake_chunks[1] = 0x40; // this is the size"
+        },
+        {
+          "op": "FREE",
+          "var": "victim",
+          "line": "free(victim);"
+        }
+      ]
+    },
+    {
+      "id": "house_of_tangerine",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.36/house_of_tangerine.c",
+      "glibc_dir_version": "2.36",
+      "description": "house_of_tangerine technique",
+      "glibc_versions": {
+        "min": "2.34",
+        "max": "2.36"
+      },
+      "bug_types": [
+        "uaf"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "win",
+          "source_var": "\"WIN\\0WIN\\0WIN\\0\\x06\\xfe\\x1b\\xe2\"",
+          "value": "\"WIN\\0WIN\\0WIN\\0\\x06\\xfe\\x1b\\x",
+          "line": "char win[0x10] = \"WIN\\0WIN\\0WIN\\0\\x06\\xfe\\x1b\\xe2\";"
+        }
+      ]
+    },
+    {
+      "id": "house_of_water",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.36/house_of_water.c",
+      "glibc_dir_version": "2.36",
+      "description": "the following:\");\n\tputs(\"\");\n\t\n\tputs(\"small_start:\");\n\tprintf(\"0x%016lx\\t\\t0x%016lx  0x%016lx  <-- tcachebins[0x330][0/1], unsortedbin[all][0]\\n\", (unsigned long)(small_start-0x10), *(long *)(small_start-0x10), *(long *)(small_start-0x8));\n\tdump_memory(small_start, 2);\n\tputs(\"\");\n\n\tputs(\"small_end:\");\n\tprintf(\"0x%016lx\\t\\t0x%016lx  0x%016lx  <-- tcachebins[0x320][0/1], unsortedbin[all][2]\\n\", (unsigned long)(small_end-0x10), *(long *)(small_end-0x10), *(long *)(small_end-0x8));\n\tdump_memory(small_end, 2);\n\n\tputs(\"\\n\");\n\tputs(\"If you want to see a blind example using only double free, see the following chal: \");\n\tputs(\"https://github.",
+      "glibc_versions": {
+        "min": "2.36",
+        "max": "2.36"
+      },
+      "bug_types": [
+        "uaf",
+        "double_free",
+        "arbitrary_free",
+        "null_byte"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "x",
+          "source_var": "malloc(0x88)",
+          "value": "malloc(0x88)",
+          "line": "x[i] = malloc(0x88);"
+        },
+        {
+          "op": "FREE",
+          "var": "small_end",
+          "line": "puts(\"\\t> free(small_end);\");"
+        },
+        {
+          "op": "FREE",
+          "var": "relative_chunk",
+          "line": "puts(\"\\t> free(relative_chunk);\");"
+        },
+        {
+          "op": "FREE",
+          "var": "small_start",
+          "line": "puts(\"\\t> free(small_start);\");"
+        }
+      ]
+    },
+    {
+      "id": "large_bin_attack",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.36/large_bin_attack.c",
+      "glibc_dir_version": "2.36",
+      "description": "Since glibc2.30, two new checks have been enforced on large bin chunk insertion\\n\\n",
+      "glibc_versions": {
+        "min": "2.36",
+        "max": "2.36"
+      },
+      "bug_types": [
+        "uaf"
+      ],
+      "heap_operations": [
+        {
+          "op": "FREE",
+          "var": "p1",
+          "line": "free(p1);"
+        },
+        {
+          "op": "FREE",
+          "var": "p2",
+          "line": "free(p2);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "p1",
+          "source_var": "(size_t)((&target)-4)",
+          "value": "(size_t)((&target)-4)",
+          "line": "p1[3] = (size_t)((&target)-4);"
+        }
+      ]
+    },
+    {
+      "id": "mmap_overlapping_chunks",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.36/mmap_overlapping_chunks.c",
+      "glibc_dir_version": "2.36",
+      "description": "the following:\n\tmmap_chunk_2[0] = 0xdeadbeef;\n\tThis is because the memory would not be allocated to the current program.",
+      "glibc_versions": {
+        "min": "2.36",
+        "max": "2.36"
+      },
+      "bug_types": [
+        "uaf",
+        "overflow"
+      ],
+      "heap_operations": [
+        {
+          "op": "FREE",
+          "var": "mmap_chunk_3",
+          "line": "free(mmap_chunk_3);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "mmap_chunk_2",
+          "source_var": "0xdeadbeef",
+          "value": "0xdeadbeef",
+          "line": "mmap_chunk_2[0] = 0xdeadbeef;"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "overlapping_chunk",
+          "source_var": "0x1122334455667788",
+          "value": "0x1122334455667788",
+          "line": "overlapping_chunk[distance] = 0x1122334455667788;"
+        }
+      ]
+    },
+    {
+      "id": "overlapping_chunks",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.36/overlapping_chunks.c",
+      "glibc_dir_version": "2.36",
+      "description": "This is another simple chunks overlapping problem\\n\");\n\tprintf(\"The previous technique is killed by patch: https://sourceware.",
+      "glibc_versions": {
+        "min": "2.36",
+        "max": "2.36"
+      },
+      "bug_types": [
+        "uaf",
+        "overflow"
+      ],
+      "heap_operations": [
+        {
+          "op": "FREE",
+          "var": "p2",
+          "line": "free(p2);"
+        }
+      ]
+    },
+    {
+      "id": "poison_null_byte",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.36/poison_null_byte.c",
+      "glibc_dir_version": "2.36",
+      "description": "VULNERABILITY",
+      "glibc_versions": {
+        "min": "2.36",
+        "max": "2.36"
+      },
+      "bug_types": [
+        "uaf",
+        "off_by_one",
+        "null_byte"
+      ],
+      "heap_operations": [
+        {
+          "op": "FREE",
+          "var": "a",
+          "line": "free(a);"
+        },
+        {
+          "op": "FREE",
+          "var": "b",
+          "line": "free(b);"
+        },
+        {
+          "op": "FREE",
+          "var": "prev",
+          "line": "free(prev);"
+        },
+        {
+          "op": "FREE",
+          "var": "a2",
+          "line": "free(a2);"
+        },
+        {
+          "op": "FREE",
+          "var": "victim",
+          "line": "free(victim);"
+        }
+      ]
+    },
+    {
+      "id": "safe_link_double_protect",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.36/safe_link_double_protect.c",
+      "glibc_dir_version": "2.36",
+      "description": "the following:\n *\t\n *                                  (ptr^key)^key = ptr\n *\n * The technique requires control over the t-cache metadata, so pairing it with a technique such as\n * house of water might be favourable.",
+      "glibc_versions": {
+        "min": "2.32",
+        "max": "2.36"
+      },
+      "bug_types": [
+        "uaf"
+      ],
+      "heap_operations": [
+        {
+          "op": "FREE",
+          "var": "a",
+          "line": "free(a);"
+        },
+        {
+          "op": "FREE",
+          "var": "b",
+          "line": "free(b);"
+        },
+        {
+          "op": "FREE",
+          "var": "c",
+          "line": "free(c);"
+        },
+        {
+          "op": "FREE",
+          "var": "d",
+          "line": "free(d);"
+        }
+      ]
+    },
+    {
+      "id": "sysmalloc_int_free",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.36/sysmalloc_int_free.c",
+      "glibc_dir_version": "2.36",
+      "description": "This is achieved through sysmalloc calling _int_free to the top_chunk (wilderness),\n * if the top_chunk can't be merged during heap growth\n * https://elixir.",
+      "glibc_versions": {
+        "min": "2.36",
+        "max": "2.36"
+      },
+      "bug_types": [
+        "uaf"
+      ],
+      "heap_operations": []
+    },
+    {
+      "id": "tcache_house_of_spirit",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.36/tcache_house_of_spirit.c",
+      "glibc_dir_version": "2.36",
+      "description": "This file demonstrates the house of spirit attack on tcache.",
+      "glibc_versions": {
+        "min": "2.36",
+        "max": "2.36"
+      },
+      "bug_types": [
+        "double_free"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "fake_chunks",
+          "source_var": "0x40",
+          "value": "0x40",
+          "line": "fake_chunks[1] = 0x40; // this is the size"
+        },
+        {
+          "op": "FREE",
+          "var": "a",
+          "line": "free(a);"
+        }
+      ]
+    },
+    {
+      "id": "tcache_metadata_poisoning",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.36/tcache_metadata_poisoning.c",
+      "glibc_dir_version": "2.36",
+      "description": "demonstrates what an attacker can achieve by controlling\\n\"\n       \"the metadata chunk of the tcache.",
+      "glibc_versions": {
+        "min": "2.36",
+        "max": "2.36"
+      },
+      "bug_types": [
+        "uaf"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "counts",
+          "source_var": "1",
+          "value": "1",
+          "line": "metadata->counts[1] = 1;"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "entries",
+          "source_var": "&stack_target",
+          "value": "&stack_target",
+          "line": "metadata->entries[1] = &stack_target;"
+        }
+      ]
+    },
+    {
+      "id": "tcache_poisoning",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.36/tcache_poisoning.c",
+      "glibc_dir_version": "2.36",
+      "description": "This file demonstrates a simple tcache poisoning attack by tricking malloc into\\n\"\n\t\t   \"returning a pointer to an arbitrary location (in this case, the stack).",
+      "glibc_versions": {
+        "min": "2.36",
+        "max": "2.36"
+      },
+      "bug_types": [
+        "uaf"
+      ],
+      "heap_operations": [
+        {
+          "op": "ALLOC",
+          "var": "a",
+          "size": 128,
+          "line": "intptr_t *a = malloc(128);"
+        },
+        {
+          "op": "ALLOC",
+          "var": "b",
+          "size": 128,
+          "line": "intptr_t *b = malloc(128);"
+        },
+        {
+          "op": "FREE",
+          "var": "a",
+          "line": "free(a);"
+        },
+        {
+          "op": "FREE",
+          "var": "b",
+          "line": "free(b);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "b",
+          "source_var": "12)",
+          "value": "(intptr_t)((long)target ^ (lon",
+          "line": "b[0] = (intptr_t)((long)target ^ (long)b >> 12);"
+        },
+        {
+          "op": "ALLOC",
+          "var": "c",
+          "size": 128,
+          "line": "intptr_t *c = malloc(128);"
+        }
+      ]
+    },
+    {
+      "id": "tcache_relative_write",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.36/tcache_relative_write.c",
+      "glibc_dir_version": "2.36",
+      "description": "This file demonstrates TCache relative write, a technique used to achieve arbitrary decimal writing and chunk pointer arbitrary write on heap.",
+      "glibc_versions": {
+        "min": "2.36",
+        "max": "2.36"
+      },
+      "bug_types": [
+        "uaf",
+        "overflow"
+      ],
+      "heap_operations": [
+        {
+          "op": "FREE",
+          "var": "p1",
+          "line": "free(p1);\t// In this PoC, we use p1 simply for a libc leak"
+        },
+        {
+          "op": "FREE",
+          "var": "p",
+          "line": "free(p);"
+        },
+        {
+          "op": "FREE",
+          "var": "p2",
+          "line": "free(p2);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "p1",
+          "source_var": "long)p)",
+          "value": "= (unsigned long)p)",
+          "line": "assert(p1[0] == (unsigned long)p);"
+        }
+      ]
+    },
+    {
+      "id": "tcache_stashing_unlink_attack",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.36/tcache_stashing_unlink_attack.c",
+      "glibc_dir_version": "2.36",
+      "description": "This file demonstrates the stashing unlink attack on tcache.",
+      "glibc_versions": {
+        "min": "2.36",
+        "max": "2.36"
+      },
+      "bug_types": [
+        "uaf"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "stack_var",
+          "source_var": "{0}",
+          "value": "{0}",
+          "line": "unsigned long stack_var[0x10] = {0};"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "chunk_lis",
+          "source_var": "{0}",
+          "value": "{0}",
+          "line": "unsigned long *chunk_lis[0x10] = {0};"
+        }
+      ]
+    },
+    {
+      "id": "unsafe_unlink",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.36/unsafe_unlink.c",
+      "glibc_dir_version": "2.36",
+      "description": "Welcome to unsafe unlink 2.0!\\n",
+      "glibc_versions": {
+        "min": "2.36",
+        "max": "2.36"
+      },
+      "bug_types": [
+        "overflow"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "chunk0_ptr",
+          "source_var": "0x10",
+          "value": "chunk0_ptr[-1] - 0x10",
+          "line": "chunk0_ptr[1] = chunk0_ptr[-1] - 0x10;"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "chunk1_hdr",
+          "source_var": "malloc_size",
+          "value": "malloc_size",
+          "line": "chunk1_hdr[0] = malloc_size;"
+        },
+        {
+          "op": "FREE",
+          "var": "chunk1_ptr",
+          "line": "free(chunk1_ptr);"
+        }
+      ]
+    },
+    {
+      "id": "decrypt_safe_linking",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.37/decrypt_safe_linking.c",
+      "glibc_dir_version": "2.37",
+      "description": "demonstrates how to recover the original content from a poisoned\n\t * value because of the safe-linking mechanism.",
+      "glibc_versions": {
+        "min": "2.37",
+        "max": "2.37"
+      },
+      "bug_types": [
+        "uaf"
+      ],
+      "heap_operations": [
+        {
+          "op": "FREE",
+          "var": "a",
+          "line": "free(a);"
+        },
+        {
+          "op": "FREE",
+          "var": "b",
+          "line": "free(b);"
+        }
+      ]
+    },
+    {
+      "id": "fastbin_dup",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.37/fastbin_dup.c",
+      "glibc_dir_version": "2.37",
+      "description": "This file demonstrates a simple double-free attack with fastbins.",
+      "glibc_versions": {
+        "min": "2.37",
+        "max": "2.37"
+      },
+      "bug_types": [
+        "double_free"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "ptrs",
+          "source_var": "malloc(8)",
+          "value": "malloc(8)",
+          "line": "ptrs[i] = malloc(8);"
+        },
+        {
+          "op": "FREE",
+          "var": "a",
+          "line": "free(a);"
+        },
+        {
+          "op": "FREE",
+          "var": "b",
+          "line": "free(b);"
+        }
+      ]
+    },
+    {
+      "id": "fastbin_dup_consolidate",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.37/fastbin_dup_consolidate.c",
+      "glibc_dir_version": "2.37",
+      "description": "the following five places:\n1.",
+      "glibc_versions": {
+        "min": "2.37",
+        "max": "2.37"
+      },
+      "bug_types": [
+        "uaf",
+        "double_free"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "ptr",
+          "source_var": "malloc(0x40)",
+          "value": "malloc(0x40)",
+          "line": "ptr[i] = malloc(0x40);"
+        },
+        {
+          "op": "FREE",
+          "var": "p1",
+          "line": "free(p1);"
+        }
+      ]
+    },
+    {
+      "id": "fastbin_dup_into_stack",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.37/fastbin_dup_into_stack.c",
+      "glibc_dir_version": "2.37",
+      "description": "VULNERABILITY",
+      "glibc_versions": {
+        "min": "2.37",
+        "max": "2.37"
+      },
+      "bug_types": [
+        "uaf",
+        "double_free"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "ptrs",
+          "source_var": "malloc(8)",
+          "value": "malloc(8)",
+          "line": "ptrs[i] = malloc(8);"
+        },
+        {
+          "op": "FREE",
+          "var": "a",
+          "line": "free(a);"
+        },
+        {
+          "op": "FREE",
+          "var": "b",
+          "line": "free(b);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "stack_var",
+          "source_var": "0x20",
+          "value": "0x20",
+          "line": "stack_var[1] = 0x20;"
+        }
+      ]
+    },
+    {
+      "id": "fastbin_reverse_into_tcache",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.37/fastbin_reverse_into_tcache.c",
+      "glibc_dir_version": "2.37",
+      "description": "The following operation assumes the address of victim is known, thus requiring\n\t// a heap leak.",
+      "glibc_versions": {
+        "min": "2.37",
+        "max": "2.37"
+      },
+      "bug_types": [
+        "uaf",
+        "overflow"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "ptrs",
+          "source_var": "malloc(allocsize)",
+          "value": "malloc(allocsize)",
+          "line": "ptrs[i] = malloc(allocsize);"
+        },
+        {
+          "op": "FREE",
+          "var": "allocsize",
+          "line": "printf(\"First we need to free(allocsize) at least 7 times to fill the tcache.\\n\""
+        },
+        {
+          "op": "FREE",
+          "var": "victim",
+          "line": "free(victim);"
+        }
+      ]
+    },
+    {
+      "id": "house_of_botcake",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.37/house_of_botcake.c",
+      "glibc_dir_version": "2.37",
+      "description": "This file demonstrates a powerful tcache poisoning attack by tricking malloc into\");\n    puts(\"returning a pointer to an arbitrary location (in this demo, the stack).",
+      "glibc_versions": {
+        "min": "2.32",
+        "max": "2.37"
+      },
+      "bug_types": [
+        "uaf",
+        "double_free"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "x",
+          "source_var": "malloc(0x100)",
+          "value": "malloc(0x100)",
+          "line": "x[i] = malloc(0x100);"
+        },
+        {
+          "op": "FREE",
+          "var": "a",
+          "line": "free(a);"
+        },
+        {
+          "op": "FREE",
+          "var": "prev",
+          "line": "free(prev);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "target",
+          "source_var": "0xcafebabe",
+          "value": "0xcafebabe",
+          "line": "target[0] = 0xcafebabe;"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "stack_var",
+          "source_var": "0xcafebabe)",
+          "value": "= 0xcafebabe)",
+          "line": "assert(stack_var[0] == 0xcafebabe);"
+        }
+      ]
+    },
+    {
+      "id": "house_of_einherjar",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.37/house_of_einherjar.c",
+      "glibc_dir_version": "2.37",
+      "description": "The following restriction for normal bins won't allow us to create chunks bigger than the memory\n\t * allocated from the system in this arena:\n\t *\n\t * https://sourceware.",
+      "glibc_versions": {
+        "min": "2.37",
+        "max": "2.37"
+      },
+      "bug_types": [
+        "uaf",
+        "overflow",
+        "off_by_one",
+        "null_byte"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "a",
+          "source_var": "0",
+          "value": "0",
+          "line": "a[0] = 0;\t// prev_size (Not Used)"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "b",
+          "source_var": "0",
+          "value": "0",
+          "line": "b[real_b_size] = 0;"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "x",
+          "source_var": "malloc(0xf8)",
+          "value": "malloc(0xf8)",
+          "line": "x[i] = malloc(0xf8);"
+        },
+        {
+          "op": "FREE",
+          "var": "c",
+          "line": "free(c);"
+        },
+        {
+          "op": "FREE",
+          "var": "pad",
+          "line": "free(pad);"
+        },
+        {
+          "op": "FREE",
+          "var": "b",
+          "line": "free(b);"
+        }
+      ]
+    },
+    {
+      "id": "house_of_lore",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.37/house_of_lore.c",
+      "glibc_dir_version": "2.37",
+      "description": "This is a revisited version that bypass also the hardening check introduced by glibc malloc\\n\");\n  fprintf(stderr, \"This is tested against Ubuntu 22.",
+      "glibc_versions": {
+        "min": "2.37",
+        "max": "2.37"
+      },
+      "bug_types": [
+        "uaf"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "stack_buffer_1",
+          "source_var": "{0}",
+          "value": "{0}",
+          "line": "intptr_t* stack_buffer_1[4] = {0};"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "stack_buffer_2",
+          "source_var": "{0}",
+          "value": "{0}",
+          "line": "intptr_t* stack_buffer_2[4] = {0};"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "dummies",
+          "source_var": "malloc(0x100)",
+          "value": "malloc(0x100)",
+          "line": "for(int i=0; i<7; i++) dummies[i] = malloc(0x100);"
+        },
+        {
+          "op": "ALLOC",
+          "var": "p5",
+          "size": 1000,
+          "line": "void *p5 = malloc(1000);"
+        },
+        {
+          "op": "ALLOC",
+          "var": "p2",
+          "size": 1200,
+          "line": "void *p2 = malloc(1200);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "victim",
+          "source_var": "(intptr_t)stack_buffer_1",
+          "value": "(intptr_t)stack_buffer_1",
+          "line": "victim[1] = (intptr_t)stack_buffer_1; // victim->bk is pointing to stack"
+        }
+      ]
+    },
+    {
+      "id": "house_of_mind_fastbin",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.37/house_of_mind_fastbin.c",
+      "glibc_dir_version": "2.37",
+      "description": "the following things: \n- Finds a valid arena location for a non-main arena.",
+      "glibc_versions": {
+        "min": "2.37",
+        "max": "2.37"
+      },
+      "bug_types": [
+        "uaf",
+        "overflow"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "fake_arena",
+          "source_var": "0xFF",
+          "value": "0xFF",
+          "line": "fake_arena[0x888] = 0xFF;"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "tcache_chunks",
+          "source_var": "malloc(0x50)",
+          "value": "malloc(0x50)",
+          "line": "tcache_chunks[i] = malloc(0x50);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "fake_heap_info",
+          "source_var": "fake_arena",
+          "value": "(uint64_t) fake_arena",
+          "line": "fake_heap_info[0] = (uint64_t) fake_arena; // Setting the fake ar_ptr (arena)"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "chunk_ptr",
+          "source_var": "0x4",
+          "value": "0x60 | 0x4",
+          "line": "chunk_ptr[1] = 0x60 | 0x4; // Setting the non-main arena bit"
+        },
+        {
+          "op": "FREE",
+          "var": "fastbin_chunk",
+          "line": "free(fastbin_chunk); // Trigger the madness"
+        }
+      ]
+    },
+    {
+      "id": "house_of_spirit",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.37/house_of_spirit.c",
+      "glibc_dir_version": "2.37",
+      "description": "This file demonstrates the house of spirit attack.",
+      "glibc_versions": {
+        "min": "2.37",
+        "max": "2.37"
+      },
+      "bug_types": [
+        "uaf"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "chunks",
+          "source_var": "malloc(0x30)",
+          "value": "malloc(0x30)",
+          "line": "chunks[i] = malloc(0x30);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "fake_chunks",
+          "source_var": "0x40",
+          "value": "0x40",
+          "line": "fake_chunks[1] = 0x40; // this is the size"
+        },
+        {
+          "op": "FREE",
+          "var": "victim",
+          "line": "free(victim);"
+        }
+      ]
+    },
+    {
+      "id": "house_of_tangerine",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.37/house_of_tangerine.c",
+      "glibc_dir_version": "2.37",
+      "description": "house_of_tangerine technique",
+      "glibc_versions": {
+        "min": "2.34",
+        "max": "2.37"
+      },
+      "bug_types": [
+        "uaf"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "win",
+          "source_var": "\"WIN\\0WIN\\0WIN\\0\\x06\\xfe\\x1b\\xe2\"",
+          "value": "\"WIN\\0WIN\\0WIN\\0\\x06\\xfe\\x1b\\x",
+          "line": "char win[0x10] = \"WIN\\0WIN\\0WIN\\0\\x06\\xfe\\x1b\\xe2\";"
+        }
+      ]
+    },
+    {
+      "id": "house_of_water",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.37/house_of_water.c",
+      "glibc_dir_version": "2.37",
+      "description": "the following:\");\n\tputs(\"\");\n\t\n\tputs(\"small_start:\");\n\tprintf(\"0x%016lx\\t\\t0x%016lx  0x%016lx  <-- tcachebins[0x330][0/1], unsortedbin[all][0]\\n\", (unsigned long)(small_start-0x10), *(long *)(small_start-0x10), *(long *)(small_start-0x8));\n\tdump_memory(small_start, 2);\n\tputs(\"\");\n\n\tputs(\"small_end:\");\n\tprintf(\"0x%016lx\\t\\t0x%016lx  0x%016lx  <-- tcachebins[0x320][0/1], unsortedbin[all][2]\\n\", (unsigned long)(small_end-0x10), *(long *)(small_end-0x10), *(long *)(small_end-0x8));\n\tdump_memory(small_end, 2);\n\n\tputs(\"\\n\");\n\tputs(\"If you want to see a blind example using only double free, see the following chal: \");\n\tputs(\"https://github.",
+      "glibc_versions": {
+        "min": "2.37",
+        "max": "2.37"
+      },
+      "bug_types": [
+        "uaf",
+        "double_free",
+        "arbitrary_free",
+        "null_byte"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "x",
+          "source_var": "malloc(0x88)",
+          "value": "malloc(0x88)",
+          "line": "x[i] = malloc(0x88);"
+        },
+        {
+          "op": "FREE",
+          "var": "small_end",
+          "line": "puts(\"\\t> free(small_end);\");"
+        },
+        {
+          "op": "FREE",
+          "var": "relative_chunk",
+          "line": "puts(\"\\t> free(relative_chunk);\");"
+        },
+        {
+          "op": "FREE",
+          "var": "small_start",
+          "line": "puts(\"\\t> free(small_start);\");"
+        }
+      ]
+    },
+    {
+      "id": "large_bin_attack",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.37/large_bin_attack.c",
+      "glibc_dir_version": "2.37",
+      "description": "Since glibc2.30, two new checks have been enforced on large bin chunk insertion\\n\\n",
+      "glibc_versions": {
+        "min": "2.37",
+        "max": "2.37"
+      },
+      "bug_types": [
+        "uaf"
+      ],
+      "heap_operations": [
+        {
+          "op": "FREE",
+          "var": "p1",
+          "line": "free(p1);"
+        },
+        {
+          "op": "FREE",
+          "var": "p2",
+          "line": "free(p2);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "p1",
+          "source_var": "(size_t)((&target)-4)",
+          "value": "(size_t)((&target)-4)",
+          "line": "p1[3] = (size_t)((&target)-4);"
+        }
+      ]
+    },
+    {
+      "id": "mmap_overlapping_chunks",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.37/mmap_overlapping_chunks.c",
+      "glibc_dir_version": "2.37",
+      "description": "the following:\n\tmmap_chunk_2[0] = 0xdeadbeef;\n\tThis is because the memory would not be allocated to the current program.",
+      "glibc_versions": {
+        "min": "2.37",
+        "max": "2.37"
+      },
+      "bug_types": [
+        "uaf",
+        "overflow"
+      ],
+      "heap_operations": [
+        {
+          "op": "FREE",
+          "var": "mmap_chunk_3",
+          "line": "free(mmap_chunk_3);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "mmap_chunk_2",
+          "source_var": "0xdeadbeef",
+          "value": "0xdeadbeef",
+          "line": "mmap_chunk_2[0] = 0xdeadbeef;"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "overlapping_chunk",
+          "source_var": "0x1122334455667788",
+          "value": "0x1122334455667788",
+          "line": "overlapping_chunk[distance] = 0x1122334455667788;"
+        }
+      ]
+    },
+    {
+      "id": "overlapping_chunks",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.37/overlapping_chunks.c",
+      "glibc_dir_version": "2.37",
+      "description": "This is another simple chunks overlapping problem\\n\");\n\tprintf(\"The previous technique is killed by patch: https://sourceware.",
+      "glibc_versions": {
+        "min": "2.37",
+        "max": "2.37"
+      },
+      "bug_types": [
+        "uaf",
+        "overflow"
+      ],
+      "heap_operations": [
+        {
+          "op": "FREE",
+          "var": "p2",
+          "line": "free(p2);"
+        }
+      ]
+    },
+    {
+      "id": "poison_null_byte",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.37/poison_null_byte.c",
+      "glibc_dir_version": "2.37",
+      "description": "VULNERABILITY",
+      "glibc_versions": {
+        "min": "2.37",
+        "max": "2.37"
+      },
+      "bug_types": [
+        "uaf",
+        "off_by_one",
+        "null_byte"
+      ],
+      "heap_operations": [
+        {
+          "op": "FREE",
+          "var": "a",
+          "line": "free(a);"
+        },
+        {
+          "op": "FREE",
+          "var": "b",
+          "line": "free(b);"
+        },
+        {
+          "op": "FREE",
+          "var": "prev",
+          "line": "free(prev);"
+        },
+        {
+          "op": "FREE",
+          "var": "a2",
+          "line": "free(a2);"
+        },
+        {
+          "op": "FREE",
+          "var": "victim",
+          "line": "free(victim);"
+        }
+      ]
+    },
+    {
+      "id": "safe_link_double_protect",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.37/safe_link_double_protect.c",
+      "glibc_dir_version": "2.37",
+      "description": "the following:\n *\t\n *                                  (ptr^key)^key = ptr\n *\n * The technique requires control over the t-cache metadata, so pairing it with a technique such as\n * house of water might be favourable.",
+      "glibc_versions": {
+        "min": "2.32",
+        "max": "2.37"
+      },
+      "bug_types": [
+        "uaf"
+      ],
+      "heap_operations": [
+        {
+          "op": "FREE",
+          "var": "a",
+          "line": "free(a);"
+        },
+        {
+          "op": "FREE",
+          "var": "b",
+          "line": "free(b);"
+        },
+        {
+          "op": "FREE",
+          "var": "c",
+          "line": "free(c);"
+        },
+        {
+          "op": "FREE",
+          "var": "d",
+          "line": "free(d);"
+        }
+      ]
+    },
+    {
+      "id": "sysmalloc_int_free",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.37/sysmalloc_int_free.c",
+      "glibc_dir_version": "2.37",
+      "description": "This is achieved through sysmalloc calling _int_free to the top_chunk (wilderness),\n * if the top_chunk can't be merged during heap growth\n * https://elixir.",
+      "glibc_versions": {
+        "min": "2.37",
+        "max": "2.37"
+      },
+      "bug_types": [
+        "uaf"
+      ],
+      "heap_operations": []
+    },
+    {
+      "id": "tcache_house_of_spirit",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.37/tcache_house_of_spirit.c",
+      "glibc_dir_version": "2.37",
+      "description": "This file demonstrates the house of spirit attack on tcache.",
+      "glibc_versions": {
+        "min": "2.37",
+        "max": "2.37"
+      },
+      "bug_types": [
+        "double_free"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "fake_chunks",
+          "source_var": "0x40",
+          "value": "0x40",
+          "line": "fake_chunks[1] = 0x40; // this is the size"
+        },
+        {
+          "op": "FREE",
+          "var": "a",
+          "line": "free(a);"
+        }
+      ]
+    },
+    {
+      "id": "tcache_metadata_poisoning",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.37/tcache_metadata_poisoning.c",
+      "glibc_dir_version": "2.37",
+      "description": "demonstrates what an attacker can achieve by controlling\\n\"\n       \"the metadata chunk of the tcache.",
+      "glibc_versions": {
+        "min": "2.37",
+        "max": "2.37"
+      },
+      "bug_types": [
+        "uaf"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "counts",
+          "source_var": "1",
+          "value": "1",
+          "line": "metadata->counts[1] = 1;"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "entries",
+          "source_var": "&stack_target",
+          "value": "&stack_target",
+          "line": "metadata->entries[1] = &stack_target;"
+        }
+      ]
+    },
+    {
+      "id": "tcache_poisoning",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.37/tcache_poisoning.c",
+      "glibc_dir_version": "2.37",
+      "description": "This file demonstrates a simple tcache poisoning attack by tricking malloc into\\n\"\n\t\t   \"returning a pointer to an arbitrary location (in this case, the stack).",
+      "glibc_versions": {
+        "min": "2.37",
+        "max": "2.37"
+      },
+      "bug_types": [
+        "uaf"
+      ],
+      "heap_operations": [
+        {
+          "op": "ALLOC",
+          "var": "a",
+          "size": 128,
+          "line": "intptr_t *a = malloc(128);"
+        },
+        {
+          "op": "ALLOC",
+          "var": "b",
+          "size": 128,
+          "line": "intptr_t *b = malloc(128);"
+        },
+        {
+          "op": "FREE",
+          "var": "a",
+          "line": "free(a);"
+        },
+        {
+          "op": "FREE",
+          "var": "b",
+          "line": "free(b);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "b",
+          "source_var": "12)",
+          "value": "(intptr_t)((long)target ^ (lon",
+          "line": "b[0] = (intptr_t)((long)target ^ (long)b >> 12);"
+        },
+        {
+          "op": "ALLOC",
+          "var": "c",
+          "size": 128,
+          "line": "intptr_t *c = malloc(128);"
+        }
+      ]
+    },
+    {
+      "id": "tcache_relative_write",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.37/tcache_relative_write.c",
+      "glibc_dir_version": "2.37",
+      "description": "This file demonstrates TCache relative write, a technique used to achieve arbitrary decimal writing and chunk pointer arbitrary write on heap.",
+      "glibc_versions": {
+        "min": "2.37",
+        "max": "2.37"
+      },
+      "bug_types": [
+        "uaf",
+        "overflow"
+      ],
+      "heap_operations": [
+        {
+          "op": "FREE",
+          "var": "p1",
+          "line": "free(p1);\t// In this PoC, we use p1 simply for a libc leak"
+        },
+        {
+          "op": "FREE",
+          "var": "p",
+          "line": "free(p);"
+        },
+        {
+          "op": "FREE",
+          "var": "p2",
+          "line": "free(p2);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "p1",
+          "source_var": "long)p)",
+          "value": "= (unsigned long)p)",
+          "line": "assert(p1[0] == (unsigned long)p);"
+        }
+      ]
+    },
+    {
+      "id": "tcache_stashing_unlink_attack",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.37/tcache_stashing_unlink_attack.c",
+      "glibc_dir_version": "2.37",
+      "description": "This file demonstrates the stashing unlink attack on tcache.",
+      "glibc_versions": {
+        "min": "2.37",
+        "max": "2.37"
+      },
+      "bug_types": [
+        "uaf"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "stack_var",
+          "source_var": "{0}",
+          "value": "{0}",
+          "line": "unsigned long stack_var[0x10] = {0};"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "chunk_lis",
+          "source_var": "{0}",
+          "value": "{0}",
+          "line": "unsigned long *chunk_lis[0x10] = {0};"
+        }
+      ]
+    },
+    {
+      "id": "unsafe_unlink",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.37/unsafe_unlink.c",
+      "glibc_dir_version": "2.37",
+      "description": "Welcome to unsafe unlink 2.0!\\n",
+      "glibc_versions": {
+        "min": "2.37",
+        "max": "2.37"
+      },
+      "bug_types": [
+        "overflow"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "chunk0_ptr",
+          "source_var": "0x10",
+          "value": "chunk0_ptr[-1] - 0x10",
+          "line": "chunk0_ptr[1] = chunk0_ptr[-1] - 0x10;"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "chunk1_hdr",
+          "source_var": "malloc_size",
+          "value": "malloc_size",
+          "line": "chunk1_hdr[0] = malloc_size;"
+        },
+        {
+          "op": "FREE",
+          "var": "chunk1_ptr",
+          "line": "free(chunk1_ptr);"
+        }
+      ]
+    },
+    {
+      "id": "decrypt_safe_linking",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.38/decrypt_safe_linking.c",
+      "glibc_dir_version": "2.38",
+      "description": "demonstrates how to recover the original content from a poisoned\n\t * value because of the safe-linking mechanism.",
+      "glibc_versions": {
+        "min": "2.38",
+        "max": "2.38"
+      },
+      "bug_types": [
+        "uaf"
+      ],
+      "heap_operations": [
+        {
+          "op": "FREE",
+          "var": "a",
+          "line": "free(a);"
+        },
+        {
+          "op": "FREE",
+          "var": "b",
+          "line": "free(b);"
+        }
+      ]
+    },
+    {
+      "id": "fastbin_dup",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.38/fastbin_dup.c",
+      "glibc_dir_version": "2.38",
+      "description": "This file demonstrates a simple double-free attack with fastbins.",
+      "glibc_versions": {
+        "min": "2.38",
+        "max": "2.38"
+      },
+      "bug_types": [
+        "double_free"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "ptrs",
+          "source_var": "malloc(8)",
+          "value": "malloc(8)",
+          "line": "ptrs[i] = malloc(8);"
+        },
+        {
+          "op": "FREE",
+          "var": "a",
+          "line": "free(a);"
+        },
+        {
+          "op": "FREE",
+          "var": "b",
+          "line": "free(b);"
+        }
+      ]
+    },
+    {
+      "id": "fastbin_dup_consolidate",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.38/fastbin_dup_consolidate.c",
+      "glibc_dir_version": "2.38",
+      "description": "the following five places:\n1.",
+      "glibc_versions": {
+        "min": "2.38",
+        "max": "2.38"
+      },
+      "bug_types": [
+        "uaf",
+        "double_free"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "ptr",
+          "source_var": "malloc(0x40)",
+          "value": "malloc(0x40)",
+          "line": "ptr[i] = malloc(0x40);"
+        },
+        {
+          "op": "FREE",
+          "var": "p1",
+          "line": "free(p1);"
+        }
+      ]
+    },
+    {
+      "id": "fastbin_dup_into_stack",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.38/fastbin_dup_into_stack.c",
+      "glibc_dir_version": "2.38",
+      "description": "VULNERABILITY",
+      "glibc_versions": {
+        "min": "2.38",
+        "max": "2.38"
+      },
+      "bug_types": [
+        "uaf",
+        "double_free"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "ptrs",
+          "source_var": "malloc(8)",
+          "value": "malloc(8)",
+          "line": "ptrs[i] = malloc(8);"
+        },
+        {
+          "op": "FREE",
+          "var": "a",
+          "line": "free(a);"
+        },
+        {
+          "op": "FREE",
+          "var": "b",
+          "line": "free(b);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "stack_var",
+          "source_var": "0x20",
+          "value": "0x20",
+          "line": "stack_var[1] = 0x20;"
+        }
+      ]
+    },
+    {
+      "id": "fastbin_reverse_into_tcache",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.38/fastbin_reverse_into_tcache.c",
+      "glibc_dir_version": "2.38",
+      "description": "The following operation assumes the address of victim is known, thus requiring\n\t// a heap leak.",
+      "glibc_versions": {
+        "min": "2.38",
+        "max": "2.38"
+      },
+      "bug_types": [
+        "uaf",
+        "overflow"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "ptrs",
+          "source_var": "malloc(allocsize)",
+          "value": "malloc(allocsize)",
+          "line": "ptrs[i] = malloc(allocsize);"
+        },
+        {
+          "op": "FREE",
+          "var": "allocsize",
+          "line": "printf(\"First we need to free(allocsize) at least 7 times to fill the tcache.\\n\""
+        },
+        {
+          "op": "FREE",
+          "var": "victim",
+          "line": "free(victim);"
+        }
+      ]
+    },
+    {
+      "id": "house_of_botcake",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.38/house_of_botcake.c",
+      "glibc_dir_version": "2.38",
+      "description": "This file demonstrates a powerful tcache poisoning attack by tricking malloc into\");\n    puts(\"returning a pointer to an arbitrary location (in this demo, the stack).",
+      "glibc_versions": {
+        "min": "2.32",
+        "max": "2.38"
+      },
+      "bug_types": [
+        "uaf",
+        "double_free"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "x",
+          "source_var": "malloc(0x100)",
+          "value": "malloc(0x100)",
+          "line": "x[i] = malloc(0x100);"
+        },
+        {
+          "op": "FREE",
+          "var": "a",
+          "line": "free(a);"
+        },
+        {
+          "op": "FREE",
+          "var": "prev",
+          "line": "free(prev);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "target",
+          "source_var": "0xcafebabe",
+          "value": "0xcafebabe",
+          "line": "target[0] = 0xcafebabe;"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "stack_var",
+          "source_var": "0xcafebabe)",
+          "value": "= 0xcafebabe)",
+          "line": "assert(stack_var[0] == 0xcafebabe);"
+        }
+      ]
+    },
+    {
+      "id": "house_of_einherjar",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.38/house_of_einherjar.c",
+      "glibc_dir_version": "2.38",
+      "description": "The following restriction for normal bins won't allow us to create chunks bigger than the memory\n\t * allocated from the system in this arena:\n\t *\n\t * https://sourceware.",
+      "glibc_versions": {
+        "min": "2.38",
+        "max": "2.38"
+      },
+      "bug_types": [
+        "uaf",
+        "overflow",
+        "off_by_one",
+        "null_byte"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "a",
+          "source_var": "0",
+          "value": "0",
+          "line": "a[0] = 0;\t// prev_size (Not Used)"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "b",
+          "source_var": "0",
+          "value": "0",
+          "line": "b[real_b_size] = 0;"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "x",
+          "source_var": "malloc(0xf8)",
+          "value": "malloc(0xf8)",
+          "line": "x[i] = malloc(0xf8);"
+        },
+        {
+          "op": "FREE",
+          "var": "c",
+          "line": "free(c);"
+        },
+        {
+          "op": "FREE",
+          "var": "pad",
+          "line": "free(pad);"
+        },
+        {
+          "op": "FREE",
+          "var": "b",
+          "line": "free(b);"
+        }
+      ]
+    },
+    {
+      "id": "house_of_lore",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.38/house_of_lore.c",
+      "glibc_dir_version": "2.38",
+      "description": "This is a revisited version that bypass also the hardening check introduced by glibc malloc\\n\");\n  fprintf(stderr, \"This is tested against Ubuntu 22.",
+      "glibc_versions": {
+        "min": "2.38",
+        "max": "2.38"
+      },
+      "bug_types": [
+        "uaf"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "stack_buffer_1",
+          "source_var": "{0}",
+          "value": "{0}",
+          "line": "intptr_t* stack_buffer_1[4] = {0};"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "stack_buffer_2",
+          "source_var": "{0}",
+          "value": "{0}",
+          "line": "intptr_t* stack_buffer_2[4] = {0};"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "dummies",
+          "source_var": "malloc(0x100)",
+          "value": "malloc(0x100)",
+          "line": "for(int i=0; i<7; i++) dummies[i] = malloc(0x100);"
+        },
+        {
+          "op": "ALLOC",
+          "var": "p5",
+          "size": 1000,
+          "line": "void *p5 = malloc(1000);"
+        },
+        {
+          "op": "ALLOC",
+          "var": "p2",
+          "size": 1200,
+          "line": "void *p2 = malloc(1200);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "victim",
+          "source_var": "(intptr_t)stack_buffer_1",
+          "value": "(intptr_t)stack_buffer_1",
+          "line": "victim[1] = (intptr_t)stack_buffer_1; // victim->bk is pointing to stack"
+        }
+      ]
+    },
+    {
+      "id": "house_of_mind_fastbin",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.38/house_of_mind_fastbin.c",
+      "glibc_dir_version": "2.38",
+      "description": "the following things: \n- Finds a valid arena location for a non-main arena.",
+      "glibc_versions": {
+        "min": "2.38",
+        "max": "2.38"
+      },
+      "bug_types": [
+        "uaf",
+        "overflow"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "fake_arena",
+          "source_var": "0xFF",
+          "value": "0xFF",
+          "line": "fake_arena[0x888] = 0xFF;"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "tcache_chunks",
+          "source_var": "malloc(0x50)",
+          "value": "malloc(0x50)",
+          "line": "tcache_chunks[i] = malloc(0x50);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "fake_heap_info",
+          "source_var": "fake_arena",
+          "value": "(uint64_t) fake_arena",
+          "line": "fake_heap_info[0] = (uint64_t) fake_arena; // Setting the fake ar_ptr (arena)"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "chunk_ptr",
+          "source_var": "0x4",
+          "value": "0x60 | 0x4",
+          "line": "chunk_ptr[1] = 0x60 | 0x4; // Setting the non-main arena bit"
+        },
+        {
+          "op": "FREE",
+          "var": "fastbin_chunk",
+          "line": "free(fastbin_chunk); // Trigger the madness"
+        }
+      ]
+    },
+    {
+      "id": "house_of_spirit",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.38/house_of_spirit.c",
+      "glibc_dir_version": "2.38",
+      "description": "This file demonstrates the house of spirit attack.",
+      "glibc_versions": {
+        "min": "2.38",
+        "max": "2.38"
+      },
+      "bug_types": [
+        "uaf"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "chunks",
+          "source_var": "malloc(0x30)",
+          "value": "malloc(0x30)",
+          "line": "chunks[i] = malloc(0x30);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "fake_chunks",
+          "source_var": "0x40",
+          "value": "0x40",
+          "line": "fake_chunks[1] = 0x40; // this is the size"
+        },
+        {
+          "op": "FREE",
+          "var": "victim",
+          "line": "free(victim);"
+        }
+      ]
+    },
+    {
+      "id": "house_of_tangerine",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.38/house_of_tangerine.c",
+      "glibc_dir_version": "2.38",
+      "description": "house_of_tangerine technique",
+      "glibc_versions": {
+        "min": "2.34",
+        "max": "2.38"
+      },
+      "bug_types": [
+        "uaf"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "win",
+          "source_var": "\"WIN\\0WIN\\0WIN\\0\\x06\\xfe\\x1b\\xe2\"",
+          "value": "\"WIN\\0WIN\\0WIN\\0\\x06\\xfe\\x1b\\x",
+          "line": "char win[0x10] = \"WIN\\0WIN\\0WIN\\0\\x06\\xfe\\x1b\\xe2\";"
+        }
+      ]
+    },
+    {
+      "id": "house_of_water",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.38/house_of_water.c",
+      "glibc_dir_version": "2.38",
+      "description": "the following:\");\n\tputs(\"\");\n\t\n\tputs(\"small_start:\");\n\tprintf(\"0x%016lx\\t\\t0x%016lx  0x%016lx  <-- tcachebins[0x330][0/1], unsortedbin[all][0]\\n\", (unsigned long)(small_start-0x10), *(long *)(small_start-0x10), *(long *)(small_start-0x8));\n\tdump_memory(small_start, 2);\n\tputs(\"\");\n\n\tputs(\"small_end:\");\n\tprintf(\"0x%016lx\\t\\t0x%016lx  0x%016lx  <-- tcachebins[0x320][0/1], unsortedbin[all][2]\\n\", (unsigned long)(small_end-0x10), *(long *)(small_end-0x10), *(long *)(small_end-0x8));\n\tdump_memory(small_end, 2);\n\n\tputs(\"\\n\");\n\tputs(\"If you want to see a blind example using only double free, see the following chal: \");\n\tputs(\"https://github.",
+      "glibc_versions": {
+        "min": "2.38",
+        "max": "2.38"
+      },
+      "bug_types": [
+        "uaf",
+        "double_free",
+        "arbitrary_free",
+        "null_byte"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "x",
+          "source_var": "malloc(0x88)",
+          "value": "malloc(0x88)",
+          "line": "x[i] = malloc(0x88);"
+        },
+        {
+          "op": "FREE",
+          "var": "small_end",
+          "line": "puts(\"\\t> free(small_end);\");"
+        },
+        {
+          "op": "FREE",
+          "var": "relative_chunk",
+          "line": "puts(\"\\t> free(relative_chunk);\");"
+        },
+        {
+          "op": "FREE",
+          "var": "small_start",
+          "line": "puts(\"\\t> free(small_start);\");"
+        }
+      ]
+    },
+    {
+      "id": "large_bin_attack",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.38/large_bin_attack.c",
+      "glibc_dir_version": "2.38",
+      "description": "Since glibc2.30, two new checks have been enforced on large bin chunk insertion\\n\\n",
+      "glibc_versions": {
+        "min": "2.38",
+        "max": "2.38"
+      },
+      "bug_types": [
+        "uaf"
+      ],
+      "heap_operations": [
+        {
+          "op": "FREE",
+          "var": "p1",
+          "line": "free(p1);"
+        },
+        {
+          "op": "FREE",
+          "var": "p2",
+          "line": "free(p2);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "p1",
+          "source_var": "(size_t)((&target)-4)",
+          "value": "(size_t)((&target)-4)",
+          "line": "p1[3] = (size_t)((&target)-4);"
+        }
+      ]
+    },
+    {
+      "id": "mmap_overlapping_chunks",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.38/mmap_overlapping_chunks.c",
+      "glibc_dir_version": "2.38",
+      "description": "the following:\n\tmmap_chunk_2[0] = 0xdeadbeef;\n\tThis is because the memory would not be allocated to the current program.",
+      "glibc_versions": {
+        "min": "2.38",
+        "max": "2.38"
+      },
+      "bug_types": [
+        "uaf",
+        "overflow"
+      ],
+      "heap_operations": [
+        {
+          "op": "FREE",
+          "var": "mmap_chunk_3",
+          "line": "free(mmap_chunk_3);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "mmap_chunk_2",
+          "source_var": "0xdeadbeef",
+          "value": "0xdeadbeef",
+          "line": "mmap_chunk_2[0] = 0xdeadbeef;"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "overlapping_chunk",
+          "source_var": "0x1122334455667788",
+          "value": "0x1122334455667788",
+          "line": "overlapping_chunk[distance] = 0x1122334455667788;"
+        }
+      ]
+    },
+    {
+      "id": "overlapping_chunks",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.38/overlapping_chunks.c",
+      "glibc_dir_version": "2.38",
+      "description": "This is another simple chunks overlapping problem\\n\");\n\tprintf(\"The previous technique is killed by patch: https://sourceware.",
+      "glibc_versions": {
+        "min": "2.38",
+        "max": "2.38"
+      },
+      "bug_types": [
+        "uaf",
+        "overflow"
+      ],
+      "heap_operations": [
+        {
+          "op": "FREE",
+          "var": "p2",
+          "line": "free(p2);"
+        }
+      ]
+    },
+    {
+      "id": "poison_null_byte",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.38/poison_null_byte.c",
+      "glibc_dir_version": "2.38",
+      "description": "VULNERABILITY",
+      "glibc_versions": {
+        "min": "2.38",
+        "max": "2.38"
+      },
+      "bug_types": [
+        "uaf",
+        "off_by_one",
+        "null_byte"
+      ],
+      "heap_operations": [
+        {
+          "op": "FREE",
+          "var": "a",
+          "line": "free(a);"
+        },
+        {
+          "op": "FREE",
+          "var": "b",
+          "line": "free(b);"
+        },
+        {
+          "op": "FREE",
+          "var": "prev",
+          "line": "free(prev);"
+        },
+        {
+          "op": "FREE",
+          "var": "a2",
+          "line": "free(a2);"
+        },
+        {
+          "op": "FREE",
+          "var": "victim",
+          "line": "free(victim);"
+        }
+      ]
+    },
+    {
+      "id": "safe_link_double_protect",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.38/safe_link_double_protect.c",
+      "glibc_dir_version": "2.38",
+      "description": "the following:\n *\t\n *                                  (ptr^key)^key = ptr\n *\n * The technique requires control over the t-cache metadata, so pairing it with a technique such as\n * house of water might be favourable.",
+      "glibc_versions": {
+        "min": "2.32",
+        "max": "2.38"
+      },
+      "bug_types": [
+        "uaf"
+      ],
+      "heap_operations": [
+        {
+          "op": "FREE",
+          "var": "a",
+          "line": "free(a);"
+        },
+        {
+          "op": "FREE",
+          "var": "b",
+          "line": "free(b);"
+        },
+        {
+          "op": "FREE",
+          "var": "c",
+          "line": "free(c);"
+        },
+        {
+          "op": "FREE",
+          "var": "d",
+          "line": "free(d);"
+        }
+      ]
+    },
+    {
+      "id": "sysmalloc_int_free",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.38/sysmalloc_int_free.c",
+      "glibc_dir_version": "2.38",
+      "description": "This is achieved through sysmalloc calling _int_free to the top_chunk (wilderness),\n * if the top_chunk can't be merged during heap growth\n * https://elixir.",
+      "glibc_versions": {
+        "min": "2.38",
+        "max": "2.38"
+      },
+      "bug_types": [
+        "uaf"
+      ],
+      "heap_operations": []
+    },
+    {
+      "id": "tcache_house_of_spirit",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.38/tcache_house_of_spirit.c",
+      "glibc_dir_version": "2.38",
+      "description": "This file demonstrates the house of spirit attack on tcache.",
+      "glibc_versions": {
+        "min": "2.38",
+        "max": "2.38"
+      },
+      "bug_types": [
+        "double_free"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "fake_chunks",
+          "source_var": "0x40",
+          "value": "0x40",
+          "line": "fake_chunks[1] = 0x40; // this is the size"
+        },
+        {
+          "op": "FREE",
+          "var": "a",
+          "line": "free(a);"
+        }
+      ]
+    },
+    {
+      "id": "tcache_metadata_poisoning",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.38/tcache_metadata_poisoning.c",
+      "glibc_dir_version": "2.38",
+      "description": "demonstrates what an attacker can achieve by controlling\\n\"\n       \"the metadata chunk of the tcache.",
+      "glibc_versions": {
+        "min": "2.38",
+        "max": "2.38"
+      },
+      "bug_types": [
+        "uaf"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "counts",
+          "source_var": "1",
+          "value": "1",
+          "line": "metadata->counts[1] = 1;"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "entries",
+          "source_var": "&stack_target",
+          "value": "&stack_target",
+          "line": "metadata->entries[1] = &stack_target;"
+        }
+      ]
+    },
+    {
+      "id": "tcache_poisoning",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.38/tcache_poisoning.c",
+      "glibc_dir_version": "2.38",
+      "description": "This file demonstrates a simple tcache poisoning attack by tricking malloc into\\n\"\n\t\t   \"returning a pointer to an arbitrary location (in this case, the stack).",
+      "glibc_versions": {
+        "min": "2.38",
+        "max": "2.38"
+      },
+      "bug_types": [
+        "uaf"
+      ],
+      "heap_operations": [
+        {
+          "op": "ALLOC",
+          "var": "a",
+          "size": 128,
+          "line": "intptr_t *a = malloc(128);"
+        },
+        {
+          "op": "ALLOC",
+          "var": "b",
+          "size": 128,
+          "line": "intptr_t *b = malloc(128);"
+        },
+        {
+          "op": "FREE",
+          "var": "a",
+          "line": "free(a);"
+        },
+        {
+          "op": "FREE",
+          "var": "b",
+          "line": "free(b);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "b",
+          "source_var": "12)",
+          "value": "(intptr_t)((long)target ^ (lon",
+          "line": "b[0] = (intptr_t)((long)target ^ (long)b >> 12);"
+        },
+        {
+          "op": "ALLOC",
+          "var": "c",
+          "size": 128,
+          "line": "intptr_t *c = malloc(128);"
+        }
+      ]
+    },
+    {
+      "id": "tcache_relative_write",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.38/tcache_relative_write.c",
+      "glibc_dir_version": "2.38",
+      "description": "This file demonstrates TCache relative write, a technique used to achieve arbitrary decimal writing and chunk pointer arbitrary write on heap.",
+      "glibc_versions": {
+        "min": "2.38",
+        "max": "2.38"
+      },
+      "bug_types": [
+        "uaf",
+        "overflow"
+      ],
+      "heap_operations": [
+        {
+          "op": "FREE",
+          "var": "p1",
+          "line": "free(p1);\t// In this PoC, we use p1 simply for a libc leak"
+        },
+        {
+          "op": "FREE",
+          "var": "p",
+          "line": "free(p);"
+        },
+        {
+          "op": "FREE",
+          "var": "p2",
+          "line": "free(p2);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "p1",
+          "source_var": "long)p)",
+          "value": "= (unsigned long)p)",
+          "line": "assert(p1[0] == (unsigned long)p);"
+        }
+      ]
+    },
+    {
+      "id": "tcache_stashing_unlink_attack",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.38/tcache_stashing_unlink_attack.c",
+      "glibc_dir_version": "2.38",
+      "description": "This file demonstrates the stashing unlink attack on tcache.",
+      "glibc_versions": {
+        "min": "2.38",
+        "max": "2.38"
+      },
+      "bug_types": [
+        "uaf"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "stack_var",
+          "source_var": "{0}",
+          "value": "{0}",
+          "line": "unsigned long stack_var[0x10] = {0};"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "chunk_lis",
+          "source_var": "{0}",
+          "value": "{0}",
+          "line": "unsigned long *chunk_lis[0x10] = {0};"
+        }
+      ]
+    },
+    {
+      "id": "unsafe_unlink",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.38/unsafe_unlink.c",
+      "glibc_dir_version": "2.38",
+      "description": "Welcome to unsafe unlink 2.0!\\n",
+      "glibc_versions": {
+        "min": "2.38",
+        "max": "2.38"
+      },
+      "bug_types": [
+        "overflow"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "chunk0_ptr",
+          "source_var": "0x10",
+          "value": "chunk0_ptr[-1] - 0x10",
+          "line": "chunk0_ptr[1] = chunk0_ptr[-1] - 0x10;"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "chunk1_hdr",
+          "source_var": "malloc_size",
+          "value": "malloc_size",
+          "line": "chunk1_hdr[0] = malloc_size;"
+        },
+        {
+          "op": "FREE",
+          "var": "chunk1_ptr",
+          "line": "free(chunk1_ptr);"
+        }
+      ]
+    },
+    {
+      "id": "decrypt_safe_linking",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.39/decrypt_safe_linking.c",
+      "glibc_dir_version": "2.39",
+      "description": "demonstrates how to recover the original content from a poisoned\n\t * value because of the safe-linking mechanism.",
+      "glibc_versions": {
+        "min": "2.39",
+        "max": "2.39"
+      },
+      "bug_types": [
+        "uaf"
+      ],
+      "heap_operations": [
+        {
+          "op": "FREE",
+          "var": "a",
+          "line": "free(a);"
+        },
+        {
+          "op": "FREE",
+          "var": "b",
+          "line": "free(b);"
+        }
+      ]
+    },
+    {
+      "id": "fastbin_dup",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.39/fastbin_dup.c",
+      "glibc_dir_version": "2.39",
+      "description": "This file demonstrates a simple double-free attack with fastbins.",
+      "glibc_versions": {
+        "min": "2.39",
+        "max": "2.39"
+      },
+      "bug_types": [
+        "double_free"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "ptrs",
+          "source_var": "malloc(8)",
+          "value": "malloc(8)",
+          "line": "ptrs[i] = malloc(8);"
+        },
+        {
+          "op": "FREE",
+          "var": "a",
+          "line": "free(a);"
+        },
+        {
+          "op": "FREE",
+          "var": "b",
+          "line": "free(b);"
+        }
+      ]
+    },
+    {
+      "id": "fastbin_dup_consolidate",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.39/fastbin_dup_consolidate.c",
+      "glibc_dir_version": "2.39",
+      "description": "the following five places:\n1.",
+      "glibc_versions": {
+        "min": "2.39",
+        "max": "2.39"
+      },
+      "bug_types": [
+        "uaf",
+        "double_free"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "ptr",
+          "source_var": "malloc(0x40)",
+          "value": "malloc(0x40)",
+          "line": "ptr[i] = malloc(0x40);"
+        },
+        {
+          "op": "FREE",
+          "var": "p1",
+          "line": "free(p1);"
+        }
+      ]
+    },
+    {
+      "id": "fastbin_dup_into_stack",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.39/fastbin_dup_into_stack.c",
+      "glibc_dir_version": "2.39",
+      "description": "VULNERABILITY",
+      "glibc_versions": {
+        "min": "2.39",
+        "max": "2.39"
+      },
+      "bug_types": [
+        "uaf",
+        "double_free"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "ptrs",
+          "source_var": "malloc(8)",
+          "value": "malloc(8)",
+          "line": "ptrs[i] = malloc(8);"
+        },
+        {
+          "op": "FREE",
+          "var": "a",
+          "line": "free(a);"
+        },
+        {
+          "op": "FREE",
+          "var": "b",
+          "line": "free(b);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "stack_var",
+          "source_var": "0x20",
+          "value": "0x20",
+          "line": "stack_var[1] = 0x20;"
+        }
+      ]
+    },
+    {
+      "id": "fastbin_reverse_into_tcache",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.39/fastbin_reverse_into_tcache.c",
+      "glibc_dir_version": "2.39",
+      "description": "The following operation assumes the address of victim is known, thus requiring\n\t// a heap leak.",
+      "glibc_versions": {
+        "min": "2.39",
+        "max": "2.39"
+      },
+      "bug_types": [
+        "uaf",
+        "overflow"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "ptrs",
+          "source_var": "malloc(allocsize)",
+          "value": "malloc(allocsize)",
+          "line": "ptrs[i] = malloc(allocsize);"
+        },
+        {
+          "op": "FREE",
+          "var": "allocsize",
+          "line": "printf(\"First we need to free(allocsize) at least 7 times to fill the tcache.\\n\""
+        },
+        {
+          "op": "FREE",
+          "var": "victim",
+          "line": "free(victim);"
+        }
+      ]
+    },
+    {
+      "id": "house_of_botcake",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.39/house_of_botcake.c",
+      "glibc_dir_version": "2.39",
+      "description": "This file demonstrates a powerful tcache poisoning attack by tricking malloc into\");\n    puts(\"returning a pointer to an arbitrary location (in this demo, the stack).",
+      "glibc_versions": {
+        "min": "2.32",
+        "max": "2.39"
+      },
+      "bug_types": [
+        "uaf",
+        "double_free"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "x",
+          "source_var": "malloc(0x100)",
+          "value": "malloc(0x100)",
+          "line": "x[i] = malloc(0x100);"
+        },
+        {
+          "op": "FREE",
+          "var": "a",
+          "line": "free(a);"
+        },
+        {
+          "op": "FREE",
+          "var": "prev",
+          "line": "free(prev);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "target",
+          "source_var": "0xcafebabe",
+          "value": "0xcafebabe",
+          "line": "target[0] = 0xcafebabe;"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "stack_var",
+          "source_var": "0xcafebabe)",
+          "value": "= 0xcafebabe)",
+          "line": "assert(stack_var[0] == 0xcafebabe);"
+        }
+      ]
+    },
+    {
+      "id": "house_of_einherjar",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.39/house_of_einherjar.c",
+      "glibc_dir_version": "2.39",
+      "description": "The following restriction for normal bins won't allow us to create chunks bigger than the memory\n\t * allocated from the system in this arena:\n\t *\n\t * https://sourceware.",
+      "glibc_versions": {
+        "min": "2.39",
+        "max": "2.39"
+      },
+      "bug_types": [
+        "uaf",
+        "overflow",
+        "off_by_one",
+        "null_byte"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "a",
+          "source_var": "0",
+          "value": "0",
+          "line": "a[0] = 0;\t// prev_size (Not Used)"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "b",
+          "source_var": "0",
+          "value": "0",
+          "line": "b[real_b_size] = 0;"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "x",
+          "source_var": "malloc(0xf8)",
+          "value": "malloc(0xf8)",
+          "line": "x[i] = malloc(0xf8);"
+        },
+        {
+          "op": "FREE",
+          "var": "c",
+          "line": "free(c);"
+        },
+        {
+          "op": "FREE",
+          "var": "pad",
+          "line": "free(pad);"
+        },
+        {
+          "op": "FREE",
+          "var": "b",
+          "line": "free(b);"
+        }
+      ]
+    },
+    {
+      "id": "house_of_lore",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.39/house_of_lore.c",
+      "glibc_dir_version": "2.39",
+      "description": "This is a revisited version that bypass also the hardening check introduced by glibc malloc\\n\");\n  fprintf(stderr, \"This is tested against Ubuntu 22.",
+      "glibc_versions": {
+        "min": "2.39",
+        "max": "2.39"
+      },
+      "bug_types": [
+        "uaf"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "stack_buffer_1",
+          "source_var": "{0}",
+          "value": "{0}",
+          "line": "intptr_t* stack_buffer_1[4] = {0};"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "stack_buffer_2",
+          "source_var": "{0}",
+          "value": "{0}",
+          "line": "intptr_t* stack_buffer_2[4] = {0};"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "dummies",
+          "source_var": "malloc(0x100)",
+          "value": "malloc(0x100)",
+          "line": "for(int i=0; i<7; i++) dummies[i] = malloc(0x100);"
+        },
+        {
+          "op": "ALLOC",
+          "var": "p5",
+          "size": 1000,
+          "line": "void *p5 = malloc(1000);"
+        },
+        {
+          "op": "ALLOC",
+          "var": "p2",
+          "size": 1200,
+          "line": "void *p2 = malloc(1200);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "victim",
+          "source_var": "(intptr_t)stack_buffer_1",
+          "value": "(intptr_t)stack_buffer_1",
+          "line": "victim[1] = (intptr_t)stack_buffer_1; // victim->bk is pointing to stack"
+        }
+      ]
+    },
+    {
+      "id": "house_of_mind_fastbin",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.39/house_of_mind_fastbin.c",
+      "glibc_dir_version": "2.39",
+      "description": "the following things: \n- Finds a valid arena location for a non-main arena.",
+      "glibc_versions": {
+        "min": "2.39",
+        "max": "2.39"
+      },
+      "bug_types": [
+        "uaf",
+        "overflow"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "fake_arena",
+          "source_var": "0xFF",
+          "value": "0xFF",
+          "line": "fake_arena[0x888] = 0xFF;"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "tcache_chunks",
+          "source_var": "malloc(0x50)",
+          "value": "malloc(0x50)",
+          "line": "tcache_chunks[i] = malloc(0x50);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "fake_heap_info",
+          "source_var": "fake_arena",
+          "value": "(uint64_t) fake_arena",
+          "line": "fake_heap_info[0] = (uint64_t) fake_arena; // Setting the fake ar_ptr (arena)"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "chunk_ptr",
+          "source_var": "0x4",
+          "value": "0x60 | 0x4",
+          "line": "chunk_ptr[1] = 0x60 | 0x4; // Setting the non-main arena bit"
+        },
+        {
+          "op": "FREE",
+          "var": "fastbin_chunk",
+          "line": "free(fastbin_chunk); // Trigger the madness"
+        }
+      ]
+    },
+    {
+      "id": "house_of_spirit",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.39/house_of_spirit.c",
+      "glibc_dir_version": "2.39",
+      "description": "This file demonstrates the house of spirit attack.",
+      "glibc_versions": {
+        "min": "2.39",
+        "max": "2.39"
+      },
+      "bug_types": [
+        "uaf"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "chunks",
+          "source_var": "malloc(0x30)",
+          "value": "malloc(0x30)",
+          "line": "chunks[i] = malloc(0x30);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "fake_chunks",
+          "source_var": "0x40",
+          "value": "0x40",
+          "line": "fake_chunks[1] = 0x40; // this is the size"
+        },
+        {
+          "op": "FREE",
+          "var": "victim",
+          "line": "free(victim);"
+        }
+      ]
+    },
+    {
+      "id": "house_of_tangerine",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.39/house_of_tangerine.c",
+      "glibc_dir_version": "2.39",
+      "description": "house_of_tangerine technique",
+      "glibc_versions": {
+        "min": "2.34",
+        "max": "2.39"
+      },
+      "bug_types": [
+        "uaf"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "win",
+          "source_var": "\"WIN\\0WIN\\0WIN\\0\\x06\\xfe\\x1b\\xe2\"",
+          "value": "\"WIN\\0WIN\\0WIN\\0\\x06\\xfe\\x1b\\x",
+          "line": "char win[0x10] = \"WIN\\0WIN\\0WIN\\0\\x06\\xfe\\x1b\\xe2\";"
+        }
+      ]
+    },
+    {
+      "id": "house_of_water",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.39/house_of_water.c",
+      "glibc_dir_version": "2.39",
+      "description": "the following:\");\n\tputs(\"\");\n\t\n\tputs(\"small_start:\");\n\tprintf(\"0x%016lx\\t\\t0x%016lx  0x%016lx  <-- tcachebins[0x330][0/1], unsortedbin[all][0]\\n\", (unsigned long)(small_start-0x10), *(long *)(small_start-0x10), *(long *)(small_start-0x8));\n\tdump_memory(small_start, 2);\n\tputs(\"\");\n\n\tputs(\"small_end:\");\n\tprintf(\"0x%016lx\\t\\t0x%016lx  0x%016lx  <-- tcachebins[0x320][0/1], unsortedbin[all][2]\\n\", (unsigned long)(small_end-0x10), *(long *)(small_end-0x10), *(long *)(small_end-0x8));\n\tdump_memory(small_end, 2);\n\n\tputs(\"\\n\");\n\tputs(\"If you want to see a blind example using only double free, see the following chal: \");\n\tputs(\"https://github.",
+      "glibc_versions": {
+        "min": "2.39",
+        "max": "2.39"
+      },
+      "bug_types": [
+        "uaf",
+        "double_free",
+        "arbitrary_free",
+        "null_byte"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "x",
+          "source_var": "malloc(0x88)",
+          "value": "malloc(0x88)",
+          "line": "x[i] = malloc(0x88);"
+        },
+        {
+          "op": "FREE",
+          "var": "small_end",
+          "line": "puts(\"\\t> free(small_end);\");"
+        },
+        {
+          "op": "FREE",
+          "var": "relative_chunk",
+          "line": "puts(\"\\t> free(relative_chunk);\");"
+        },
+        {
+          "op": "FREE",
+          "var": "small_start",
+          "line": "puts(\"\\t> free(small_start);\");"
+        }
+      ]
+    },
+    {
+      "id": "large_bin_attack",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.39/large_bin_attack.c",
+      "glibc_dir_version": "2.39",
+      "description": "Since glibc2.30, two new checks have been enforced on large bin chunk insertion\\n\\n",
+      "glibc_versions": {
+        "min": "2.39",
+        "max": "2.39"
+      },
+      "bug_types": [
+        "uaf"
+      ],
+      "heap_operations": [
+        {
+          "op": "FREE",
+          "var": "p1",
+          "line": "free(p1);"
+        },
+        {
+          "op": "FREE",
+          "var": "p2",
+          "line": "free(p2);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "p1",
+          "source_var": "(size_t)((&target)-4)",
+          "value": "(size_t)((&target)-4)",
+          "line": "p1[3] = (size_t)((&target)-4);"
+        }
+      ]
+    },
+    {
+      "id": "mmap_overlapping_chunks",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.39/mmap_overlapping_chunks.c",
+      "glibc_dir_version": "2.39",
+      "description": "the following:\n\tmmap_chunk_2[0] = 0xdeadbeef;\n\tThis is because the memory would not be allocated to the current program.",
+      "glibc_versions": {
+        "min": "2.39",
+        "max": "2.39"
+      },
+      "bug_types": [
+        "uaf",
+        "overflow"
+      ],
+      "heap_operations": [
+        {
+          "op": "FREE",
+          "var": "mmap_chunk_3",
+          "line": "free(mmap_chunk_3);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "mmap_chunk_2",
+          "source_var": "0xdeadbeef",
+          "value": "0xdeadbeef",
+          "line": "mmap_chunk_2[0] = 0xdeadbeef;"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "overlapping_chunk",
+          "source_var": "0x1122334455667788",
+          "value": "0x1122334455667788",
+          "line": "overlapping_chunk[distance] = 0x1122334455667788;"
+        }
+      ]
+    },
+    {
+      "id": "overlapping_chunks",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.39/overlapping_chunks.c",
+      "glibc_dir_version": "2.39",
+      "description": "This is another simple chunks overlapping problem\\n\");\n\tprintf(\"The previous technique is killed by patch: https://sourceware.",
+      "glibc_versions": {
+        "min": "2.39",
+        "max": "2.39"
+      },
+      "bug_types": [
+        "uaf",
+        "overflow"
+      ],
+      "heap_operations": [
+        {
+          "op": "FREE",
+          "var": "p2",
+          "line": "free(p2);"
+        }
+      ]
+    },
+    {
+      "id": "poison_null_byte",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.39/poison_null_byte.c",
+      "glibc_dir_version": "2.39",
+      "description": "VULNERABILITY",
+      "glibc_versions": {
+        "min": "2.39",
+        "max": "2.39"
+      },
+      "bug_types": [
+        "uaf",
+        "off_by_one",
+        "null_byte"
+      ],
+      "heap_operations": [
+        {
+          "op": "FREE",
+          "var": "a",
+          "line": "free(a);"
+        },
+        {
+          "op": "FREE",
+          "var": "b",
+          "line": "free(b);"
+        },
+        {
+          "op": "FREE",
+          "var": "prev",
+          "line": "free(prev);"
+        },
+        {
+          "op": "FREE",
+          "var": "a2",
+          "line": "free(a2);"
+        },
+        {
+          "op": "FREE",
+          "var": "victim",
+          "line": "free(victim);"
+        }
+      ]
+    },
+    {
+      "id": "safe_link_double_protect",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.39/safe_link_double_protect.c",
+      "glibc_dir_version": "2.39",
+      "description": "the following:\n *\t\n *                                  (ptr^key)^key = ptr\n *\n * The technique requires control over the t-cache metadata, so pairing it with a technique such as\n * house of water might be favourable.",
+      "glibc_versions": {
+        "min": "2.32",
+        "max": "2.39"
+      },
+      "bug_types": [
+        "uaf"
+      ],
+      "heap_operations": [
+        {
+          "op": "FREE",
+          "var": "a",
+          "line": "free(a);"
+        },
+        {
+          "op": "FREE",
+          "var": "b",
+          "line": "free(b);"
+        },
+        {
+          "op": "FREE",
+          "var": "c",
+          "line": "free(c);"
+        },
+        {
+          "op": "FREE",
+          "var": "d",
+          "line": "free(d);"
+        }
+      ]
+    },
+    {
+      "id": "sysmalloc_int_free",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.39/sysmalloc_int_free.c",
+      "glibc_dir_version": "2.39",
+      "description": "This is achieved through sysmalloc calling _int_free to the top_chunk (wilderness),\n * if the top_chunk can't be merged during heap growth\n * https://elixir.",
+      "glibc_versions": {
+        "min": "2.39",
+        "max": "2.39"
+      },
+      "bug_types": [
+        "uaf"
+      ],
+      "heap_operations": []
+    },
+    {
+      "id": "tcache_house_of_spirit",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.39/tcache_house_of_spirit.c",
+      "glibc_dir_version": "2.39",
+      "description": "This file demonstrates the house of spirit attack on tcache.",
+      "glibc_versions": {
+        "min": "2.39",
+        "max": "2.39"
+      },
+      "bug_types": [
+        "double_free"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "fake_chunks",
+          "source_var": "0x40",
+          "value": "0x40",
+          "line": "fake_chunks[1] = 0x40; // this is the size"
+        },
+        {
+          "op": "FREE",
+          "var": "a",
+          "line": "free(a);"
+        }
+      ]
+    },
+    {
+      "id": "tcache_metadata_poisoning",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.39/tcache_metadata_poisoning.c",
+      "glibc_dir_version": "2.39",
+      "description": "demonstrates what an attacker can achieve by controlling\\n\"\n       \"the metadata chunk of the tcache.",
+      "glibc_versions": {
+        "min": "2.39",
+        "max": "2.39"
+      },
+      "bug_types": [
+        "uaf"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "counts",
+          "source_var": "1",
+          "value": "1",
+          "line": "metadata->counts[1] = 1;"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "entries",
+          "source_var": "&stack_target",
+          "value": "&stack_target",
+          "line": "metadata->entries[1] = &stack_target;"
+        }
+      ]
+    },
+    {
+      "id": "tcache_poisoning",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.39/tcache_poisoning.c",
+      "glibc_dir_version": "2.39",
+      "description": "This file demonstrates a simple tcache poisoning attack by tricking malloc into\\n\"\n\t\t   \"returning a pointer to an arbitrary location (in this case, the stack).",
+      "glibc_versions": {
+        "min": "2.39",
+        "max": "2.39"
+      },
+      "bug_types": [
+        "uaf"
+      ],
+      "heap_operations": [
+        {
+          "op": "ALLOC",
+          "var": "a",
+          "size": 128,
+          "line": "intptr_t *a = malloc(128);"
+        },
+        {
+          "op": "ALLOC",
+          "var": "b",
+          "size": 128,
+          "line": "intptr_t *b = malloc(128);"
+        },
+        {
+          "op": "FREE",
+          "var": "a",
+          "line": "free(a);"
+        },
+        {
+          "op": "FREE",
+          "var": "b",
+          "line": "free(b);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "b",
+          "source_var": "12)",
+          "value": "(intptr_t)((long)target ^ (lon",
+          "line": "b[0] = (intptr_t)((long)target ^ (long)b >> 12);"
+        },
+        {
+          "op": "ALLOC",
+          "var": "c",
+          "size": 128,
+          "line": "intptr_t *c = malloc(128);"
+        }
+      ]
+    },
+    {
+      "id": "tcache_relative_write",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.39/tcache_relative_write.c",
+      "glibc_dir_version": "2.39",
+      "description": "This file demonstrates TCache relative write, a technique used to achieve arbitrary decimal writing and chunk pointer arbitrary write on heap.",
+      "glibc_versions": {
+        "min": "2.39",
+        "max": "2.39"
+      },
+      "bug_types": [
+        "uaf",
+        "overflow"
+      ],
+      "heap_operations": [
+        {
+          "op": "FREE",
+          "var": "p1",
+          "line": "free(p1);\t// In this PoC, we use p1 simply for a libc leak"
+        },
+        {
+          "op": "FREE",
+          "var": "p",
+          "line": "free(p);"
+        },
+        {
+          "op": "FREE",
+          "var": "p2",
+          "line": "free(p2);"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "p1",
+          "source_var": "long)p)",
+          "value": "= (unsigned long)p)",
+          "line": "assert(p1[0] == (unsigned long)p);"
+        }
+      ]
+    },
+    {
+      "id": "tcache_stashing_unlink_attack",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.39/tcache_stashing_unlink_attack.c",
+      "glibc_dir_version": "2.39",
+      "description": "This file demonstrates the stashing unlink attack on tcache.",
+      "glibc_versions": {
+        "min": "2.39",
+        "max": "2.39"
+      },
+      "bug_types": [
+        "uaf"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "stack_var",
+          "source_var": "{0}",
+          "value": "{0}",
+          "line": "unsigned long stack_var[0x10] = {0};"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "chunk_lis",
+          "source_var": "{0}",
+          "value": "{0}",
+          "line": "unsigned long *chunk_lis[0x10] = {0};"
+        }
+      ]
+    },
+    {
+      "id": "unsafe_unlink",
+      "source_file": "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.39/unsafe_unlink.c",
+      "glibc_dir_version": "2.39",
+      "description": "Welcome to unsafe unlink 2.0!\\n",
+      "glibc_versions": {
+        "min": "2.39",
+        "max": "2.39"
+      },
+      "bug_types": [
+        "overflow"
+      ],
+      "heap_operations": [
+        {
+          "op": "OVERWRITE",
+          "target_var": "chunk0_ptr",
+          "source_var": "0x10",
+          "value": "chunk0_ptr[-1] - 0x10",
+          "line": "chunk0_ptr[1] = chunk0_ptr[-1] - 0x10;"
+        },
+        {
+          "op": "OVERWRITE",
+          "target_var": "chunk1_hdr",
+          "source_var": "malloc_size",
+          "value": "malloc_size",
+          "line": "chunk1_hdr[0] = malloc_size;"
+        },
+        {
+          "op": "FREE",
+          "var": "chunk1_ptr",
+          "line": "free(chunk1_ptr);"
+        }
+      ]
+    }
+  ]
+}

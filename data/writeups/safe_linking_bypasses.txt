@@ -1,0 +1,9 @@
+Decrypt Safe Linking is a technique to recover original pointers from the masked pointers introduced in glibc 2.32.
+Safe linking XORs pointers in tcache and fastbins with (chunk_address >> 12).
+An attacker can recover the mask by observing that the first 12 bits of the pointer are known or can be leaked.
+By iteratively XORing and shifting, the full original pointer can be reconstructed from the masked value.
+
+Safe Link Double Protect is a method to bypass safe linking using tcache metadata control.
+If an attacker can control tcache metadata, they can point a tcache bin entry to another tcache bin entry that already contains a masked pointer.
+When this second entry is allocated and then linked into a new tcache, the safe linking mechanism XORs it again with the same key.
+Since (ptr ^ key) ^ key equals ptr, the protection is effectively removed, and the original pointer is restored in the new tcache bin.

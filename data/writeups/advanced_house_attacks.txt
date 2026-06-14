@@ -1,0 +1,14 @@
+The House of Water is a complex technique to gain control over tcache metadata.
+An attacker creates a linked list in a small bin containing three chunks.
+By overwriting the least significant byte of the fwd pointer of the first chunk and the bk pointer of the last chunk, they redirect the list to a fake chunk inside the tcache_perthread_struct.
+When the tcache for that size class is emptied, a subsequent allocation from the small bin will return the fake chunk, giving the attacker control over tcache metadata.
+
+House of Tangerine is a modernized version of House of Orange that works on glibc 2.34 and later.
+An attacker uses a heap overflow to corrupt the size of the top_chunk, ensuring it remains page-aligned but is smaller than a subsequent allocation request.
+When the large allocation is requested, sysmalloc is called and, seeing the top_chunk is too small and corrupted, it calls _int_free on the old top_chunk.
+The old top_chunk is moved into the unsorted bin or tcache, allowing the attacker to perform further attacks like tcache poisoning without an explicit free.
+
+The House of Spirit attack allows an attacker to allocate a chunk at an arbitrary address by forging a fake chunk header.
+The attacker writes a valid size field and a sane next-chunk size at the target location.
+Then, the attacker calls free() on the target address, which adds the fake chunk into a fastbin or tcache.
+The next malloc for that size class will return the attacker-controlled address.

