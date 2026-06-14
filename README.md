@@ -1,5 +1,21 @@
 # AutoPwn: Artifact-Assisted Heap Exploit Generation
 
+## Thông tin nhóm
+
+| Mã nhóm | Mã đề tài |
+|---------|-----------|
+| G14     | CK11      |
+
+### Thành viên
+
+| STT | Họ và tên       | MSSV     |
+|-----|-----------------|----------|
+| 1   | Huỳnh Nhật Duy  | 24520375 |
+| 2   | Nguyễn Hoàng Quý | 24521494 |
+| 3   | Lê Quốc Khôi    | 23520769 |
+
+---
+
 Framework tự động sinh mã khai thác lỗi Heap cho CTF PWN, lấy cảm hứng từ paper **AutoPwn (IEEE TIFS 2024)**.
 
 ## Tính năng nổi bật

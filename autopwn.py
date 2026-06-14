@@ -390,15 +390,10 @@ class AutoPwnFramework:
         exploit_path = os.path.join(self.exploits_dir, "exploit.py")
         codegen.save(exploit_path)
         print(f"      OK — {exploit_path}")
-
-        # Phase 8: Verification
-        self.log("PHASE 8", "Verifying exploit...")
+        
         from core.executor.capability_verifier import CapabilityVerifier
         verifier = CapabilityVerifier()
         report = verifier.verify(exploit_path, self.target, timeout=15, runs=3)
-        print(f"      Verification results:")
-        for line in report.summary():
-            print(line)
 
         report_path = os.path.join(self.internal_artifacts, "verification_report.json")
         CapabilityVerifier.save_report(report, report_path)

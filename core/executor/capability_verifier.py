@@ -174,4 +174,3 @@ class CapabilityVerifier:
         }
         with open(output_path, "w") as f:
             json.dump(data, f, indent=2)
-        print(f"[OK] Verification report saved to {output_path}")
