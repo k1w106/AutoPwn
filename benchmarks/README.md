@@ -34,17 +34,6 @@ benchmarks/
     └── solve.py                 # Reference solution (nếu có)
 ```
 
-## Challenges
-
-| ID | CTF | Difficulty | Vulnerability Types | Exploit Approach |
-|----|-----|------------|---------------------|------------------|
-| justCTF-2025-babyheap | justCTF 2025 | Medium | UAF, Tcache Poisoning | `/proc/mem` (custom ld-linux patches tcache, bypasses double-free & unsorted bin) |
-| amateurs-ctf-2024-heaps-of-fun | Amateurs CTF 2024 | Medium | UAF |
-| 0ctf-2017-babyheap | 0CTF 2017 | Hard | Heap Overflow, Double Free |
-| defcon-quals-2019-babyheap | DEF CON Quals 2019 | Hard | Off-by-one, Tcache Poisoning |
-| backdoor-ctf-2021-babyheap | BackdoorCTF 2021 | Medium | Index Confusion, UAF |
-| picoctf-2024-heap3 | picoCTF 2024 | Easy | UAF |
-
 ## Cách sử dụng
 
 ### 1. Thêm challenge mới
@@ -106,17 +95,6 @@ python evaluate.py ../../challenges.json ../results/justCTF-2025-babyheap
 - **clear_documentation** (30%): Comments giải thích rõ mỗi address làm gì?
 - **modular_design** (30%): Address calculations modular và dễ sửa?
 
-## Bảng điểm
-
-| Score | Grade |
-|-------|-------|
-| 0.90+ | A+ |
-| 0.80+ | A |
-| 0.70+ | B+ |
-| 0.60+ | B |
-| 0.50+ | C |
-| 0.40+ | D |
-| <0.40 | F |
 
 ## Ghi chú kỹ thuật cho justCTF-2025-babyheap
 
